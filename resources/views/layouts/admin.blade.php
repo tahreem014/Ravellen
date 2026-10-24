@@ -22,6 +22,7 @@
         .admin-stat-icon { width: 2.75rem; height: 2.75rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
         .btn-admin-primary { background: linear-gradient(to right, #EC4899, #A855F7); border: none; color: #fff; }
         .btn-admin-primary:hover { color: #fff; opacity: .9; }
+        .btn-admin-primary:disabled, .btn-admin-primary.disabled { color: #fff; }
         .btn-admin-logout { border: 1px solid #DB2777; color: #DB2777; background: #fff; }
         .btn-admin-logout:hover { background: #DB2777; color: #fff; }
         .admin-container { max-width: 1320px; margin-left: auto; margin-right: auto; }
@@ -100,13 +101,92 @@
             const handler = function () {
                 okBtn.removeEventListener('click', handler);
                 modal.hide();
-                form.submit();
+                form.matches('[data-ajax]') ? adminSubmit(form) : form.submit();
             };
             okBtn.addEventListener('click', handler);
 
             modal.show();
             return false;
         };
+
+        /*
+         * In-place saving: forms marked data-ajax are sent in the background
+         * (RespondToBackgroundForms turns the usual redirect into JSON), the
+         * server's message shows as a toast, and the page's [data-admin-region]
+         * sections are re-rendered from a fresh copy of the page — so the admin
+         * never leaves or reloads the page. The form gets an "admin:saved" event.
+         */
+        window.adminSubmit = async function (form) {
+            const buttons = [...form.elements].filter(el => el.type === 'submit');
+            const wasDisabled = buttons.map(b => b.disabled);
+            buttons.forEach(b => b.disabled = true);
+            const restore = () => buttons.forEach((b, i) => b.disabled = wasDisabled[i]);
+
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: new FormData(form),
+                });
+
+                if (res.status === 419 || res.status === 401) {
+                    showToast('Your session expired. Reloading the page so you can try again.', 'error');
+                    setTimeout(() => location.reload(), 1500);
+                    return;
+                }
+                if (res.status === 413) {
+                    showToast('That upload is larger than the server accepts. Try fewer or smaller files.', 'error');
+                    return restore();
+                }
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    showToast(data.errors && Object.keys(data.errors).length
+                        ? [...new Set(Object.values(data.errors).flat())].join(' ')
+                        : (data.message || 'That could not be saved. Please try again.'), 'error');
+                    return restore();
+                }
+
+                if (data.message) showToast(data.message, 'success');
+                await refreshAdminRegions(form);
+                restore();
+                form.dispatchEvent(new CustomEvent('admin:saved', { bubbles: true, detail: data }));
+            } catch (e) {
+                showToast('Could not reach the server. Please try again.', 'error');
+                restore();
+            }
+        };
+
+        // A field the admin changed but hasn't saved yet
+        const isDirty = (el) => el.type === 'checkbox' || el.type === 'radio' ? el.checked !== el.defaultChecked
+            // a select with no option marked selected starts on its first option
+            : el.tagName === 'SELECT' ? el.selectedIndex !== Math.max(0, [...el.options].findIndex(o => o.defaultSelected))
+            : el.type !== 'file' && 'defaultValue' in el && el.value !== el.defaultValue;
+
+        window.refreshAdminRegions = async function (savedForm) {
+            const regions = [...document.querySelectorAll('[data-admin-region]')];
+            if (!regions.length) return;
+
+            const res = await fetch(location.href, { headers: { 'Accept': 'text/html', 'X-Live-Refresh': '1' }, cache: 'no-store' });
+            if (!res.ok) return;
+            const fresh = new DOMParser().parseFromString(await res.text(), 'text/html');
+            const savedFields = savedForm ? [...savedForm.elements] : [];
+
+            regions.forEach(region => {
+                const next = fresh.querySelector(`[data-admin-region="${region.dataset.adminRegion}"]`);
+                if (!next) return;
+                // keep a section with unsaved edits, unless those edits are what was just saved
+                const unsaved = [...region.querySelectorAll('input, select, textarea')].some(el => isDirty(el) && !savedFields.includes(el));
+                if (!unsaved) region.innerHTML = next.innerHTML;
+            });
+            document.dispatchEvent(new CustomEvent('admin:regions-updated'));
+        };
+
+        document.addEventListener('submit', (e) => {
+            if (!e.target.matches('form[data-ajax]') || e.defaultPrevented) return;
+            e.preventDefault();
+            adminSubmit(e.target);
+        });
     </script>
 
     @include('layouts.toastify')

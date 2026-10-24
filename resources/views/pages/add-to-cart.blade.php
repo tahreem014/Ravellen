@@ -19,12 +19,19 @@
 
     /* ── Item cards ── */
     .cart-item-card {
-        border: 0; border-radius: 1rem;
+        border: 2px solid transparent; border-radius: 1rem;
         box-shadow: 0 2px 12px rgba(0,0,0,.07);
         background: #fff; margin-bottom: 1rem;
-        transition: box-shadow .2s;
+        transition: box-shadow .2s, border-color .2s;
+        cursor: pointer; user-select: none; -webkit-user-select: none;
     }
     .cart-item-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.11); }
+    /* Blue outline = this item goes to checkout */
+    .cart-item-card.selected {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.15), 0 6px 20px rgba(0,0,0,.11);
+    }
+    .cart-item-card:focus-visible { outline: 2px solid #3b82f6; outline-offset: 3px; }
     .cart-item-img {
         width: 5rem; height: 5rem; object-fit: cover;
         border-radius: .6rem; flex-shrink: 0;
@@ -59,6 +66,7 @@
         padding: .5rem .25rem; width: 100%; transition: opacity .2s;
     }
     .checkout-btn:hover { opacity: .88; color: #fff; }
+    .checkout-btn:disabled { opacity: .5; cursor: not-allowed; }
     .continue-btn {
         border: 1.5px solid #e5e7eb; border-radius: .6rem;
         background: #fff; color: #374151;
@@ -83,8 +91,9 @@
         font-weight: 600; font-size: .9rem;
         padding: .6rem 1.5rem; transition: opacity .2s;
         display: inline-flex; align-items: center; gap: .4rem;
+        text-decoration: none;
     }
-    .start-shopping-btn:hover { opacity: .88; color: #fff; }
+    .start-shopping-btn:hover { opacity: .88; color: #fff; text-decoration: none; }
 </style>
 @endsection
 
@@ -135,7 +144,7 @@
                         <span>Total</span>
                         <span id="total-val" style="color:#ec4899;">PKR 200</span>
                     </div>
-                    <button class="checkout-btn mb-2" onclick="window.location.href='{{ url('/checkout') }}'">Proceed to Checkout &nbsp;→</button>
+                    <button class="checkout-btn mb-2" id="checkout-btn" onclick="window.location.href='{{ url('/checkout') }}'">Proceed to Checkout &nbsp;→</button>
                     <button class="continue-btn" onclick="window.location.href='{{ url('/shop') }}'">Continue Shopping</button>
                     <p class="text-muted mt-3 mb-0" style="font-size:.75rem;">
                         <strong>Note:</strong> Shipping fee of PKR 200 is applied to all orders.
@@ -152,14 +161,28 @@
 @section('script')
 <script>
 const SHIPPING   = 200;
-const CART_KEY   = 'rv_cart';
-const IS_AUTH    = {{ auth()->check() ? 'true' : 'false' }};
-const CSRF_TOKEN = '{{ csrf_token() }}';
+const CART_KEY       = 'rv_cart';
+const DESELECTED_KEY = 'rv_cart_deselected';   // read by the checkout page too
+const IS_AUTH        = {{ auth()->check() ? 'true' : 'false' }};
+const CSRF_TOKEN     = '{{ csrf_token() }}';
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 function getCart()       { try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch(e) { return []; } }
 function saveCart(cart)  { localStorage.setItem(CART_KEY, JSON.stringify(cart)); }
+
+/* Selection is stored as the items the user has *un*-selected, so anything
+   newly added to the cart is selected by default. */
+function getDeselected()     { try { return new Set(JSON.parse(localStorage.getItem(DESELECTED_KEY) || '[]')); } catch(e) { return new Set(); } }
+function saveDeselected(set) { try { localStorage.setItem(DESELECTED_KEY, JSON.stringify([...set])); } catch(e) {} }
+/* db-backed rows have a unique id; guest rows are identified by id + variant. */
+function itemKey(item)       { return item.id.startsWith('db-') ? item.id : item.id + '|' + (item.subtitle || ''); }
 function fmt(n)          { return 'PKR ' + Number(n).toLocaleString(); }
+/* Price plus the crossed-out regular price while the item is on sale. */
+function priceHtml(amount, original) {
+    return fmt(amount) + (original && original > amount
+        ? ' <s style="color:#9ca3af;-webkit-text-fill-color:#9ca3af;font-weight:500;font-size:.8em;margin-left:.3em;">' + fmt(original) + '</s>'
+        : '');
+}
 function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
@@ -229,16 +252,25 @@ function renderCart() {
 
     const totalQty = cart.reduce((s, i) => s + i.qty, 0);
     document.getElementById('cart-count-label').textContent =
-        totalQty + ' item' + (totalQty !== 1 ? 's' : '') + ' in your cart';
+        totalQty + ' item' + (totalQty !== 1 ? 's' : '') + ' in your cart · click an item to select or deselect it for checkout';
+
+    // Drop deselections for items that are no longer in the cart
+    const deselected = getDeselected();
+    const liveKeys   = new Set(cart.map(itemKey));
+    const pruned     = [...deselected].filter(k => liveKeys.has(k));
+    if (pruned.length !== deselected.size) saveDeselected(new Set(pruned));
 
     document.getElementById('cart-items-list').innerHTML = cart.map((item, idx) => {
         const lineTotal    = item.unitPrice * item.qty;
         const displayPrice = item.preorder ? Math.round(lineTotal * 0.4) : lineTotal;
+        const originalLine = item.originalPrice && !item.preorder ? item.originalPrice * item.qty : null;
         // DB items carry id like 'db-123'; extract numeric id for API calls
         const dbId = item.id && item.id.startsWith('db-') ? item.id.replace('db-', '') : null;
+        const isSelected = !pruned.includes(itemKey(item));
 
         return `
-        <div class="cart-item-card p-3" data-idx="${idx}" data-db-id="${dbId || ''}">
+        <div class="cart-item-card p-3 ${isSelected ? 'selected' : ''}" data-idx="${idx}" data-db-id="${dbId || ''}"
+             role="checkbox" aria-checked="${isSelected}" tabindex="0">
             <div class="d-flex align-items-center gap-3">
                 <img src="${item.image || ''}" alt="${item.name}" class="cart-item-img"
                      onerror="this.src='https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=200&q=80'">
@@ -262,9 +294,9 @@ function renderCart() {
                         </div>
                         <div class="text-end">
                             <div class="text-muted" style="font-size:.75rem;">
-                                ${fmt(item.unitPrice)} each${item.preorder ? ' · 40% advance' : ''}
+                                ${priceHtml(item.unitPrice, item.originalPrice)} each${item.preorder ? ' · 40% advance' : ''}
                             </div>
-                            <div class="item-price">${fmt(displayPrice)}</div>
+                            <div class="item-price">${priceHtml(displayPrice, originalLine)}</div>
                         </div>
                     </div>
                 </div>
@@ -276,12 +308,16 @@ function renderCart() {
 }
 
 /* ── summary ────────────────────────────────────────────────────────────── */
+/* Totals cover only the selected items — those are what checkout will order. */
 function updateSummary(cart) {
     let regularTotal  = 0;
     let preorderTotal = 0;
     let totalQty      = 0;
 
-    cart.forEach(item => {
+    const deselected = getDeselected();
+    const selected   = cart.filter(item => !deselected.has(itemKey(item)));
+
+    selected.forEach(item => {
         const line = item.unitPrice * item.qty;
         totalQty += item.qty;
         if (item.preorder) preorderTotal += Math.round(line * 0.4);
@@ -289,7 +325,9 @@ function updateSummary(cart) {
     });
 
     const subtotal   = regularTotal + preorderTotal;
-    const grandTotal = subtotal + SHIPPING;
+    const grandTotal = selected.length ? subtotal + SHIPPING : 0;
+
+    document.getElementById('checkout-btn').disabled = selected.length === 0;
 
     document.getElementById('subtotal-label').textContent = `Subtotal (${totalQty} item${totalQty !== 1 ? 's' : ''})`;
     document.getElementById('subtotal-val').textContent   = fmt(subtotal);
@@ -302,6 +340,41 @@ function updateSummary(cart) {
     } else {
         preRow.style.setProperty('display', 'none', 'important');
     }
+}
+
+/* ── selection ───────────────────────────────────────────────────────────── */
+function toggleSelect(card) {
+    const cart = getCart();
+    const item = cart[Number(card.dataset.idx)];
+    if (!item) return;
+
+    const deselected = getDeselected();
+    const key        = itemKey(item);
+    if (deselected.has(key)) deselected.delete(key); else deselected.add(key);
+    saveDeselected(deselected);
+
+    // Update in place (no re-render) so keyboard focus stays on the card
+    const isSelected = !deselected.has(key);
+    card.classList.toggle('selected', isSelected);
+    card.setAttribute('aria-checked', isSelected);
+    updateSummary(cart);
+}
+
+function initSelection() {
+    const list = document.getElementById('cart-items-list');
+
+    list.addEventListener('click', e => {
+        if (e.target.closest('button')) return;      // qty / delete keep their own behaviour
+        const card = e.target.closest('.cart-item-card');
+        if (card) toggleSelect(card);
+    });
+
+    list.addEventListener('keydown', e => {
+        if (e.key !== ' ' && e.key !== 'Enter') return;
+        if (!e.target.classList.contains('cart-item-card')) return;
+        e.preventDefault();
+        toggleSelect(e.target);
+    });
 }
 
 /* ── mutations ───────────────────────────────────────────────────────────── */
@@ -323,8 +396,15 @@ async function removeItem(idx, dbId) {
 }
 
 /* ── boot ───────────────────────────────────────────────────────────────── */
+// The admin changed prices / discounts while the cart is open (layouts/live-updates)
+document.addEventListener('live:catalog', async () => {
+    await syncFromDb();
+    renderCart();
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
     await syncFromDb();
+    initSelection();
     renderCart();
 });
 </script>

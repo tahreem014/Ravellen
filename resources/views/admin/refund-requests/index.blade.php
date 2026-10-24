@@ -15,7 +15,8 @@
         </form>
     </div>
 
-    <div class="admin-card card">
+    {{-- data-admin-region / data-ajax: approve / reject save in place (layouts/admin) --}}
+    <div class="admin-card card" data-admin-region="refunds">
         <div class="table-responsive">
             <table class="table align-middle mb-0">
                 <thead>
@@ -51,13 +52,13 @@
                             </td>
                             <td class="text-end">
                                 @if ($refund->status === 'pending')
-                                    <form action="{{ route('admin.refund-requests.update', $refund) }}" method="POST" class="d-inline">
+                                    <form action="{{ route('admin.refund-requests.update', $refund) }}" method="POST" class="d-inline" data-ajax>
                                         @csrf
                                         @method('PUT')
                                         <input type="hidden" name="status" value="approved">
                                         <button class="btn btn-sm btn-outline-success"><i class="ri-check-line"></i> Approve</button>
                                     </form>
-                                    <form action="{{ route('admin.refund-requests.update', $refund) }}" method="POST" class="d-inline">
+                                    <form action="{{ route('admin.refund-requests.update', $refund) }}" method="POST" class="d-inline" data-ajax>
                                         @csrf
                                         @method('PUT')
                                         <input type="hidden" name="status" value="rejected">

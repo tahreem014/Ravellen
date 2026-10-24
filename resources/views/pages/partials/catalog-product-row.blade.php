@@ -8,7 +8,7 @@
 
         @forelse($product->variants as $variant)
             <span class="variant-badge">
-                {{ $variant->variant_name }} — PKR {{ number_format($variant->price, 0) }}
+                {{ $variant->variant_name }} — <x-price :variant="$variant" />
             </span>
         @empty
             <span class="text-muted small">No variants.</span>

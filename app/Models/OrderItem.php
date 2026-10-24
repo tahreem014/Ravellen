@@ -53,7 +53,7 @@ class OrderItem extends Model
     {
         $status = $this->order?->order_status;
 
-        if (in_array($status, [Order::STATUS_PENDING, Order::STATUS_PROCESSING], true)) {
+        if (in_array($status, [Order::STATUS_PENDING, Order::STATUS_CONFIRMED, Order::STATUS_PROCESSING], true)) {
             return true;
         }
 

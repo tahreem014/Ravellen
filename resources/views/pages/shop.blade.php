@@ -205,24 +205,25 @@
         </div>
 
         {{-- ── Product grid ── --}}
-        <div class="row g-3" id="shop-grid">
+        <div class="row g-3" id="shop-grid" data-live-listing="shop" data-live-signature="{{ app(\App\Services\LiveUpdateService::class)->listingSignature('shop') }}">
             @forelse($allProducts as $product)
                 @php
                     $cat        = $product->_cat;
                     $sub        = $product->_sub;
                     $image      = $product->images->first()?->image_url ?? $fallbackImage;
-                    $minPrice   = $product->variants->min('price');
-                    $priceLabel = $minPrice ? 'From PKR ' . number_format($minPrice) : 'PKR —';
+                    $cheapest   = $product->cheapestVariant();
+                    $priceLabel = $cheapest ? 'From PKR ' . number_format($cheapest->effectivePrice()) : 'PKR —';
                     $searchText = strtolower($cat->name . ' ' . ($sub->name ?? '') . ' ' . $product->name);
                     $theme      = $shopThemeMap[$cat->name] ?? $shopDefaultTheme;
                 @endphp
-                <div class="col-6 col-md-4 col-lg-3 shop-item"
+                <div class="col-6 col-md-4 col-lg-3 shop-item" data-live-product="{{ $product->id }}"
                      data-cat="{{ $cat->id }}"
                      data-sub="{{ $sub->id ?? '' }}"
                      data-search="{{ $searchText }}">
                     <div class="shop-prod-card">
                         <div class="shop-prod-img-wrap">
-                            <img src="{{ $image }}" alt="{{ $product->name }}">
+                            <img src="{{ $image }}" alt="{{ $product->name }}" data-live-image>
+                            <x-discount-badge :label="$product->discountLabel()" live />
                             @if($sub)
                                 <span class="shop-prod-badge" style="background:{{ $theme['accent'] }};">{{ $sub->name }}</span>
                             @endif
@@ -238,8 +239,8 @@
                         </div>
                         <div class="p-3">
                             <p class="shop-prod-cat-label" style="color:{{ $theme['accent'] }};">{{ $cat->name }}</p>
-                            <h6 class="shop-prod-name">{{ $product->name }}</h6>
-                            <p class="shop-prod-price" style="background:linear-gradient(to right,{{ $theme['accent'] }},{{ $theme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">{{ $priceLabel }}</p>
+                            <h6 class="shop-prod-name" data-live-name>{{ $product->name }}</h6>
+                            <p class="shop-prod-price" data-live-price data-live-prefix="From " style="background:linear-gradient(to right,{{ $theme['accent'] }},{{ $theme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><x-price :variant="$cheapest" prefix="From " /></p>
                             <a href="{{ route('product-item', $product->slug) }}" class="shop-explore-btn" style="background:{{ $theme['grad'] }};">
                                 View Product <i class="ri-arrow-right-line ms-1"></i>
                             </a>

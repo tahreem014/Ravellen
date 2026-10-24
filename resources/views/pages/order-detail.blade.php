@@ -22,6 +22,7 @@
     }
     .status-pending, .status-awaiting_stock  { background: #fef3c7; color: #92400e; }
     .status-payment_due                       { background: #fee2e2; color: #991b1b; }
+    .status-confirmed                         { background: #d1fae5; color: #065f46; }
     .status-processing                        { background: #dbeafe; color: #1e40af; }
     .status-shipped                           { background: #e0e7ff; color: #3730a3; }
     .status-delivered                         { background: #dcfce7; color: #166534; }
@@ -58,7 +59,8 @@
 
 @section('content')
 <div class="order-wrapper py-5">
-<div class="container px-4" style="max-width: 900px;">
+{{-- data-live-region: re-rendered when the admin changes this order (layouts/live-updates) --}}
+<div class="container px-4" style="max-width: 900px;" data-live-region="order-detail">
 
     <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <div>
@@ -73,7 +75,7 @@
     @if($order->order_type === 'pre_order' && $order->order_status === 'payment_due')
     <div class="preorder-note d-flex align-items-start gap-2 mb-4">
         <i class="ri-information-line mt-1"></i>
-        <div>Your preorder item is now available. Please complete the remaining payment below to move your order into processing.</div>
+        <div>Your preorder item is now available. Please complete the remaining payment below to confirm your order.</div>
     </div>
     @elseif($order->order_type === 'pre_order' && $order->order_status === 'awaiting_stock')
     <div class="preorder-note d-flex align-items-start gap-2 mb-4">
@@ -113,26 +115,38 @@
             <div class="order-card">
                 <div class="section-title"><i class="ri-bank-card-line"></i> Payment</div>
 
-                <div class="money-row"><span class="text-muted">Payment method</span><span class="text-capitalize">{{ $order->payment_method }}</span></div>
+                <div class="money-row"><span class="text-muted">Payment method</span><span>{{ $order->payment_method_label }}</span></div>
                 <div class="money-row"><span class="text-muted">Shipping fee</span><span>PKR {{ number_format($order->shipping_fee) }}</span></div>
 
                 @if($order->order_type === 'pre_order')
-                    <div class="money-row"><span class="text-muted">Advance paid (40%)</span><span>PKR {{ number_format($order->advance_amount) }}</span></div>
+                    <div class="money-row"><span class="text-muted">Advance (40%)</span><span>PKR {{ number_format($order->advance_amount) }}</span></div>
                     <div class="money-row">
                         <span class="text-muted">Remaining balance</span>
                         <span>PKR {{ number_format($order->remaining_amount) }}</span>
                     </div>
                     <div class="money-row total"><span>Order total</span><span>PKR {{ number_format($order->total_amount) }}</span></div>
 
-                    @if($order->order_status === 'payment_due')
+                    @if($order->isAwaitingInitialPayment())
+                        <button class="pay-remaining-btn" id="pay-now-btn" onclick="payNow()">
+                            Pay Advance — PKR {{ number_format($order->advance_amount) }}
+                        </button>
+                    @elseif($order->order_status === 'payment_due')
                         <button class="pay-remaining-btn" id="pay-remaining-btn" onclick="payRemaining()">
                             Pay Remaining — PKR {{ number_format($order->remaining_amount) }}
                         </button>
                     @elseif($order->payment_stage === 'completed')
                         <p class="text-muted small mt-3 mb-0"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> Remaining balance paid {{ $order->remaining_paid_at?->format('d M Y') }}.</p>
+                    @elseif($order->payment_stage === 'advance_paid')
+                        <p class="text-muted small mt-3 mb-0"><i class="ri-checkbox-circle-line" style="color:#22c55e;"></i> Advance paid{{ $order->paid_at ? ' '.$order->paid_at->format('d M Y') : '' }}.</p>
                     @endif
                 @else
-                    <div class="money-row total"><span>Total paid</span><span>PKR {{ number_format($order->total_amount) }}</span></div>
+                    @if($order->isAwaitingInitialPayment())
+                        <button class="pay-remaining-btn" id="pay-now-btn" onclick="payNow()">
+                            Pay Now — PKR {{ number_format($order->total_amount) }}
+                        </button>
+                    @else
+                        <div class="money-row total"><span>Total paid</span><span>PKR {{ number_format($order->total_amount) }}</span></div>
+                    @endif
                 @endif
             </div>
         </div>
@@ -145,34 +159,43 @@
 @section('script')
 <script>
 const CSRF_TOKEN = '{{ csrf_token() }}';
-const ORDER_ID   = {{ $order->id }};
+const ORDER_UUID = @json($order->uuid);
 
-async function payRemaining() {
-    const btn = document.getElementById('pay-remaining-btn');
+async function startSafepayPayment(url, btn, originalLabel) {
     btn.disabled = true;
-    btn.textContent = 'Processing…';
+    btn.textContent = 'Redirecting to payment…';
 
     try {
-        const res  = await fetch(`/orders/${ORDER_ID}/pay-remaining`, {
+        const res  = await fetch(url, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
         });
         const data = await res.json();
 
-        if (!res.ok) {
-            alert(data.message || 'Payment failed. Please try again.');
+        if (!res.ok || !data.redirect) {
+            showToast(data.message || 'Payment failed. Please try again.', 'error');
             btn.disabled = false;
-            btn.textContent = 'Pay Remaining';
+            btn.textContent = originalLabel;
             return;
         }
 
-        window.location.reload();
+        window.location.href = data.redirect;
     } catch (e) {
-        console.error('Pay remaining failed:', e);
-        alert('Something went wrong. Please try again.');
+        console.error('Payment start failed:', e);
+        showToast('Something went wrong. Please try again.', 'error');
         btn.disabled = false;
-        btn.textContent = 'Pay Remaining';
+        btn.textContent = originalLabel;
     }
+}
+
+function payNow() {
+    const btn = document.getElementById('pay-now-btn');
+    startSafepayPayment(`/orders/${ORDER_UUID}/pay`, btn, btn.textContent);
+}
+
+function payRemaining() {
+    const btn = document.getElementById('pay-remaining-btn');
+    startSafepayPayment(`/orders/${ORDER_UUID}/pay-remaining`, btn, btn.textContent);
 }
 </script>
 @endsection

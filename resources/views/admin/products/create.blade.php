@@ -9,7 +9,7 @@
 
     <div class="admin-card card">
         <div class="card-body">
-            <form action="{{ route('admin.products.store') }}" method="POST">
+            <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
                 <div class="mb-3">
@@ -40,7 +40,14 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-admin-primary">Create Product</button>
+                @include('admin.products.partials.pricing-fields', ['currentMode' => null, 'hasVariants' => false])
+
+                <div class="border rounded-3 p-3 mb-3">
+                    <div class="fw-semibold mb-2">Photos &amp; videos <span class="text-muted fw-normal small">(optional)</span></div>
+                    @include('admin.products.partials.media-picker')
+                </div>
+
+                <button type="submit" class="btn btn-admin-primary" data-media-submit>Create Product</button>
             </form>
         </div>
     </div>

@@ -15,7 +15,7 @@ class StoreAddToCartRequest extends FormRequest
     {
         return [
             'product_id'         => 'required|integer|exists:products,id',
-            'product_variant_id' => 'nullable|integer|exists:product_variants,id',
+            'product_variant_id' => 'required|integer|exists:product_variants,id',
             'qty'                => 'required|integer|min:1|max:100',
             'comment'            => 'nullable|string|max:1000',
             'preference'         => 'nullable|string|max:255',

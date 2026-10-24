@@ -348,12 +348,12 @@
                         $allProds = $allProds->concat($sub->products);
                     }
                     $firstImg  = isset($cfg) ? ($allProds->first(fn($p) => $p->images->isNotEmpty())?->images->first()?->image_url ?? $cfg['fallback']) : null;
-                    $minPrice  = $allProds->flatMap(fn($p) => $p->variants)->min('price');
-                    $pDesc     = $minPrice ? 'From PKR ' . number_format($minPrice) : ($cat->subCategories->count() . ' sub-categories, ' . $allProds->count() . ' products');
+                    $cheapest  = \App\Models\ProductVariant::cheapestOf($allProds->flatMap(fn($p) => $p->variants));
+                    $pDesc     = $cat->subCategories->count() . ' sub-categories, ' . $allProds->count() . ' products';
                     $catLabel  = isset($cfg) ? ($cfg['label'] ?? $cat->name) : $cat->name;
                 @endphp
                 @if($cfg)
-                <div class="col-md-6 col-lg-4 fade-up">
+                <div class="col-md-6 col-lg-4 fade-up" data-live-category="{{ $cat->id }}">
                     <a href="{{ url($cfg['link']) }}" class="text-decoration-none">
                         <div class="cat-card card">
                             <div class="cat-card-img-wrap">
@@ -365,7 +365,7 @@
                             </div>
                             <div class="card-body p-4">
                                 <h5 class="fw-bold mb-1">{{ $catLabel }}</h5>
-                                <p class="text-muted small mb-3">{{ $pDesc }}</p>
+                                <p class="text-muted small mb-3" data-live-price data-live-prefix="From ">@if($cheapest)<x-price :variant="$cheapest" prefix="From " />@else{{ $pDesc }}@endif</p>
                                 <button class="btn cat-explore-btn w-100 py-2 text-white"
                                         style="background:{{ $cfg['btnBg'] }};">
                                     Explore {{ $catLabel }}

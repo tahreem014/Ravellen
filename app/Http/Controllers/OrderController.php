@@ -50,25 +50,4 @@ class OrderController extends Controller
 
         return view('pages.order-detail', compact('order'));
     }
-
-    /**
-     * POST /orders/{order}/pay-remaining
-     * Collect the remaining 60% on a restocked preorder.
-     */
-    public function payRemaining(Request $request, Order $order): JsonResponse
-    {
-        abort_unless($order->user_id === $request->user()->id, 404);
-
-        try {
-            $updated = $this->orderService->payRemaining($request->user(), $order->id);
-        } catch (\RuntimeException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Remaining payment received — your order is now processing.',
-            'order'   => $updated->toArray(),
-        ]);
-    }
 }

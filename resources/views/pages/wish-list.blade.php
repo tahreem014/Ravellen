@@ -89,6 +89,7 @@
     .wl-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,.12); }
 
     .wl-card-img-wrap {
+        position: relative;
         width: 9rem; min-width: 9rem; height: 9rem;
         overflow: hidden; flex-shrink: 0;
     }
@@ -182,7 +183,8 @@
                 $wishlistProductIds = collect($wishlist)->keys()
                     ->filter(fn($id) => preg_match('/^p-(\d+)$/', $id))
                     ->map(fn($id) => (int) substr($id, 2));
-                $productSlugs = \App\Models\Product::whereIn('id', $wishlistProductIds)->pluck('slug', 'id');
+                $wishlistProducts = \App\Models\Product::with('variants')->whereIn('id', $wishlistProductIds)->get()->keyBy('id');
+                $productSlugs = $wishlistProducts->pluck('slug', 'id');
             @endphp
 
             <div class="d-flex flex-column gap-3" id="wl-items-container">
@@ -192,16 +194,20 @@
                     $url  = preg_match('/^p-(\d+)$/', $item['id'], $m)
                         ? route('product-item', $productSlugs[(int) $m[1]] ?? $m[1])
                         : url($urlMap[$item['id']] ?? '/shop');
+                    // DB products show their live price (sales included), not the label saved when hearted
+                    $liveProduct  = isset($m[1]) ? $wishlistProducts->get((int) $m[1]) : null;
+                    $liveCheapest = $liveProduct?->cheapestVariant();
                 @endphp
-                <div id="wl-item-{{ $item['id'] }}">
+                <div id="wl-item-{{ $item['id'] }}" @if($liveProduct) data-live-product="{{ $liveProduct->id }}" @endif>
                     <div class="wl-card">
                         <div class="wl-card-img-wrap">
-                            <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}">
+                            <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" @if($liveProduct) data-live-image @endif>
+                            <x-discount-badge :label="$liveProduct?->discountLabel()" :live="(bool) $liveProduct" />
                         </div>
                         <div class="wl-card-body">
-                            <div class="wl-item-name">{{ $item['name'] }}</div>
+                            <div class="wl-item-name" data-live-name>{{ $item['name'] }}</div>
                             {{-- <div class="wl-item-desc">{{ $desc }}</div> --}}
-                            <div class="wl-item-price">{{ $item['price'] }}</div>
+                            <div class="wl-item-price" data-live-price data-live-prefix="From ">@if($liveCheapest)<x-price :variant="$liveCheapest" prefix="From " />@else{{ $item['price'] }}@endif</div>
                             <a href="{{ $url }}" class="wl-view-btn">
                                 View Product <i class="ri-arrow-right-line"></i>
                             </a>

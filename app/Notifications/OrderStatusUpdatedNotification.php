@@ -12,7 +12,7 @@ use Illuminate\Notifications\Notification;
 class OrderStatusUpdatedNotification extends Notification
 {
     private const MESSAGES = [
-        'confirmed'                 => 'Your order has been confirmed.',
+        Order::STATUS_CONFIRMED      => 'Your payment was received and your order has been confirmed.',
         Order::STATUS_PROCESSING     => 'Your order is being prepared.',
         Order::STATUS_SHIPPED        => 'Your order has been shipped.',
         Order::STATUS_DELIVERED      => 'Your order has been delivered.',

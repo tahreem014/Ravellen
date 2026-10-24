@@ -8,6 +8,7 @@ final readonly class OrderData
 {
     public function __construct(
         public int     $id,
+        public string  $uuid,
         public string  $trackingNumber,
         public string  $orderType,
         public float   $totalAmount,
@@ -24,6 +25,7 @@ final readonly class OrderData
     {
         return new self(
             id:              $order->id,
+            uuid:            $order->uuid,
             trackingNumber:  $order->tracking_number ?? 'RVL-' . str_pad($order->id, 6, '0', STR_PAD_LEFT),
             orderType:       $order->order_type,
             totalAmount:     (float) $order->total_amount,
@@ -41,6 +43,7 @@ final readonly class OrderData
     {
         return [
             'id'               => $this->id,
+            'uuid'             => $this->uuid,
             'tracking_number'  => $this->trackingNumber,
             'order_type'       => $this->orderType,
             'total_amount'     => $this->totalAmount,

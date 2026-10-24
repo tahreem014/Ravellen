@@ -340,12 +340,12 @@
                         $allProds = $allProds->concat($sub->products);
                     }
                     $firstImg  = isset($cfg) ? ($allProds->first(fn($p) => $p->images->isNotEmpty())?->images->first()?->image_url ?? $cfg['fallback']) : null;
-                    $minPrice  = $allProds->flatMap(fn($p) => $p->variants)->min('price');
-                    $pDesc     = $minPrice ? 'From PKR ' . number_format($minPrice) : ($cat->subCategories->count() . ' sub-categories, ' . $allProds->count() . ' products');
+                    $cheapest  = \App\Models\ProductVariant::cheapestOf($allProds->flatMap(fn($p) => $p->variants));
+                    $pDesc     = $cat->subCategories->count() . ' sub-categories, ' . $allProds->count() . ' products';
                     $catLabel  = isset($cfg) ? ($cfg['label'] ?? $cat->name) : $cat->name;
                 ?>
                 <?php if($cfg): ?>
-                <div class="col-md-6 col-lg-4 fade-up">
+                <div class="col-md-6 col-lg-4 fade-up" data-live-category="<?php echo e($cat->id); ?>">
                     <a href="<?php echo e(url($cfg['link'])); ?>" class="text-decoration-none">
                         <div class="cat-card card">
                             <div class="cat-card-img-wrap">
@@ -357,7 +357,26 @@
                             </div>
                             <div class="card-body p-4">
                                 <h5 class="fw-bold mb-1"><?php echo e($catLabel); ?></h5>
-                                <p class="text-muted small mb-3"><?php echo e($pDesc); ?></p>
+                                <p class="text-muted small mb-3" data-live-price data-live-prefix="From "><?php if($cheapest): ?><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['variant' => $cheapest,'prefix' => 'From ']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('price'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['variant' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($cheapest),'prefix' => 'From ']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?><?php else: ?><?php echo e($pDesc); ?><?php endif; ?></p>
                                 <button class="btn cat-explore-btn w-100 py-2 text-white"
                                         style="background:<?php echo e($cfg['btnBg']); ?>;">
                                     Explore <?php echo e($catLabel); ?>

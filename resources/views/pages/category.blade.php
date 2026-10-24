@@ -120,6 +120,10 @@
 @php
     $fallbackImage = 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80';
 
+    // Live updates: this page's product set, so adding / removing a product refreshes it (layouts/live-updates)
+    $liveListing   = 'category:' . ($dbCategories ?? collect())->pluck('name')->implode('|');
+    $liveSignature = app(\App\Services\LiveUpdateService::class)->listingSignature($liveListing);
+
     // Flatten all products from the loaded DB categories
     $allDbProducts = collect();
     foreach (($dbCategories ?? collect()) as $dbCat) {
@@ -193,19 +197,20 @@
     </div>
 
     {{-- ── Grid ── --}}
-    <div class="row g-4" id="gb-grid">
+    <div class="row g-4" id="gb-grid" data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}">
         @forelse($allDbProducts as $product)
         @php
             $subName   = $product->_sub_name ?? $product->subCategory?->name ?? '';
             $tag       = $giftTagMap[$subName] ?? 'bts';
             $image     = $product->images->first()?->image_url ?? $fallbackImage;
-            $minPrice  = $product->variants->min('price');
-            $priceLabel = $minPrice ? 'From PKR ' . number_format($minPrice) : 'PKR —';
+            $cheapest  = $product->cheapestVariant();
+            $priceLabel = $cheapest ? 'From PKR ' . number_format($cheapest->effectivePrice()) : 'PKR —';
         @endphp
-        <div class="col-6 col-md-4 gb-item" data-tag="{{ $tag }}">
+        <div class="col-6 col-md-4 gb-item" data-tag="{{ $tag }}" data-live-product="{{ $product->id }}">
             <div class="gb-card">
                 <div class="gb-card-img-wrap">
-                    <img src="{{ $image }}" alt="{{ $product->name }}" class="gb-card-img">
+                    <img src="{{ $image }}" alt="{{ $product->name }}" class="gb-card-img" data-live-image>
+                    <x-discount-badge :label="$product->discountLabel()" live />
                     @if($subName)
                         <span class="gb-badge" style="background:#ec4899;">{{ $subName }}</span>
                     @endif
@@ -220,9 +225,9 @@
                     </button>
                 </div>
                 <div class="p-3 d-flex flex-column">
-                    <h6 class="gb-name mb-1">{{ $product->name }}</h6>
+                    <h6 class="gb-name mb-1" data-live-name>{{ $product->name }}</h6>
                     <p class="gb-desc">{{ $product->description }}</p>
-                    <p class="gb-price">{{ $priceLabel }}</p>
+                    <p class="gb-price" data-live-price data-live-prefix="From "><x-price :variant="$cheapest" prefix="From " /></p>
                     @if($product->variants->count() > 1)
                         <p class="text-muted mb-2" style="font-size:.75rem;">{{ $product->variants->count() }} variants available</p>
                     @endif
@@ -287,19 +292,20 @@
         </div>
 
         {{-- ── Grid ── --}}
-        <div class="row g-4" id="bts-gb-grid">
+        <div class="row g-4" id="bts-gb-grid" data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}">
             @forelse($allDbProducts as $product)
             @php
                 $subName    = $product->_sub_name ?? $product->subCategory?->name ?? '';
                 $tag        = $btsGiftTagMap[$subName] ?? 'era';
                 $image      = $product->images->first()?->image_url ?? $fallbackImage;
-                $minPrice   = $product->variants->min('price');
-                $priceLabel = $minPrice ? 'From PKR ' . number_format($minPrice) : 'PKR —';
+                $cheapest   = $product->cheapestVariant();
+                $priceLabel = $cheapest ? 'From PKR ' . number_format($cheapest->effectivePrice()) : 'PKR —';
             @endphp
-            <div class="col-6 col-md-4 bts-gb-item" data-tag="{{ $tag }}">
+            <div class="col-6 col-md-4 bts-gb-item" data-tag="{{ $tag }}" data-live-product="{{ $product->id }}">
                 <div class="gb-card">
                     <div class="gb-card-img-wrap">
-                        <img src="{{ $image }}" alt="{{ $product->name }}" class="gb-card-img">
+                        <img src="{{ $image }}" alt="{{ $product->name }}" class="gb-card-img" data-live-image>
+                        <x-discount-badge :label="$product->discountLabel()" live />
                         @if($subName)
                             <span class="gb-badge" style="background:#7c3aed;">{{ $subName }}</span>
                         @endif
@@ -314,9 +320,9 @@
                         </button>
                     </div>
                     <div class="p-3 d-flex flex-column">
-                        <h6 class="gb-name mb-1">{{ $product->name }}</h6>
+                        <h6 class="gb-name mb-1" data-live-name>{{ $product->name }}</h6>
                         <p class="gb-desc">{{ $product->description }}</p>
-                        <p class="bts-gb-price">{{ $priceLabel }}</p>
+                        <p class="bts-gb-price" data-live-price data-live-prefix="From "><x-price :variant="$cheapest" prefix="From " /></p>
                         @if($product->variants->count() > 1)
                             <p class="text-muted mb-2" style="font-size:.75rem;">{{ $product->variants->count() }} variants available</p>
                         @endif
@@ -374,20 +380,21 @@
     </div>
 
     {{-- Ceramic Grid --}}
-    <div class="row g-4" id="cer-grid">
+    <div class="row g-4" id="cer-grid" data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}">
         @forelse($allDbProducts as $product)
         @php
             $subName    = $product->_sub_name ?? $product->subCategory?->name ?? '';
             $tag        = $ceramicTagMap[$subName] ?? 'mug';
             $image      = $product->images->first()?->image_url ?? $fallbackImage;
-            $minPrice   = $product->variants->min('price');
-            $priceLabel = $minPrice ? 'PKR ' . number_format($minPrice) : 'PKR —';
+            $cheapest   = $product->cheapestVariant();
+            $priceLabel = $cheapest ? 'PKR ' . number_format($cheapest->effectivePrice()) : 'PKR —';
             $variantName = $product->variants->first()?->variant_name;
         @endphp
-        <div class="col-6 col-md-4 cer-item" data-tag="{{ $tag }}">
+        <div class="col-6 col-md-4 cer-item" data-tag="{{ $tag }}" data-live-product="{{ $product->id }}">
             <div class="gb-card">
                 <div class="gb-card-img-wrap">
-                    <img src="{{ $image }}" alt="{{ $product->name }}" class="gb-card-img">
+                    <img src="{{ $image }}" alt="{{ $product->name }}" class="gb-card-img" data-live-image>
+                    <x-discount-badge :label="$product->discountLabel()" live />
                     @if($subName)
                         <span class="gb-badge" style="background:#C8A98A;">{{ $subName }}</span>
                     @endif
@@ -402,9 +409,9 @@
                     </button>
                 </div>
                 <div class="p-3 d-flex flex-column">
-                    <h6 class="gb-name mb-1">{{ $product->name }}</h6>
+                    <h6 class="gb-name mb-1" data-live-name>{{ $product->name }}</h6>
                     <p class="gb-desc">{{ $product->description }}</p>
-                    <p class="gb-price">{{ $priceLabel }}</p>
+                    <p class="gb-price" data-live-price><x-price :variant="$cheapest" /></p>
                     @if($variantName)
                         <p class="text-muted mb-2" style="font-size:.75rem;">{{ $variantName }}</p>
                     @endif

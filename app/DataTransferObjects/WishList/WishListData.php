@@ -25,7 +25,7 @@ final readonly class WishListData
             productId: $wishlist->product_id,
             productName: $product?->name ?? '',
             productImage: $product?->images->first()?->image,
-            price: $product?->variants->min('price'),
+            price: $product?->cheapestVariant()?->effectivePrice(),
             createdAt: $wishlist->created_at->toDateTimeString(),
         );
     }

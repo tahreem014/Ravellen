@@ -13,7 +13,8 @@
         </form>
     </div>
 
-    <div class="admin-card card">
+    
+    <div class="admin-card card" data-admin-region="refunds">
         <div class="table-responsive">
             <table class="table align-middle mb-0">
                 <thead>
@@ -49,13 +50,13 @@
                             </td>
                             <td class="text-end">
                                 <?php if($refund->status === 'pending'): ?>
-                                    <form action="<?php echo e(route('admin.refund-requests.update', $refund)); ?>" method="POST" class="d-inline">
+                                    <form action="<?php echo e(route('admin.refund-requests.update', $refund)); ?>" method="POST" class="d-inline" data-ajax>
                                         <?php echo csrf_field(); ?>
                                         <?php echo method_field('PUT'); ?>
                                         <input type="hidden" name="status" value="approved">
                                         <button class="btn btn-sm btn-outline-success"><i class="ri-check-line"></i> Approve</button>
                                     </form>
-                                    <form action="<?php echo e(route('admin.refund-requests.update', $refund)); ?>" method="POST" class="d-inline">
+                                    <form action="<?php echo e(route('admin.refund-requests.update', $refund)); ?>" method="POST" class="d-inline" data-ajax>
                                         <?php echo csrf_field(); ?>
                                         <?php echo method_field('PUT'); ?>
                                         <input type="hidden" name="status" value="rejected">

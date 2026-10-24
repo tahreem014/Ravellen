@@ -35,4 +35,11 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'safepay' => [
+        'environment'    => env('SAFEPAY_ENV', 'sandbox'),
+        'public_key'     => env('SAFEPAY_PUBLIC_KEY'),
+        'secret_key'     => env('SAFEPAY_SECRET_KEY'),
+        'webhook_secret' => env('SAFEPAY_WEBHOOK_SECRET'),
+    ],
+
 ];

@@ -12,6 +12,7 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        // Authenticated by the X-SFPY-SIGNATURE HMAC instead of a session/CSRF token.
+        'payments/safepay/webhook',
     ];
 }

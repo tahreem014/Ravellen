@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class TrackOrderController extends Controller
@@ -54,6 +55,9 @@ class TrackOrderController extends Controller
                 if (ctype_digit($query)) {
                     $q->orWhere('id', (int) $query);
                 }
+                if (Str::isUuid($query)) {
+                    $q->orWhere('uuid', $query);
+                }
                 $q->orWhere('tracking_number', $query);
             })
             ->first();
@@ -101,11 +105,13 @@ class TrackOrderController extends Controller
             ? [
                 Order::STATUS_AWAITING_STOCK => 'Awaiting Stock',
                 Order::STATUS_PAYMENT_DUE    => 'Payment Due',
+                Order::STATUS_CONFIRMED      => 'Confirmed',
                 Order::STATUS_PROCESSING     => 'Processing',
                 Order::STATUS_SHIPPED        => 'Shipped',
                 Order::STATUS_DELIVERED      => 'Delivered',
             ]
             : [
+                Order::STATUS_CONFIRMED  => 'Confirmed',
                 Order::STATUS_PROCESSING => 'Processing',
                 Order::STATUS_SHIPPED    => 'Shipped',
                 Order::STATUS_DELIVERED  => 'Delivered',

@@ -87,6 +87,7 @@
     .wl-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,.12); }
 
     .wl-card-img-wrap {
+        position: relative;
         width: 9rem; min-width: 9rem; height: 9rem;
         overflow: hidden; flex-shrink: 0;
     }
@@ -180,7 +181,8 @@
                 $wishlistProductIds = collect($wishlist)->keys()
                     ->filter(fn($id) => preg_match('/^p-(\d+)$/', $id))
                     ->map(fn($id) => (int) substr($id, 2));
-                $productSlugs = \App\Models\Product::whereIn('id', $wishlistProductIds)->pluck('slug', 'id');
+                $wishlistProducts = \App\Models\Product::with('variants')->whereIn('id', $wishlistProductIds)->get()->keyBy('id');
+                $productSlugs = $wishlistProducts->pluck('slug', 'id');
             ?>
 
             <div class="d-flex flex-column gap-3" id="wl-items-container">
@@ -190,16 +192,58 @@
                     $url  = preg_match('/^p-(\d+)$/', $item['id'], $m)
                         ? route('product-item', $productSlugs[(int) $m[1]] ?? $m[1])
                         : url($urlMap[$item['id']] ?? '/shop');
+                    // DB products show their live price (sales included), not the label saved when hearted
+                    $liveProduct  = isset($m[1]) ? $wishlistProducts->get((int) $m[1]) : null;
+                    $liveCheapest = $liveProduct?->cheapestVariant();
                 ?>
-                <div id="wl-item-<?php echo e($item['id']); ?>">
+                <div id="wl-item-<?php echo e($item['id']); ?>" <?php if($liveProduct): ?> data-live-product="<?php echo e($liveProduct->id); ?>" <?php endif; ?>>
                     <div class="wl-card">
                         <div class="wl-card-img-wrap">
-                            <img src="<?php echo e($item['image']); ?>" alt="<?php echo e($item['name']); ?>">
+                            <img src="<?php echo e($item['image']); ?>" alt="<?php echo e($item['name']); ?>" <?php if($liveProduct): ?> data-live-image <?php endif; ?>>
+                            <?php if (isset($component)) { $__componentOriginalc259565ab925afbe6d933017bcb8ab06 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalc259565ab925afbe6d933017bcb8ab06 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.discount-badge','data' => ['label' => $liveProduct?->discountLabel(),'live' => (bool) $liveProduct]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('discount-badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($liveProduct?->discountLabel()),'live' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute((bool) $liveProduct)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
+<?php $attributes = $__attributesOriginalc259565ab925afbe6d933017bcb8ab06; ?>
+<?php unset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
+<?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
+<?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
                         </div>
                         <div class="wl-card-body">
-                            <div class="wl-item-name"><?php echo e($item['name']); ?></div>
+                            <div class="wl-item-name" data-live-name><?php echo e($item['name']); ?></div>
                             
-                            <div class="wl-item-price"><?php echo e($item['price']); ?></div>
+                            <div class="wl-item-price" data-live-price data-live-prefix="From "><?php if($liveCheapest): ?><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['variant' => $liveCheapest,'prefix' => 'From ']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('price'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['variant' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($liveCheapest),'prefix' => 'From ']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?><?php else: ?><?php echo e($item['price']); ?><?php endif; ?></div>
                             <a href="<?php echo e($url); ?>" class="wl-view-btn">
                                 View Product <i class="ri-arrow-right-line"></i>
                             </a>

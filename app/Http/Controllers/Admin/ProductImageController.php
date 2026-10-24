@@ -5,44 +5,24 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Services\ProductMediaService;
 use Illuminate\Http\Request;
 
 class ProductImageController extends Controller
 {
+    public function __construct(private readonly ProductMediaService $mediaService)
+    {
+    }
+
+    /** Save every photo / video picked in the edit page's Media section at once. */
     public function store(Request $request, Product $product)
     {
-        $request->validate([
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'video' => ['nullable', 'mimetypes:video/mp4,video/quicktime', 'max:20480'],
-        ]);
+        $request->validate($this->mediaService->rules(required: true), $this->mediaService->messages());
 
-        if (! $request->hasFile('image') && ! $request->hasFile('video')) {
-            return back()->withErrors(['image' => 'Choose an image or a video to upload.']);
-        }
+        $count = $this->mediaService->store($product, $request->file('media', []));
 
-        $destination = public_path('images/products');
-
-        $imageName = null;
-        $videoName = null;
-
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $imageName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->move($destination, $imageName);
-        }
-
-        if ($request->hasFile('video')) {
-            $file = $request->file('video');
-            $videoName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->move($destination, $videoName);
-        }
-
-        $product->images()->create([
-            'image' => $imageName,
-            'video' => $videoName,
-        ]);
-
-        return redirect()->route('admin.products.edit', $product)->with('status', 'Media uploaded.');
+        return redirect()->route('admin.products.edit', $product)
+            ->with('status', $count === 1 ? '1 file uploaded.' : "{$count} files uploaded.");
     }
 
     public function destroy(Product $product, ProductImage $image)

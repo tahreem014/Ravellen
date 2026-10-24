@@ -92,6 +92,7 @@
         padding: .25rem .75rem;
     }
     .status-delivered { background: #dcfce7; color: #16a34a; }
+    .status-confirmed  { background: #ecfdf5; color: #059669; }
     .status-processing { background: #eff6ff; color: #2563eb; }
     .status-pending    { background: #fefce8; color: #ca8a04; }
     .status-shipped        { background: #ede9fe; color: #7c3aed; }
@@ -225,6 +226,7 @@
 @php
     $statusMap = [
         'delivered'      => ['label'=>'Delivered',      'class'=>'status-delivered',      'icon'=>'ri-checkbox-circle-line'],
+        'confirmed'      => ['label'=>'Confirmed',      'class'=>'status-confirmed',      'icon'=>'ri-checkbox-circle-line'],
         'processing'     => ['label'=>'Processing',     'class'=>'status-processing',     'icon'=>'ri-time-line'],
         'pending'        => ['label'=>'Pending',        'class'=>'status-pending',        'icon'=>'ri-hourglass-line'],
         'shipped'        => ['label'=>'Shipped',        'class'=>'status-shipped',        'icon'=>'ri-truck-line'],
@@ -296,8 +298,8 @@
             <button class="profile-tab" onclick="switchTab('settings',this)">Settings</button>
         </div>
 
-        {{-- ── Overview ── --}}
-        <div id="tab-overview" class="tab-panel active">
+        {{-- ── Overview ── (data-live-region: re-rendered when an order / refund changes, layouts/live-updates) --}}
+        <div id="tab-overview" class="tab-panel active" data-live-region="profile-overview">
             <div class="row g-3 mb-4">
                 <div class="col-4">
                     <div class="stat-card">
@@ -346,8 +348,8 @@
             </div>
         </div>
 
-        {{-- ── Order History ── --}}
-        <div id="tab-orders" class="tab-panel">
+        {{-- ── Order History ── (data-live-region, as above) --}}
+        <div id="tab-orders" class="tab-panel" data-live-region="profile-orders">
             <div class="content-card">
                 <div class="section-heading">Order History</div>
                 <div class="section-sub">View and track all your orders</div>
@@ -396,7 +398,7 @@
                             <span class="status-badge status-awaiting_stock"><i class="ri-hourglass-line"></i> Awaiting Stock</span>
                             @elseif($itemPaymentDue)
                             <button type="button" class="pay-remaining-item-btn"
-                                onclick="payRemainingItem({{ $order->id }}, this)">Complete Remaining Payment</button>
+                                onclick="payRemainingItem({{ Js::from($order->uuid) }}, this)">Complete Remaining Payment</button>
                             @endif
                             @if(!$refund && $item->isRefundEligible())
                             <button type="button" class="refund-request-btn" style="margin-left:0;"
@@ -431,7 +433,7 @@
 
                     <div class="d-flex gap-2 mt-3 flex-wrap">
                         <button type="button" class="track-btn"
-                            onclick="window.location.href='{{ route('track-order', ['order_id' => $order->id]) }}'">Track Package</button>
+                            onclick="window.location.href='{{ route('track-order', ['order_id' => $order->tracking_number ?: $order->uuid]) }}'">Track Package</button>
                         <button class="invoice-btn">View Invoice</button>
                     </div>
                 </div>
@@ -1024,12 +1026,12 @@ function submitRefundRequest() {
     });
 }
 
-function payRemainingItem(orderId, btn) {
+function payRemainingItem(orderUuid, btn) {
     btn.disabled = true;
     const originalText = btn.textContent;
     btn.textContent = 'Processing…';
 
-    fetch(`/orders/${orderId}/pay-remaining`, {
+    fetch(`/orders/${orderUuid}/pay-remaining`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -25,17 +25,23 @@ class CartService
     /**
      * Add a new item or increment qty if same product+variant already exists.
      *
-     * @throws \RuntimeException if the variant is out_of_stock, restocking, or discontinued —
-     *         only active and pre_order variants can be purchased.
+     * The variant is what carries the price, so it must be one of this
+     * product's own variants — a row without one would check out at PKR 0.
+     *
+     * @throws \RuntimeException if the variant doesn't belong to the product, or is
+     *         out_of_stock, restocking, or discontinued — only active and pre_order
+     *         variants can be purchased.
      */
     public function addItem(User $user, StoreCartItemData $data): CartItemData
     {
-        if ($data->productVariantId) {
-            $variant = ProductVariant::find($data->productVariantId);
+        $variant = ProductVariant::find($data->productVariantId);
 
-            if ($variant && ! $variant->isPurchasable()) {
-                throw new \RuntimeException('This item is currently unavailable and cannot be added to your cart.');
-            }
+        if (! $variant || $variant->product_id !== $data->productId) {
+            throw new \RuntimeException('Please choose an available option for this product.');
+        }
+
+        if (! $variant->isPurchasable()) {
+            throw new \RuntimeException('This item is currently unavailable and cannot be added to your cart.');
         }
 
         $existing = $user->cartItems()

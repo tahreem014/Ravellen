@@ -21,27 +21,38 @@ class OrderService
     }
 
     /**
-     * Place order(s) from the user's DB cart, then clear the cart.
+     * Place order(s) from the cart items the user selected, then remove only
+     * those items from the cart — anything left unselected stays put.
      *
-     * A cart is split by variant status: active-variant items become one
-     * "normal" order (paid in full), pre_order-variant items become a
-     * separate "pre_order" order (40% advance). A cart containing only one
-     * kind produces a single order — the split logic has no special case
+     * The selection is split by variant status: active-variant items become
+     * one "normal" order (paid in full), pre_order-variant items become a
+     * separate "pre_order" order (40% advance). A selection containing only
+     * one kind produces a single order — the split logic has no special case
      * for it, it's just an empty bucket.
      *
+     * Ids are looked up through the user's own cart relation, so an id that
+     * belongs to someone else (or no longer exists) is simply not found.
+     *
      * @return OrderData[]
-     * @throws \RuntimeException if the user's cart is empty
+     * @throws \RuntimeException if none of the selected items are in the user's cart
      */
     public function placeOrder(User $user, PlaceOrderData $data): array
     {
         return DB::transaction(function () use ($user, $data) {
 
             $cartItems = $user->cartItems()
+                ->whereIn('id', $data->cartItemIds)
                 ->with(['product.category', 'productVariant'])
                 ->get();
 
             if ($cartItems->isEmpty()) {
-                throw new \RuntimeException('Your cart is empty.');
+                throw new \RuntimeException('The selected items are no longer in your cart.');
+            }
+
+            // Prices come from the variant, so a row whose variant was removed
+            // or taken off sale can't be priced — never let it through at PKR 0.
+            if ($cartItems->contains(fn (AddToCart $item) => ! $item->productVariant?->isPurchasable())) {
+                throw new \RuntimeException('Some selected items are no longer available. Please remove them from your cart and try again.');
             }
 
             $address = $user->addresses()->find($data->addressId);
@@ -70,34 +81,9 @@ class OrderService
                 $orders[] = $this->createOrder($user, $data, $preorderItems, $shippingFee, $rate->id, isPreorder: true);
             }
 
-            $user->cartItems()->delete();
+            $user->cartItems()->whereIn('id', $cartItems->modelKeys())->delete();
 
             return array_map(fn (Order $order) => OrderData::fromModel($order), $orders);
-        });
-    }
-
-    /**
-     * Collect the remaining 60% on a preorder order that's back in stock.
-     *
-     * @throws \RuntimeException if the order doesn't belong to the user or
-     *         isn't actually waiting on a remaining payment right now
-     */
-    public function payRemaining(User $user, int $orderId): OrderData
-    {
-        return DB::transaction(function () use ($user, $orderId) {
-            $order = $user->orders()->lockForUpdate()->findOrFail($orderId);
-
-            if ($order->order_status !== Order::STATUS_PAYMENT_DUE) {
-                throw new \RuntimeException('This order has no remaining payment due right now.');
-            }
-
-            $order->update([
-                'payment_stage'      => Order::STAGE_COMPLETED,
-                'remaining_paid_at'  => now(),
-                'order_status'       => Order::STATUS_PROCESSING,
-            ]);
-
-            return OrderData::fromModel($order);
         });
     }
 
@@ -106,7 +92,9 @@ class OrderService
      */
     private function createOrder(User $user, PlaceOrderData $data, Collection $items, float $shippingFee, int $shippingRateId, bool $isPreorder): Order
     {
-        $subtotal = $items->sum(fn (AddToCart $item) => (float) ($item->productVariant?->price ?? 0) * $item->qty);
+        // effectivePrice() is the sale price while one is set — always read
+        // from the DB here, never from what the browser displayed.
+        $subtotal = $items->sum(fn (AddToCart $item) => $item->productVariant->effectivePrice() * $item->qty);
         $tracking = 'RVL-' . strtoupper(Str::random(8));
 
         $order = Order::create([
@@ -114,17 +102,21 @@ class OrderService
             'order_type'        => $isPreorder ? Order::TYPE_PRE_ORDER : Order::TYPE_NORMAL,
             'shipping_name'     => $data->shippingName,
             'shipping_phone'    => $data->shippingPhone,
-            'shipping_fee'      => $shippingFee,
+            'shipping_fee'      => number_format($shippingFee, 2, '.', ''),
             'shipping_rate_id'  => $shippingRateId,
             'shipping_address'  => $data->shippingAddress,
-            'total_amount'      => $subtotal + $shippingFee,
-            'advance_amount'    => $isPreorder ? round($subtotal * self::ADVANCE_RATE, 2) : null,
-            'remaining_amount'  => $isPreorder ? round($subtotal * (1 - self::ADVANCE_RATE), 2) + $shippingFee : null,
+            'total_amount'      => number_format($subtotal + $shippingFee, 2, '.', ''),
+            'advance_amount'    => $isPreorder ? number_format($subtotal * self::ADVANCE_RATE, 2, '.', '') : null,
+            'remaining_amount'  => $isPreorder ? number_format($subtotal * (1 - self::ADVANCE_RATE) + $shippingFee, 2, '.', '') : null,
             'order_date'        => now(),
-            'order_status'      => $isPreorder ? Order::STATUS_AWAITING_STOCK : Order::STATUS_PROCESSING,
+            // Payment hasn't happened yet — Safepay checkout is initiated
+            // as a separate step right after the order is created, and
+            // these move to their paid/awaiting-stock equivalents only
+            // once that payment is verified.
+            'order_status'      => Order::STATUS_PENDING,
             'payment_method'    => $data->paymentMethod,
-            'payment_status'    => 'paid',
-            'payment_stage'     => $isPreorder ? Order::STAGE_ADVANCE_PAID : null,
+            'payment_status'    => Order::PAYMENT_PENDING,
+            'payment_stage'     => null,
             'tracking_number'   => $tracking,
         ]);
 
@@ -133,7 +125,7 @@ class OrderService
                 'product_id'         => $item->product_id,
                 'product_variant_id' => $item->product_variant_id,
                 'qty'                => $item->qty,
-                'price'              => (float) ($item->productVariant?->price ?? 0),
+                'price'              => $item->productVariant->effectivePrice(),
                 'comment'            => $item->comment,
                 'preference'         => $item->preference,
             ]);

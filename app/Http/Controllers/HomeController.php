@@ -12,6 +12,13 @@ use Illuminate\Support\Facades\Session;
 
 class HomeController extends Controller
 {
+    // bias keys used by the BTS Merch page → that member's BTS Merch sub-category
+    public const BTS_BIAS_SUB_CATEGORIES = [
+        'jungkook' => 'Jungkook',     'taehyung' => 'V (Taehyung)', 'jimin' => 'Jimin',
+        'namjoon'  => 'RM (Namjoon)', 'jin'      => 'Jin',          'jhope' => 'J-Hope',
+        'suga'     => 'SUGA',         'ot7'      => 'OT7',          'bt21'  => 'BT21',
+    ];
+
     /**
      * Create a new controller instance.
      *
@@ -57,6 +64,32 @@ class HomeController extends Controller
         ])->orderBy('name')->get();
 
         return view('pages.shop', compact('categories'));
+    }
+
+    /**
+     * BTS Merch landing page. Picking a bias shows that member's starting
+     * prices, read from the same products the bias product pages sell.
+     */
+    public function btsMerch()
+    {
+        $products = \App\Models\Product::with(['variants', 'subCategory'])
+            ->whereHas('category', fn ($q) => $q->where('name', 'BTS Merch'))
+            ->get();
+
+        $biasPrices = [];
+
+        foreach (self::BTS_BIAS_SUB_CATEGORIES as $bias => $subCategory) {
+            $memberProducts = $products->filter(fn ($p) => $p->subCategory?->name === $subCategory);
+            $scoop = $memberProducts->first(fn ($p) => str_contains($p->name, 'Scoop'))?->cheapestVariant();
+            $balls = $memberProducts->first(fn ($p) => str_contains($p->name, 'Balls'));
+
+            $biasPrices[$bias] = [
+                'scoop' => $scoop ? ['price' => $scoop->effectivePrice(), 'original' => $scoop->hasDiscount() ? (float) $scoop->price : null] : null,
+                'balls' => $balls ? ($balls->packOptions()[0] ?? null) : null,   // smallest pack
+            ];
+        }
+
+        return view('pages.bts-merch', compact('biasPrices'));
     }
 
     public function categoryPage(string $section = 'gift-box')
@@ -126,9 +159,10 @@ class HomeController extends Controller
 
     /**
      * Generic product-detail pages (mystery-balls, mystery-scoops, bts-scoop,
-     * bts-balls, ceramic, gift-box). Looks up the canonical DB product and
-     * injects $dbProductMap so the JS can send product_id + variant_id to the
-     * cart API.
+     * bts-balls, ceramic, gift-box). For the mystery types it looks up the
+     * canonical DB product — or, with ?bias= from the BTS Merch page, that
+     * member's product — so prices, discounts and the variant ids sent to the
+     * cart API all come from the database.
      */
     public function genericProductPage(string $type): \Illuminate\View\View
     {
@@ -137,36 +171,36 @@ class HomeController extends Controller
             'mystery-scoops' => ['category' => 'Mystery Scoops', 'name' => 'Original Mystery Scoop'],
             'bts-scoop'      => ['category' => 'BTS Merch',      'name' => null],
             'bts-balls'      => ['category' => 'BTS Merch',      'name' => null],
-            'ceramic'        => ['category' => 'Ceramic Items', 'name' => null],
-            'gift-box'       => ['category' => 'Gift Boxes',    'name' => null],
         ];
 
+        $biasSubCategories = self::BTS_BIAS_SUB_CATEGORIES;
+
         $map     = $categoryMap[$type] ?? null;
+        $bias    = request('bias');
         $product = null;
 
         if ($map) {
-            $query = \App\Models\Product::with(['variants', 'images'])
-                ->whereHas('category', fn ($q) => $q->where('name', $map['category']));
+            $isBalls = str_contains($type, 'balls');
+            $query   = \App\Models\Product::with(['variants', 'images']);
 
-            if ($map['name']) {
-                $query->where('name', $map['name']);
+            if ($bias || ! $map['name']) {
+                $query->whereHas('category', fn ($q) => $q->where('name', 'BTS Merch'))
+                    ->where('name', 'like', $isBalls ? '%Balls%' : '%Scoop%');
+
+                if (isset($biasSubCategories[$bias])) {
+                    $query->whereHas('subCategory', fn ($q) => $q->where('name', $biasSubCategories[$bias]));
+                }
+            } else {
+                $query->whereHas('category', fn ($q) => $q->where('name', $map['category']))
+                    ->orderByRaw('name = ? desc', [$map['name']]);
             }
 
-            $product = $query->first();
+            $product = $query->orderBy('id')->first();
         }
 
-        $dbProductMap = $product ? [
-            'product_id' => $product->id,
-            'variants'   => $product->variants->map(fn ($v) => [
-                'id'    => $v->id,
-                'name'  => $v->variant_name,
-                'price' => (int) $v->price,
-            ])->values()->toArray(),
-        ] : ['product_id' => null, 'variants' => []];
-
         return view('pages.product-detail', [
-            'type'         => $type,
-            'dbProductMap' => $dbProductMap,
+            'type'           => $type,
+            'genericProduct' => $product,
         ]);
     }
 

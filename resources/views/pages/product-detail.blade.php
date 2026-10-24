@@ -114,36 +114,35 @@
     // Fall back to mystery-scoops reviews if type not found
     $reviews = $allReviews[$productType] ?? $allReviews['mystery-scoops'];
 
-    // ── Resolve DB product/variant IDs for generic (non product-item) types ──
-    // These are used by addToCart() to persist to the DB for auth users.
-    // Values from the seeder: Mystery Scoops product_id=43, Mystery Balls product_id=44
-    // BTS Merch & Ceramic use sub-category products (no single product_id here — handled by piAddToCart).
-    $dbProductMap = [];
-    if (in_array($productType, ['mystery-scoops', 'mystery-balls', 'bts-scoop', 'bts-balls', 'ceramic', 'gift-box'])) {
-        $categoryNameForType = match($productType) {
-            'mystery-scoops' => 'Mystery Scoops',
-            'mystery-balls'  => 'Mystery Balls',
-            default          => null,
-        };
-        if ($categoryNameForType) {
-            $dbProduct = \App\Models\Category::where('name', $categoryNameForType)
-                ->first()
-                ?->products()
-                ->whereNull('sub_category_id')
-                ->with('variants')
-                ->first();
-            if ($dbProduct) {
-                $dbProductMap = [
-                    'product_id' => $dbProduct->id,
-                    'variants'   => $dbProduct->variants->map(fn($v) => [
-                        'id'    => $v->id,
-                        'name'  => $v->variant_name,
-                        'price' => (int) $v->price,
-                    ])->values()->all(),
-                ];
-            }
-        }
-    }
+    // ── DB product behind the generic (non product-item) mystery pages ──────
+    // HomeController::genericProductPage resolves it (the BTS member's product
+    // for ?bias=). Prices shown here and the ids addToCart() sends to the cart
+    // API all come from it; ceramic/gift-box pages have none.
+    $genericProduct = $genericProduct ?? null;
+    $dbProductMap   = ['product_id' => $genericProduct?->id];
+
+    // Mystery Balls quantity options — see Product::packOptions()
+    $ballPacks = $genericProduct?->packOptions() ?? [];
+    $ballsMode = $genericProduct?->pricing_mode;
+    $ballsMin  = $ballPacks[0]['qty'] ?? 5;
+    $ballsMax  = $ballPacks ? $ballPacks[count($ballPacks) - 1]['qty'] : 50;
+
+    // Mystery Scoop sizes, cheapest first ("Classic Scoop" → "Classic")
+    $scoopOptions = $genericProduct && ! $genericProduct->usesPackPricing()
+        ? $genericProduct->variants->sortBy('price')->values()->map(fn ($v) => [
+            'id'       => $v->id,
+            'name'     => trim(preg_replace('/\bscoop\b/i', '', $v->variant_name)) ?: $v->variant_name,
+            'price'    => $v->effectivePrice(),
+            'original' => $v->hasDiscount() ? (float) $v->price : null,
+            'percent'  => $v->discountPercent(),
+        ])->all()
+        : [];
+    $firstScoop = $scoopOptions[0] ?? null;
+
+    // Live updates (layouts/live-updates): the DB product this page shows, and a
+    // fingerprint of its sizes / packs so a structural admin change re-renders the page
+    $livePageProduct   = ($type ?? null) === 'product-item' ? ($product ?? null) : $genericProduct;
+    $livePageStructure = $livePageProduct ? app(\App\Services\LiveUpdateService::class)->structure($livePageProduct) : null;
 @endphp
 
 @section('css')
@@ -156,7 +155,15 @@
         overflow: hidden; transition: box-shadow .3s;
     }
     .product-card:hover { box-shadow: 0 12px 32px rgba(0,0,0,.13); }
-    .product-img { width: 100%; height: 100%; min-height: 18rem; object-fit: cover; display: block; }
+    /* contain: always show the whole photo, even when the details column makes the card tall */
+    .product-img { position: relative; width: 100%; height: 100%; min-height: 18rem; object-fit: contain; display: block; }
+    /* the space around a fitted photo is filled with a soft blurred copy of it (set up in the page script) */
+    .product-img-frame { overflow: hidden; background: #fff; }
+    .product-img-frame::before {
+        content: ''; position: absolute; inset: 0;
+        background: var(--product-img) center / cover no-repeat;
+        filter: blur(28px); transform: scale(1.2); opacity: .45;
+    }
 
     /* Size selector (scoops) */
     .size-btn {
@@ -169,6 +176,7 @@
     .size-btn .size-name { font-weight: 600; font-size: .85rem; color: #1f2937; }
     .size-btn.active .size-name { color: {{ $theme['accent'] }}; }
     .size-btn .size-price { font-size: .75rem; color: #6b7280; }
+    .size-btn.balls-pack-btn { min-width: 4.75rem; padding: .35rem .6rem; }
 
     /* Quantity */
     .qty-btn {
@@ -238,7 +246,7 @@
         height: 100%;
     }
     .related-prod-card:hover { transform: translateY(-6px); box-shadow: 0 16px 32px rgba(0,0,0,.13); }
-    .related-prod-img-wrap { height: 9rem; overflow: hidden; }
+    .related-prod-img-wrap { position: relative; height: 9rem; overflow: hidden; }
     .related-prod-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .related-prod-name { font-weight: 700; font-size: .85rem; color: #1f2937; margin-bottom: .3rem; }
     .related-prod-price { font-weight: 700; font-size: .82rem; margin-bottom: .75rem; }
@@ -273,7 +281,7 @@
 
     <div class="info-alert mb-4 d-flex gap-2 align-items-start">
         <i class="ri-information-line mt-1" style="color:#3b82f6;flex-shrink:0;"></i>
-        <div><strong>Quantity Rules:</strong> Minimum order is 5 balls. You can order up to 50 balls per batch. Orders must be in multiples of 5 (e.g., 5, 10, 15...).</div>
+        <div><strong>Quantity Rules:</strong> Minimum order is {{ $ballsMin }} balls. You can order up to {{ $ballsMax }} balls per batch. Orders must be in multiples of 5 (e.g., 5, 10, 15...).</div>
     </div>
 
     <div class="row g-4">
@@ -282,6 +290,7 @@
                 <div class="row g-0">
                     <div class="col-md-5 position-relative">
                         <img src="https://images.unsplash.com/photo-1615485925694-a031e97d8964?w=600&q=80" alt="Mystery Balls" class="product-img h-100">
+                        <x-discount-badge id="discount-badge" :label="isset($ballPacks[0]['percent']) ? '-' . $ballPacks[0]['percent'] . '%' : null" />
                         <span class="position-absolute top-0 start-0 m-3 badge" style="background:{{ $theme['badgeBg'] }};font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">Best Seller</span>
                     </div>
                     <div class="col-md-7">
@@ -289,20 +298,19 @@
                             <h3 class="fw-bold mb-3">Standard Mystery Balls</h3>
                             <p class="text-muted mb-4">Get the thrill of the unknown! Our mystery balls are packed with the same high-quality stationery, accessories, and cute items found in our scoops.</p>
                             <div class="mb-4">
-                                <div class="text-muted small mb-1">Price per 5 balls</div>
-                                <div class="fw-bold" style="font-size:1.75rem;color:{{ $theme['accent'] }};">PKR 1,000</div>
+                                @include('pages.partials.balls-pricing', ['packs' => $ballPacks, 'mode' => $ballsMode, 'accent' => $theme['accent']])
                             </div>
                             <div class="bg-light rounded-3 p-4 text-center">
                                 <div class="fw-medium text-muted small mb-3">Select Quantity (Multiples of 5)</div>
                                 <div class="d-flex align-items-center justify-content-center gap-4">
                                     <button class="qty-btn" id="qty-minus" onclick="updateQtyBalls(-5)"><i class="ri-subtract-line"></i></button>
                                     <div>
-                                        <div class="fw-bold" id="qty-display" style="font-size:2.5rem;line-height:1;">5</div>
+                                        <div class="fw-bold" id="qty-display" style="font-size:2.5rem;line-height:1;">{{ $ballsMin }}</div>
                                         <div class="text-muted" style="font-size:.75rem;">Balls</div>
                                     </div>
                                     <button class="qty-btn" id="qty-plus" onclick="updateQtyBalls(5)"><i class="ri-add-line"></i></button>
                                 </div>
-                                <div class="text-muted mt-2" style="font-size:.8rem;">Range: 5 - 50 balls</div>
+                                <div class="text-muted mt-2" style="font-size:.8rem;">Range: {{ $ballsMin }} - {{ $ballsMax }} balls</div>
                             </div>
                         </div>
                     </div>
@@ -370,22 +378,24 @@
                 <h5 class="fw-bold mb-4">Order Summary</h5>
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Quantity</span>
-                    <span class="fw-semibold" id="summary-qty">5 Balls</span>
+                    <span class="fw-semibold" id="summary-qty">{{ $ballsMin }} Balls</span>
                 </div>
+                @if($ballsMode === \App\Models\Product::PRICING_AUTOMATIC && $ballPacks)
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Price per 5</span>
-                    <span class="fw-semibold">PKR 1,000</span>
+                    <span class="fw-semibold balls-base-price"><x-price :amount="$ballPacks[0]['price'] * 5 / $ballsMin" :original="$ballPacks[0]['original'] !== null ? $ballPacks[0]['original'] * 5 / $ballsMin : null" /></span>
                 </div>
+                @endif
                 <div class="mb-4 d-flex justify-content-between fw-bold fs-5">
                     <span>Total</span>
-                    <span id="summary-total" style="color:{{ $theme['accent'] }};">PKR 1,000</span>
+                    <span id="summary-total" style="color:{{ $theme['accent'] }};"><x-price :amount="$ballPacks[0]['price'] ?? null" :original="$ballPacks[0]['original'] ?? null" /></span>
                 </div>
                 <div class="mb-4">
                     <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
                     <textarea class="form-control" rows="4" id="mb-special-requests" placeholder="E.g., color preferences, specific themes..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
                 </div>
-                <button onclick="addToCart('mystery-balls')" class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR 1,000</span>
+                <button onclick="addToCart('mystery-balls')" id="balls-add-btn" @disabled(! $ballPacks || ! $ballPacks[0]['available']) class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
+                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR {{ number_format($ballPacks[0]['price'] ?? 0) }}</span>
                 </button>
                 <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
             </div>
@@ -412,6 +422,7 @@
                 <div class="row g-0">
                     <div class="col-md-5 position-relative">
                         <img src="https://images.unsplash.com/photo-1765516833058-c322c800fee1?w=600&q=80" alt="Mystery Scoop" class="product-img h-100">
+                        <x-discount-badge id="discount-badge" :label="isset($firstScoop['percent']) ? '-' . $firstScoop['percent'] . '%' : null" />
                         <span class="position-absolute top-0 start-0 m-3 badge" style="background:{{ $theme['badgeBg'] }};font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">Best Seller</span>
                     </div>
                     <div class="col-md-7">
@@ -420,21 +431,19 @@
                             <p class="text-muted small mb-3">A delightful surprise of curated items in our Classic size. Each scoop contains a variety of beads, charms, and accessories.</p>
                             <div class="info-note mb-3">⚠️ Note: More than 4 same beads will be upgraded to prevent same items. If you don't want upgrades, please specify in the comments.</div>
                             <div class="mb-3">
-                                <span class="fw-bold" id="display-price" style="font-size:1.5rem;color:{{ $theme['accent'] }};">PKR 2,500</span>
-                                <span class="text-muted small ms-1" id="display-size-label">per classic</span>
+                                <span class="fw-bold" id="display-price" style="font-size:1.5rem;color:{{ $theme['accent'] }};"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
+                                <span class="text-muted small ms-1" id="display-size-label">per {{ strtolower($firstScoop['name'] ?? 'scoop') }}</span>
                             </div>
                             <div class="mb-3">
                                 <div class="fw-medium small mb-2">Select size</div>
                                 <div class="d-flex gap-2 flex-wrap">
-                                    <button class="size-btn active" onclick="selectSize(this,'Classic',2500)">
-                                        <div class="size-name">Classic</div><div class="size-price">PKR 2,500</div>
+                                    @forelse($scoopOptions as $i => $scoop)
+                                    <button class="size-btn {{ $i === 0 ? 'active' : '' }}" onclick="selectSize(this, {{ $i }})">
+                                        <div class="size-name">{{ $scoop['name'] }}</div><div class="size-price" data-scoop-idx="{{ $i }}"><x-price :amount="$scoop['price']" :original="$scoop['original']" /></div>
                                     </button>
-                                    <button class="size-btn" onclick="selectSize(this,'Standard',4500)">
-                                        <div class="size-name">Standard</div><div class="size-price">PKR 4,500</div>
-                                    </button>
-                                    <button class="size-btn" onclick="selectSize(this,'Premium',8500)">
-                                        <div class="size-name">Premium</div><div class="size-price">PKR 8,500</div>
-                                    </button>
+                                    @empty
+                                    <span class="text-muted small">This product is currently unavailable.</span>
+                                    @endforelse
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -508,7 +517,7 @@
                 <h5 class="fw-bold mb-4">Order Summary</h5>
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Size</span>
-                    <span class="fw-semibold" id="summary-size">Classic</span>
+                    <span class="fw-semibold" id="summary-size">{{ $firstScoop['name'] ?? '—' }}</span>
                 </div>
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Quantity</span>
@@ -516,18 +525,18 @@
                 </div>
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Price per scoop</span>
-                    <span class="fw-semibold" id="summary-unit-price">PKR 2,500</span>
+                    <span class="fw-semibold" id="summary-unit-price"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
                 </div>
                 <div class="mb-4 d-flex justify-content-between fw-bold fs-5">
                     <span>Total</span>
-                    <span id="summary-total" style="color:{{ $theme['accent'] }};">PKR 2,500</span>
+                    <span id="summary-total" style="color:{{ $theme['accent'] }};"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
                 </div>
                 <div class="mb-4">
                     <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
                     <textarea class="form-control" rows="4" id="ms-special-requests" placeholder="E.g., preferred themes, items to avoid..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
                 </div>
-                <button onclick="addToCart('mystery-scoops')" class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR 2,500</span>
+                <button onclick="addToCart('mystery-scoops')" @disabled(! $scoopOptions) class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
+                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR {{ number_format($firstScoop['price'] ?? 0) }}</span>
                 </button>
                 <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
             </div>
@@ -558,6 +567,7 @@
                 <div class="row g-0">
                     <div class="col-md-5 position-relative">
                         <img src="https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=600&q=80" alt="BTS Mystery Scoop" class="product-img h-100">
+                        <x-discount-badge id="discount-badge" :label="isset($firstScoop['percent']) ? '-' . $firstScoop['percent'] . '%' : null" />
                         <span class="position-absolute top-0 start-0 m-3 badge" style="background:{{ $theme['badgeBg'] }};font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">ARMY Special</span>
                     </div>
                     <div class="col-md-7">
@@ -566,21 +576,19 @@
                             <p class="text-muted small mb-3">Exclusive themed mystery items for ARMY! Each scoop is curated with BTS-themed goodies{{ $biasLabel ? ' for '.$biasLabel : '' }}.</p>
                             <div class="info-note mb-3">⚠️ Note: More than 4 same items will be upgraded to prevent duplicates. Specify in comments if you prefer otherwise.</div>
                             <div class="mb-3">
-                                <span class="fw-bold" id="display-price" style="font-size:1.5rem;color:{{ $theme['accent'] }};">PKR 2,500</span>
-                                <span class="text-muted small ms-1" id="display-size-label">per classic</span>
+                                <span class="fw-bold" id="display-price" style="font-size:1.5rem;color:{{ $theme['accent'] }};"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
+                                <span class="text-muted small ms-1" id="display-size-label">per {{ strtolower($firstScoop['name'] ?? 'scoop') }}</span>
                             </div>
                             <div class="mb-3">
                                 <div class="fw-medium small mb-2">Select size</div>
                                 <div class="d-flex gap-2 flex-wrap">
-                                    <button class="size-btn active" onclick="selectSize(this,'Classic',2500)">
-                                        <div class="size-name">Classic</div><div class="size-price">PKR 2,500</div>
+                                    @forelse($scoopOptions as $i => $scoop)
+                                    <button class="size-btn {{ $i === 0 ? 'active' : '' }}" onclick="selectSize(this, {{ $i }})">
+                                        <div class="size-name">{{ $scoop['name'] }}</div><div class="size-price" data-scoop-idx="{{ $i }}"><x-price :amount="$scoop['price']" :original="$scoop['original']" /></div>
                                     </button>
-                                    <button class="size-btn" onclick="selectSize(this,'Standard',4500)">
-                                        <div class="size-name">Standard</div><div class="size-price">PKR 4,500</div>
-                                    </button>
-                                    <button class="size-btn" onclick="selectSize(this,'Premium',8500)">
-                                        <div class="size-name">Premium</div><div class="size-price">PKR 8,500</div>
-                                    </button>
+                                    @empty
+                                    <span class="text-muted small">This product is currently unavailable.</span>
+                                    @endforelse
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -606,7 +614,7 @@
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🛒 Step 2: Choose Your Scoop Size</div>
                     <p class="text-muted small mb-1">Select your Mystery Scoop size:</p>
-                    <ul class="text-muted small mb-1 ps-3"><li>Classic Scoop — PKR 2,500</li><li>Standard Scoop — PKR 4,500</li><li>Premium Scoop — PKR 8,500</li></ul>
+                    <ul class="text-muted small mb-1 ps-3">@foreach($scoopOptions as $scoop)<li>{{ $scoop['name'] }} Scoop — <span data-scoop-idx="{{ $loop->index }}"><x-price :amount="$scoop['price']" :original="$scoop['original']" /></span></li>@endforeach</ul>
                     <p class="text-muted small mb-0">Each size comes with a different value and surprise level.</p>
                 </div>
                 <div class="how-step">
@@ -664,7 +672,7 @@
                 @endif
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Size</span>
-                    <span class="fw-semibold" id="summary-size">Classic</span>
+                    <span class="fw-semibold" id="summary-size">{{ $firstScoop['name'] ?? '—' }}</span>
                 </div>
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Quantity</span>
@@ -672,18 +680,18 @@
                 </div>
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Price per scoop</span>
-                    <span class="fw-semibold" id="summary-unit-price">PKR 2,500</span>
+                    <span class="fw-semibold" id="summary-unit-price"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
                 </div>
                 <div class="mb-4 d-flex justify-content-between fw-bold fs-5">
                     <span>Total</span>
-                    <span id="summary-total" style="color:{{ $theme['accent'] }};">PKR 2,500</span>
+                    <span id="summary-total" style="color:{{ $theme['accent'] }};"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
                 </div>
                 <div class="mb-4">
                     <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
                     <textarea class="form-control" rows="4" id="bs-special-requests" placeholder="E.g., preferred member items, era themes..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
                 </div>
-                <button onclick="addToCart('bts-scoop')" class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR 2,500</span>
+                <button onclick="addToCart('bts-scoop')" @disabled(! $scoopOptions) class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
+                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR {{ number_format($firstScoop['price'] ?? 0) }}</span>
                 </button>
                 <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
             </div>
@@ -710,7 +718,7 @@
 
     <div class="info-alert mb-4 d-flex gap-2 align-items-start">
         <i class="ri-information-line mt-1" style="color:#3b82f6;flex-shrink:0;"></i>
-        <div><strong>Quantity Rules:</strong> Minimum order is 5 balls. You can order up to 50 balls per batch. Orders must be in multiples of 5.</div>
+        <div><strong>Quantity Rules:</strong> Minimum order is {{ $ballsMin }} balls. You can order up to {{ $ballsMax }} balls per batch. Orders must be in multiples of 5.</div>
     </div>
 
     <div class="row g-4">
@@ -719,6 +727,7 @@
                 <div class="row g-0">
                     <div class="col-md-5 position-relative">
                         <img src="https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=600&q=80" alt="BTS Mystery Balls" class="product-img h-100">
+                        <x-discount-badge id="discount-badge" :label="isset($ballPacks[0]['percent']) ? '-' . $ballPacks[0]['percent'] . '%' : null" />
                         <span class="position-absolute top-0 start-0 m-3 badge" style="background:{{ $theme['badgeBg'] }};font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">ARMY Special</span>
                     </div>
                     <div class="col-md-7">
@@ -726,20 +735,19 @@
                             <h3 class="fw-bold mb-3">{{ $biasLabel ? $btsLabel.' Mystery Balls' : 'BTS Mystery Balls' }}</h3>
                             <p class="text-muted mb-4">Surprise mystery balls packed with BTS-themed goodies{{ $biasLabel ? ' for '.$biasLabel : '' }}! Same high-quality items as our scoops.</p>
                             <div class="mb-4">
-                                <div class="text-muted small mb-1">Price per 5 balls</div>
-                                <div class="fw-bold" style="font-size:1.75rem;color:{{ $theme['accent'] }};">PKR 1,000</div>
+                                @include('pages.partials.balls-pricing', ['packs' => $ballPacks, 'mode' => $ballsMode, 'accent' => $theme['accent']])
                             </div>
                             <div class="bg-light rounded-3 p-4 text-center">
                                 <div class="fw-medium text-muted small mb-3">Select Quantity (Multiples of 5)</div>
                                 <div class="d-flex align-items-center justify-content-center gap-4">
                                     <button class="qty-btn" id="qty-minus" onclick="updateQtyBalls(-5)"><i class="ri-subtract-line"></i></button>
                                     <div>
-                                        <div class="fw-bold" id="qty-display" style="font-size:2.5rem;line-height:1;">5</div>
+                                        <div class="fw-bold" id="qty-display" style="font-size:2.5rem;line-height:1;">{{ $ballsMin }}</div>
                                         <div class="text-muted" style="font-size:.75rem;">Balls</div>
                                     </div>
                                     <button class="qty-btn" id="qty-plus" onclick="updateQtyBalls(5)"><i class="ri-add-line"></i></button>
                                 </div>
-                                <div class="text-muted mt-2" style="font-size:.8rem;">Range: 5 - 50 balls</div>
+                                <div class="text-muted mt-2" style="font-size:.8rem;">Range: {{ $ballsMin }} - {{ $ballsMax }} balls</div>
                             </div>
                         </div>
                     </div>
@@ -812,22 +820,24 @@
                 @endif
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Quantity</span>
-                    <span class="fw-semibold" id="summary-qty">5 Balls</span>
+                    <span class="fw-semibold" id="summary-qty">{{ $ballsMin }} Balls</span>
                 </div>
+                @if($ballsMode === \App\Models\Product::PRICING_AUTOMATIC && $ballPacks)
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Price per 5</span>
-                    <span class="fw-semibold">PKR 1,000</span>
+                    <span class="fw-semibold balls-base-price"><x-price :amount="$ballPacks[0]['price'] * 5 / $ballsMin" :original="$ballPacks[0]['original'] !== null ? $ballPacks[0]['original'] * 5 / $ballsMin : null" /></span>
                 </div>
+                @endif
                 <div class="mb-4 d-flex justify-content-between fw-bold fs-5">
                     <span>Total</span>
-                    <span id="summary-total" style="color:{{ $theme['accent'] }};">PKR 1,000</span>
+                    <span id="summary-total" style="color:{{ $theme['accent'] }};"><x-price :amount="$ballPacks[0]['price'] ?? null" :original="$ballPacks[0]['original'] ?? null" /></span>
                 </div>
                 <div class="mb-4">
                     <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
                     <textarea class="form-control" rows="4" id="bb-special-requests" placeholder="E.g., member preferences, era themes..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
                 </div>
-                <button onclick="addToCart('bts-balls')" class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR 1,000</span>
+                <button onclick="addToCart('bts-balls')" id="balls-add-btn" @disabled(! $ballPacks || ! $ballPacks[0]['available']) class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
+                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR {{ number_format($ballPacks[0]['price'] ?? 0) }}</span>
                 </button>
                 <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
             </div>
@@ -1009,30 +1019,34 @@
     $piTheme = $themes[$resolvedThemeKey] ?? $themes['gift-box'];
 
     $isCeramicItem  = str_contains($categoryName, 'Ceramic');
-    $isBalls        = str_contains($product->name, 'Balls') || str_contains($categoryName, 'Mystery Balls');
+    // Mystery Balls products (automatic or custom pricing) sell one "Pack of N" variant per quantity
+    $isBalls        = $product->usesPackPricing();
 
     $productImg     = $product->images->first()?->image_url
                         ?? 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80';
 
-    $variants       = $product->variants->sortBy('price');
-    $firstVariant   = $variants->first();
-    $minPrice       = $firstVariant?->price ?? 0;
+    $variants       = $product->variants->sortBy('price')->values();
     $hasMultiVariants = $variants->count() > 1;
-    $isPreorderItem = $firstVariant?->status === \App\Models\ProductVariant::STATUS_PRE_ORDER;
 
-    // Balls products sell in "Pack of N" variants (N = qty), each priced as a
-    // whole pack rather than per-item, so the quantity stepper needs a
-    // qty → {price, variant id} lookup instead of a flat unit price.
-    $ballsPriceMap = [];
-    if ($isBalls) {
-        foreach ($variants as $variant) {
-            $qty = (int) preg_replace('/\D/', '', $variant->variant_name);
-            if ($qty > 0) {
-                $ballsPriceMap[$qty] = ['price' => (float) $variant->price, 'id' => $variant->id];
-            }
-        }
-    }
-    $piInitialUnitPrice = $isBalls && $minPrice > 0 ? round($minPrice / 5, 2) : $minPrice;
+    // Balls: the stepper walks the pack options and each pack is a single
+    // cart line priced as a whole, so the starting selection is the smallest pack.
+    $ballPacks = $isBalls ? $product->packOptions() : [];
+    $ballsMode = $product->pricing_mode;
+    $ballsMin  = $ballPacks[0]['qty'] ?? 5;
+    $ballsMax  = $ballPacks ? $ballPacks[count($ballPacks) - 1]['qty'] : 50;
+
+    $firstVariant   = $isBalls ? $variants->firstWhere('id', $ballPacks[0]['id'] ?? null) : $variants->first();
+    $minPrice       = $firstVariant?->effectivePrice() ?? 0;
+    $minOriginal    = $firstVariant?->hasDiscount() ? (float) $firstVariant->price : null;
+    $isPreorderItem = $firstVariant?->status === \App\Models\ProductVariant::STATUS_PRE_ORDER;
+    $piInitialUnitPrice = $minPrice;
+    $piVariants = $variants->mapWithKeys(fn ($v) => [$v->id => [
+        'name'     => $v->variant_name,
+        'price'    => $v->effectivePrice(),
+        'original' => $v->hasDiscount() ? (float) $v->price : null,
+        'percent'  => $v->discountPercent(),
+        'preorder' => $v->isPreOrder(),
+    ]])->all();
 
     // Breadcrumb label
     $breadcrumbLabel = $subCategoryName ?: $categoryName;
@@ -1045,11 +1059,11 @@
                 <i class="ri-price-tag-3-line"></i> {{ $breadcrumbLabel }}
             </div>
         @endif
-        <h1 class="fw-bold mb-3"
+        <h1 class="fw-bold mb-3" data-pi-name
             style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,{{ $piTheme['accent'] }},{{ $piTheme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
             {{ $product->name }}
         </h1>
-        <p class="text-muted mx-auto" style="max-width:40rem;font-size:1.05rem;">
+        <p class="text-muted mx-auto" style="max-width:40rem;font-size:1.05rem;" data-pi-description>
             {{ $product->description }}
         </p>
     </div>
@@ -1057,7 +1071,7 @@
     @if($isBalls)
     <div class="info-alert mb-4 d-flex gap-2 align-items-start">
         <i class="ri-information-line mt-1" style="color:#3b82f6;flex-shrink:0;"></i>
-        <div><strong>Quantity Rules:</strong> Minimum order is 5 balls. Orders must be in multiples of 5 (e.g., 5, 10, 15…). Maximum 50 per batch.</div>
+        <div><strong>Quantity Rules:</strong> Minimum order is {{ $ballsMin }} balls. Orders must be in multiples of 5 (e.g., 5, 10, 15…). Maximum {{ $ballsMax }} per batch.</div>
     </div>
     @endif
 
@@ -1079,6 +1093,7 @@
                 <div class="row g-0">
                     <div class="col-md-5 position-relative">
                         <img src="{{ $productImg }}" alt="{{ $product->name }}" class="product-img h-100">
+                        <x-discount-badge id="discount-badge" :label="$firstVariant?->discountPercent() ? '-' . $firstVariant->discountPercent() . '%' : null" />
                         @if($subCategoryName)
                             <span class="position-absolute top-0 start-0 m-3 badge"
                                   style="background:{{ $piTheme['badgeBg'] }};font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">
@@ -1093,12 +1108,12 @@
                     <div class="col-md-7">
                         <div class="card-body p-4 d-flex flex-column justify-content-start h-100">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h3 class="fw-bold mb-0">{{ $product->name }}</h3>
-                                <span class="fw-bold" style="color:{{ $piTheme['accent'] }};font-size:1.1rem;">
-                                    PKR {{ number_format($minPrice) }}
+                                <h3 class="fw-bold mb-0" data-pi-name>{{ $product->name }}</h3>
+                                <span class="fw-bold" style="color:{{ $piTheme['accent'] }};font-size:1.1rem;" data-pi-headline>
+                                    <x-price :amount="$minPrice" :original="$minOriginal" />
                                 </span>
                             </div>
-                            <p class="text-muted small mb-3">{{ $product->description }}</p>
+                            <p class="text-muted small mb-3" data-pi-description>{{ $product->description }}</p>
 
                             @if($isCeramicItem && $firstVariant)
                             {{-- Ceramic specs from variant name --}}
@@ -1118,27 +1133,31 @@
                             </div>
                             @endif
 
-                            {{-- Variant selector (multiple variants = size buttons); balls skip straight
-                                 to the quantity stepper below instead of a redundant pack-size grid --}}
-                            @if($hasMultiVariants && !$isBalls)
+                            {{-- Variant selector (multiple variants = size buttons); balls use the
+                                 pack price block + quantity stepper below instead --}}
+                            @if($isBalls)
+                            <div class="mb-3">
+                                @include('pages.partials.balls-pricing', ['packs' => $ballPacks, 'mode' => $ballsMode, 'accent' => $piTheme['accent']])
+                            </div>
+                            @elseif($hasMultiVariants)
                             <div class="mb-3">
                                 <div class="fw-medium small mb-2">Select Variant</div>
                                 <div class="d-flex gap-2 flex-wrap">
                                     @foreach($variants as $i => $variant)
-                                    <button class="size-btn {{ $i === 0 ? 'active' : '' }}"
-                                            onclick="piSelectVariant(this, {{ $variant->price }}, '{{ addslashes($variant->variant_name) }}', {{ $variant->id }}, {{ $variant->status === \App\Models\ProductVariant::STATUS_PRE_ORDER ? 'true' : 'false' }})">
+                                    <button class="size-btn {{ $i === 0 ? 'active' : '' }}" data-variant-id="{{ $variant->id }}"
+                                            onclick="piSelectVariant(this, {{ $variant->id }})">
                                         <div class="size-name">{{ $variant->variant_name }}</div>
-                                        <div class="size-price">PKR {{ number_format($variant->price) }}</div>
+                                        <div class="size-price"><x-price :variant="$variant" /></div>
                                     </button>
                                     @endforeach
                                 </div>
                             </div>
                             @else
-                            {{-- Single variant (or balls) — just show price --}}
+                            {{-- Single variant — just show price --}}
                             <div class="mb-3">
                                 <span class="fw-bold" id="pi-display-price"
                                       style="font-size:1.5rem;color:{{ $piTheme['accent'] }};">
-                                    PKR {{ number_format($minPrice) }}
+                                    <x-price :amount="$minPrice" :original="$minOriginal" />
                                 </span>
                                 @if($firstVariant)
                                     <span class="text-muted small ms-1" id="pi-display-variant">{{ $firstVariant->variant_name }}</span>
@@ -1149,11 +1168,11 @@
                             {{-- Quantity selector --}}
                             <div class="mb-3 mt-auto">
                                 @if($isBalls)
-                                    <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Multiples of 5, max 50)</span></div>
+                                    <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Multiples of 5, max {{ $ballsMax }})</span></div>
                                     <div class="d-flex align-items-center gap-3">
-                                        <button class="qty-btn" id="pi-qty-minus" onclick="piUpdateQtyBalls(-5)" disabled><i class="ri-subtract-line"></i></button>
-                                        <span class="fw-bold fs-5" id="pi-qty-display">5</span>
-                                        <button class="qty-btn" id="pi-qty-plus"  onclick="piUpdateQtyBalls(5)"><i class="ri-add-line"></i></button>
+                                        <button class="qty-btn" id="pi-qty-minus" onclick="updateQtyBalls(-5)" disabled><i class="ri-subtract-line"></i></button>
+                                        <span class="fw-bold fs-5" id="pi-qty-display">{{ $ballsMin }}</span>
+                                        <button class="qty-btn" id="pi-qty-plus"  onclick="updateQtyBalls(5)" @disabled(count($ballPacks) <= 1)><i class="ri-add-line"></i></button>
                                     </div>
                                 @else
                                     <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: 1, Max: {{ $firstVariant?->max_qty ?? 10 }})</span></div>
@@ -1344,7 +1363,7 @@
                 @endif
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Product</span>
-                    <span class="fw-semibold" style="font-size:.82rem;">{{ $product->name }}</span>
+                    <span class="fw-semibold" style="font-size:.82rem;" data-pi-name>{{ $product->name }}</span>
                 </div>
                 @if($hasMultiVariants)
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
@@ -1354,10 +1373,10 @@
                 @endif
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Quantity</span>
-                    <span class="fw-semibold" id="pi-summary-qty">{{ $isBalls ? '5' : '1' }}</span>
+                    <span class="fw-semibold" id="pi-summary-qty">{{ $isBalls ? $ballsMin . ' Balls' : '1' }}</span>
                 </div>
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Unit Price</span>
+                    <span class="text-muted">{{ ! $isBalls ? 'Unit Price' : ($ballsMode === \App\Models\Product::PRICING_AUTOMATIC ? 'Price per 5' : 'Pack Price') }}</span>
                     <span class="fw-semibold" id="pi-summary-unit">PKR {{ number_format($piInitialUnitPrice) }}</span>
                 </div>
                 <div class="mb-2 d-flex justify-content-between fw-bold fs-5">
@@ -1377,7 +1396,7 @@
                               placeholder="E.g., preferred themes, items to avoid..."
                               style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
                 </div>
-                <button onclick="piAddToCart()"
+                <button onclick="piAddToCart()" id="pi-add-btn" @disabled($isBalls && ! ($ballPacks[0]['available'] ?? false))
                         class="btn text-white w-100 py-2 fw-semibold"
                         style="background:{{ $piTheme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
                     <i class="ri-shopping-cart-line me-2"></i>
@@ -1397,17 +1416,18 @@
             @foreach($relatedProducts as $related)
                 @php
                     $relatedImg   = $related->images->first()?->image_url ?? 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80';
-                    $relatedPrice = $related->variants->min('price');
+                    $relatedCheapest = $related->cheapestVariant();
                 @endphp
-                <div class="col-6 col-md-4 col-lg-3">
+                <div class="col-6 col-md-4 col-lg-3" data-live-product="{{ $related->id }}">
                     <div class="related-prod-card">
                         <div class="related-prod-img-wrap">
-                            <img src="{{ $relatedImg }}" alt="{{ $related->name }}">
+                            <img src="{{ $relatedImg }}" alt="{{ $related->name }}" data-live-image>
+                            <x-discount-badge :label="$related->discountLabel()" live />
                         </div>
                         <div class="p-3">
-                            <h6 class="related-prod-name">{{ $related->name }}</h6>
-                            <p class="related-prod-price" style="background:linear-gradient(to right,{{ $piTheme['accent'] }},{{ $piTheme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-                                {{ $relatedPrice ? 'From PKR ' . number_format($relatedPrice) : 'PKR —' }}
+                            <h6 class="related-prod-name" data-live-name>{{ $related->name }}</h6>
+                            <p class="related-prod-price" data-live-price data-live-prefix="From " style="background:linear-gradient(to right,{{ $piTheme['accent'] }},{{ $piTheme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
+                                <x-price :variant="$relatedCheapest" prefix="From " />
                             </p>
                             <a href="{{ route('product-item', $related->slug) }}" class="related-explore-btn" style="background:{{ $piTheme['btnGrad'] }};">
                                 View Product <i class="ri-arrow-right-line ms-1"></i>
@@ -1430,6 +1450,12 @@
 
 @section('script')
 <script>
+// Blurred backdrop behind the fitted product photo (see .product-img-frame)
+document.querySelectorAll('.product-img').forEach(img => {
+    img.parentElement.classList.add('product-img-frame');
+    img.parentElement.style.setProperty('--product-img', `url("${img.getAttribute('src')}")`);
+});
+
 // ── Shared helpers ─────────────────────────────────────────────────────────
 const CART_KEY   = 'rv_cart';
 const IS_LOGGED_IN = {{ auth()->check() ? 'true' : 'false' }};
@@ -1437,6 +1463,21 @@ const CSRF_TOKEN   = '{{ csrf_token() }}';
 const CART_STORE_URL   = '{{ route('cart.store') }}';
 const CART_UPDATE_URL  = '/cart/items/';   // append {id}
 const CART_DESTROY_URL = '/cart/items/';   // append {id}
+
+function fmtPkr(n) { return 'PKR ' + Math.round(n).toLocaleString(); }
+/* Same markup as the components/price.blade.php component: price, plus the crossed-out regular price while on sale. */
+function priceHtml(amount, original) {
+    return fmtPkr(amount) + (original && original > amount
+        ? ' <s class="price-was" style="color:#9ca3af;-webkit-text-fill-color:#9ca3af;font-weight:500;font-size:.8em;margin-left:.3em;">' + fmtPkr(original) + '</s>'
+        : '');
+}
+/* "-15%" badge on the product image for the selected variant / pack; hidden when it isn't on sale. */
+function setDiscountBadge(percent) {
+    const badge = document.getElementById('discount-badge');
+    if (!badge) return;
+    badge.textContent   = percent ? '-' + percent + '%' : '';
+    badge.style.display = percent ? '' : 'none';
+}
 
 /**
  * Persist item to DB (auth users) then write to localStorage.
@@ -1476,6 +1517,9 @@ async function persistToCart(payload, localItem) {
                 if (already) {
                     already.qty     = canonical.qty;
                     already.comment = canonical.comment ?? already.comment;
+                    // the server's price wins (a sale may have started or ended)
+                    already.unitPrice     = canonical.unitPrice ?? already.unitPrice;
+                    already.originalPrice = canonical.originalPrice ?? null;
                 } else {
                     filtered.push({
                         id:        canonical.id        ?? localItem.id,
@@ -1483,6 +1527,7 @@ async function persistToCart(payload, localItem) {
                         subtitle:  canonical.subtitle  ?? localItem.subtitle,
                         image:     canonical.image     ?? localItem.image,
                         unitPrice: canonical.unitPrice ?? localItem.unitPrice,
+                        originalPrice: canonical.unitPrice !== undefined ? (canonical.originalPrice ?? null) : localItem.originalPrice,
                         qty:       canonical.qty       ?? localItem.qty,
                         preorder:  canonical.preorder  ?? localItem.preorder,
                         comment:   canonical.comment    ?? localItem.comment,
@@ -1524,8 +1569,8 @@ const PRODUCT_META = {
 
 const GIFT_BOX_ITEM_ID = '{{ $itemId ?? 'gift-box' }}';
 
-// DB product/variant map injected from PHP for generic types
-const DB_PRODUCT_MAP = @json($dbProductMap ?? ['product_id' => null, 'variants' => []]);
+// DB product injected from PHP for the generic mystery types (no product_id = localStorage only)
+const DB_PRODUCT_MAP = @json($dbProductMap ?? ['product_id' => null]);
 
 // Maps each generic product type to its "Special Requests" textarea id
 const SPECIAL_REQUESTS_FIELD = {
@@ -1537,30 +1582,26 @@ const SPECIAL_REQUESTS_FIELD = {
 
 function addToCart(type) {
     const meta = PRODUCT_META[type] || {};
-    let unitPrice, qty, subtitle, variantId = null;
+    let unitPrice, qty, subtitle, variantId = null, originalPrice = null;
 
     if (type === 'mystery-balls' || type === 'bts-balls') {
-        // Find the matching "Pack of N" variant from DB map
-        if (DB_PRODUCT_MAP.variants) {
-            const packName = 'Pack of ' + ballsQty;
-            const match = DB_PRODUCT_MAP.variants.find(v => v.name === packName);
-            if (match) { variantId = match.id; unitPrice = match.price; }
-        }
-        unitPrice = unitPrice ?? Math.round((ballsQty / 5) * 1000);
-        qty       = ballsQty;
-        subtitle  = 'Pack of ' + ballsQty;
+        // The selected pack (e.g. "Pack of 10") is one cart line priced as a whole
+        const pack = currentBallsPack();
+        if (!pack || !pack.available) return;
+        variantId     = pack.id;
+        unitPrice     = pack.price;
+        originalPrice = pack.original;
+        qty           = 1;
+        subtitle      = 'Pack of ' + pack.qty;
 
     } else if (type === 'mystery-scoops' || type === 'bts-scoop') {
-        // Find the selected scoop variant from DB map
-        if (DB_PRODUCT_MAP.variants) {
-            const match = DB_PRODUCT_MAP.variants.find(v =>
-                v.name.toLowerCase().includes(scoopSizeName.toLowerCase())
-            );
-            if (match) { variantId = match.id; }
-        }
-        unitPrice = scoopUnitPrice;
-        qty       = scoopQty;
-        subtitle  = 'Size: ' + scoopSizeName;
+        const scoop = SCOOP_OPTIONS[scoopIdx];
+        if (!scoop) return;
+        variantId     = scoop.id;
+        unitPrice     = scoop.price;
+        originalPrice = scoop.original;
+        qty           = scoopQty;
+        subtitle      = 'Size: ' + scoop.name;
 
     } else if (type === 'ceramic' || type === 'gift-box') {
         unitPrice = parseInt('{{ preg_replace('/[^0-9]/', '', $productPrice ?? 'PKR 1,500') }}') || 1500;
@@ -1581,6 +1622,7 @@ function addToCart(type) {
         subtitle:  subtitle,
         image:     meta.image || '',
         unitPrice: unitPrice,
+        originalPrice: originalPrice,
         qty:       qty,
         preorder:  meta.preorder || false,
         comment:   comment,
@@ -1610,42 +1652,67 @@ function addToCart(type) {
     }
 }
 
-// ── Mystery Balls ──────────────────────────────────────────────────────────
-let ballsQty = 5;
-const BALLS_PRICE_PER_5 = 1000;
+// ── Mystery Balls (generic + product-item pages) ───────────────────────────
+// Quantity options are the product's "Pack of N" variants (Product::packOptions()),
+// each already priced by the product's automatic or custom pricing with any
+// sale applied. The stepper walks through them in order.
+const BALL_PACKS = @json($ballPacks ?? []);
+let ballsIdx = 0;
 
+function currentBallsPack() { return BALL_PACKS[ballsIdx] || null; }
+
+// The ± buttons pass ±5; each press moves to the next/previous quantity on offer.
 function updateQtyBalls(change) {
-    ballsQty = Math.min(50, Math.max(5, ballsQty + change));
-    const total = (ballsQty / 5) * BALLS_PRICE_PER_5;
-    const fmt = 'PKR ' + total.toLocaleString();
-    const qtyEl = document.getElementById('qty-display');
-    const sumQty = document.getElementById('summary-qty');
+    selectBallsPack(ballsIdx + Math.sign(change));
+}
+
+function selectBallsPack(idx) {
+    ballsIdx = Math.min(BALL_PACKS.length - 1, Math.max(0, idx));
+    const pack = currentBallsPack();
+    if (!pack) return;
+
+    // Custom-pricing price list (pages.partials.balls-pricing)
+    document.querySelectorAll('.balls-pack-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.idx) === ballsIdx));
+    document.querySelectorAll('.balls-price-qty').forEach(el => el.textContent = pack.qty);
+    document.querySelectorAll('.balls-price').forEach(el => el.innerHTML = priceHtml(pack.price, pack.original));
+    setDiscountBadge(pack.percent);
+
+    // Generic mystery-balls / bts-balls page
+    const qtyEl    = document.getElementById('qty-display');
+    const sumQty   = document.getElementById('summary-qty');
     const sumTotal = document.getElementById('summary-total');
     const btnTotal = document.getElementById('btn-total');
-    if (qtyEl) qtyEl.textContent = ballsQty;
-    if (sumQty) sumQty.textContent = ballsQty + ' Balls';
-    if (sumTotal) sumTotal.textContent = fmt;
-    if (btnTotal) btnTotal.textContent = fmt;
-    const minus = document.getElementById('qty-minus');
-    const plus  = document.getElementById('qty-plus');
-    if (minus) minus.disabled = ballsQty <= 5;
-    if (plus)  plus.disabled  = ballsQty >= 50;
+    const addBtn   = document.getElementById('balls-add-btn');
+    const minus    = document.getElementById('qty-minus');
+    const plus     = document.getElementById('qty-plus');
+    if (qtyEl)    qtyEl.textContent = pack.qty;
+    if (sumQty)   sumQty.textContent = pack.qty + ' Balls';
+    if (sumTotal) sumTotal.innerHTML = priceHtml(pack.price, pack.original);
+    if (btnTotal) btnTotal.textContent = fmtPkr(pack.price);
+    if (addBtn)   addBtn.disabled = !pack.available;
+    if (minus)    minus.disabled = ballsIdx <= 0;
+    if (plus)     plus.disabled  = ballsIdx >= BALL_PACKS.length - 1;
+
+    // Product-item page
+    if (typeof piApplyBallsPack === 'function') piApplyBallsPack(pack);
 }
 
 // ── Mystery Scoops / BTS Scoop ─────────────────────────────────────────────
+// Sizes are the product's variants, cheapest first, with any sale applied.
+const SCOOP_OPTIONS = @json($scoopOptions ?? []);
 let scoopQty = 1;
-let scoopUnitPrice = 2500;
-let scoopSizeName = 'Classic';
+let scoopIdx = 0;
 
-function selectSize(btn, name, price) {
+function selectSize(btn, idx) {
     document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    scoopSizeName = name;
-    scoopUnitPrice = price;
+    scoopIdx = idx;
+    const scoop = SCOOP_OPTIONS[idx];
     const dp = document.getElementById('display-price');
     const dl = document.getElementById('display-size-label');
-    if (dp) dp.textContent = 'PKR ' + price.toLocaleString();
-    if (dl) dl.textContent = 'per ' + name.toLowerCase();
+    if (dp) dp.innerHTML = priceHtml(scoop.price, scoop.original);
+    if (dl) dl.textContent = 'per ' + scoop.name.toLowerCase();
+    setDiscountBadge(scoop.percent);
     updateScoopSummary();
 }
 
@@ -1661,18 +1728,18 @@ function updateQtyScoop(change) {
 }
 
 function updateScoopSummary() {
-    const total = scoopQty * scoopUnitPrice;
-    const fmt = 'PKR ' + total.toLocaleString();
+    const scoop = SCOOP_OPTIONS[scoopIdx];
+    if (!scoop) return;
     const ss = document.getElementById('summary-size');
     const sq = document.getElementById('summary-qty');
     const su = document.getElementById('summary-unit-price');
     const st = document.getElementById('summary-total');
     const bt = document.getElementById('btn-total');
-    if (ss) ss.textContent = scoopSizeName;
+    if (ss) ss.textContent = scoop.name;
     if (sq) sq.textContent = scoopQty;
-    if (su) su.textContent = 'PKR ' + scoopUnitPrice.toLocaleString();
-    if (st) st.textContent = fmt;
-    if (bt) bt.textContent = fmt;
+    if (su) su.innerHTML = priceHtml(scoop.price, scoop.original);
+    if (st) st.innerHTML = priceHtml(scoop.price * scoopQty, scoop.original ? scoop.original * scoopQty : null);
+    if (bt) bt.textContent = fmtPkr(scoop.price * scoopQty);
 }
 
 // ── Ceramic / Gift Box ─────────────────────────────────────────────────────
@@ -1709,69 +1776,157 @@ function toggleReviews(btn) {
 document.addEventListener('DOMContentLoaded', () => {
     const qm = document.getElementById('qty-minus');
     if (qm) qm.disabled = true;
+    if (BALL_PACKS.length) selectBallsPack(0);
     // Set correct initial total for ceramic/gift-box
     const st = document.getElementById('ceramic-summary-total');
     if (st) st.textContent = 'PKR ' + CERAMIC_UNIT_PRICE.toLocaleString();
 });
 
+// ── Live updates from the admin (layouts/live-updates) ─────────────────────
+// Prices, discounts, name and photo are patched in place, keeping what the
+// shopper picked; if sizes / packs / pricing mode changed, the page re-renders.
+window.LIVE_PRODUCT_IDS = @json($livePageProduct ? [$livePageProduct->id] : []);
+const LIVE_PAGE_PRODUCT_ID = @json($livePageProduct?->id);
+const LIVE_PAGE_STRUCTURE  = @json($livePageStructure);
+
+document.addEventListener('live:catalog', (e) => {
+    if (!LIVE_PAGE_PRODUCT_ID) return;
+    const product = e.detail.products[LIVE_PAGE_PRODUCT_ID];
+    if (!product || product.structure !== LIVE_PAGE_STRUCTURE) {
+        location.reload();
+        return;
+    }
+    const fresh = (id) => {
+        const v = product.variants[id] || {};
+        return { price: v.price, original: v.original, percent: v.percent, preorder: v.preorder, available: v.available };
+    };
+
+    // Mystery Balls packs
+    if (BALL_PACKS.length) {
+        BALL_PACKS.forEach(pack => Object.assign(pack, fresh(pack.id)));
+        document.querySelectorAll('.balls-pack-btn').forEach(btn => {
+            const pack = BALL_PACKS[btn.dataset.idx];
+            btn.querySelector('.size-price').innerHTML = livePriceHtml(pack.price, pack.original);
+        });
+        const first = BALL_PACKS[0], perFive = 5 / first.qty;
+        document.querySelectorAll('.balls-base-price').forEach(el => el.innerHTML = livePriceHtml(first.price * perFive, first.original ? first.original * perFive : null));
+        selectBallsPack(ballsIdx);
+    }
+
+    // Mystery Scoop sizes
+    if (SCOOP_OPTIONS.length) {
+        SCOOP_OPTIONS.forEach(option => {
+            const { price, original, percent } = fresh(option.id);
+            Object.assign(option, { price, original, percent });
+        });
+        document.querySelectorAll('[data-scoop-idx]').forEach(el => {
+            const option = SCOOP_OPTIONS[el.dataset.scoopIdx];
+            el.innerHTML = livePriceHtml(option.price, option.original);
+        });
+        const picked = SCOOP_OPTIONS[scoopIdx];
+        const dp = document.getElementById('display-price');
+        if (dp) dp.innerHTML = livePriceHtml(picked.price, picked.original);
+        setDiscountBadge(picked.percent);
+        updateScoopSummary();
+    }
+
+    if (typeof piApplyLive === 'function') piApplyLive(product);
+});
+
 // ── Product-Item (DB product) ───────────────────────────────────────────────
 @if($productType === 'product-item')
-let piUnitPrice   = {{ $piInitialUnitPrice ?? $minPrice ?? 0 }};
+// For balls, piUnitPrice is the selected pack's whole price and piQty its ball count.
+let piUnitPrice     = {{ $piInitialUnitPrice ?? $minPrice ?? 0 }};
+let piOriginalPrice = {{ $minOriginal ?? 'null' }};   // regular price while on sale
 let piVariantName = '{{ addslashes($firstVariant?->variant_name ?? '') }}';
 let piVariantId   = {{ $firstVariant?->id ?? 'null' }};
-let piQty         = {{ ($isBalls ?? false) ? 5 : 1 }};
+let piQty         = {{ ($isBalls ?? false) ? ($ballsMin ?? 5) : 1 }};
 let piIsPreorder  = {{ ($isPreorderItem ?? false) ? 'true' : 'false' }};
 const PI_IS_BALLS   = {{ ($isBalls ?? false) ? 'true' : 'false' }};
+const PI_BALLS_AUTOMATIC = {{ ($ballsMode ?? null) === \App\Models\Product::PRICING_AUTOMATIC ? 'true' : 'false' }};
 const PI_MAX_QTY    = {{ $firstVariant?->max_qty ?? 10 }};
 const PI_PRODUCT_ID = 'pi-{{ $product->id ?? 'x' }}';
 const PI_PRODUCT_NAME = '{{ addslashes($product->name ?? '') }}';
 const PI_PRODUCT_IMG  = '{{ $productImg ?? '' }}';
 const PI_DB_PRODUCT_ID = {{ $product->id ?? 'null' }};
-const PI_BALLS_PRICE_MAP = @json($ballsPriceMap ?? []);
+// Current prices per variant id — the variant buttons read these, and live updates refresh them
+const PI_VARIANTS = @json((object) ($piVariants ?? []));
+const PI_HEADLINE_VARIANT_ID = {{ $firstVariant?->id ?? 'null' }};
 
-function piSelectVariant(btn, price, name, variantId, isPreorder) {
-    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    piUnitPrice   = price;
-    piVariantName = name;
-    piVariantId   = variantId;
-    piIsPreorder  = !!isPreorder;
-    piQty = PI_IS_BALLS ? 5 : 1;
-    document.getElementById('pi-qty-display').textContent = piQty;
-    const minus = document.getElementById('pi-qty-minus');
-    if (minus) minus.disabled = true;
-
+function piSetPreorder(isPreorder) {
+    piIsPreorder = !!isPreorder;
     const banner = document.getElementById('pi-preorder-banner');
     const badge  = document.getElementById('pi-preorder-badge');
     if (banner) banner.classList.toggle('d-flex', piIsPreorder);
     if (banner) banner.classList.toggle('d-none', !piIsPreorder);
     if (badge)  badge.style.display = piIsPreorder ? '' : 'none';
+}
 
+function piSelectVariant(btn, variantId) {
+    const variant = PI_VARIANTS[variantId];
+    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    setDiscountBadge(variant.percent);
+    piUnitPrice     = variant.price;
+    piOriginalPrice = variant.original;
+    piVariantName   = variant.name;
+    piVariantId     = variantId;
+    piQty = 1;
+    document.getElementById('pi-qty-display').textContent = piQty;
+    const minus = document.getElementById('pi-qty-minus');
+    if (minus) minus.disabled = true;
+
+    piSetPreorder(variant.preorder);
     piRefreshSummary();
 }
 
-function piUpdateQtyBalls(change) {
-    piQty = Math.min(50, Math.max(5, piQty + change));
+// Fresh prices / name / photo from the admin (called by the live:catalog handler below)
+function piApplyLive(product) {
+    document.querySelectorAll('[data-pi-name]').forEach(el => el.textContent = product.name);
+    document.querySelectorAll('[data-pi-description]').forEach(el => el.textContent = product.description || '');
 
-    // Balls are priced per whole pack (e.g. "Pack of 10"), not linearly per
-    // ball, so look up the real pack price and derive a per-ball unit price
-    // from it rather than guessing via multiplication.
-    const pack = PI_BALLS_PRICE_MAP[piQty];
-    if (pack) {
-        piUnitPrice   = pack.price / piQty;
-        piVariantId   = pack.id;
-        piVariantName = 'Pack of ' + piQty;
+    const img = document.querySelector('.product-img');
+    if (img && product.image && img.getAttribute('src') !== product.image) {
+        img.src = product.image;
+        img.parentElement.style.setProperty('--product-img', `url("${product.image}")`);
     }
 
+    Object.entries(product.variants).forEach(([id, fresh]) => {
+        if (!PI_VARIANTS[id]) return;
+        Object.assign(PI_VARIANTS[id], { price: fresh.price, original: fresh.original, percent: fresh.percent, preorder: fresh.preorder });
+        const price = document.querySelector(`.size-btn[data-variant-id="${id}"] .size-price`);
+        if (price) price.innerHTML = livePriceHtml(fresh.price, fresh.original);
+    });
+
+    const headline = PI_VARIANTS[PI_HEADLINE_VARIANT_ID];
+    const headlineEl = document.querySelector('[data-pi-headline]');
+    if (headline && headlineEl) headlineEl.innerHTML = livePriceHtml(headline.price, headline.original);
+
+    // balls are re-priced through selectBallsPack(); other products follow the picked variant
+    const picked = PI_VARIANTS[piVariantId];
+    if (!PI_IS_BALLS && picked) {
+        piUnitPrice     = picked.price;
+        piOriginalPrice = picked.original;
+        setDiscountBadge(picked.percent);
+        piSetPreorder(picked.preorder);
+        piRefreshSummary();
+    }
+}
+
+// Called by selectBallsPack() whenever the balls stepper / price list changes.
+function piApplyBallsPack(pack) {
+    piQty           = pack.qty;
+    piUnitPrice     = pack.price;
+    piOriginalPrice = pack.original;
+    piVariantId     = pack.id;
+    piVariantName   = 'Pack of ' + pack.qty;
+
     document.getElementById('pi-qty-display').textContent = piQty;
-    document.getElementById('pi-qty-minus').disabled = piQty <= 5;
-    document.getElementById('pi-qty-plus').disabled  = piQty >= 50;
+    document.getElementById('pi-qty-minus').disabled = ballsIdx <= 0;
+    document.getElementById('pi-qty-plus').disabled  = ballsIdx >= BALL_PACKS.length - 1;
+    document.getElementById('pi-add-btn').disabled   = !pack.available;
 
-    const displayPrice = document.getElementById('pi-display-price');
-    const displayVariant = document.getElementById('pi-display-variant');
-    if (displayPrice && pack) displayPrice.textContent = 'PKR ' + pack.price.toLocaleString();
-    if (displayVariant) displayVariant.textContent = piVariantName;
-
+    piSetPreorder(pack.preorder);
     piRefreshSummary();
 }
 
@@ -1784,8 +1939,12 @@ function piUpdateQty(change) {
 }
 
 function piRefreshSummary() {
-    const total   = piQty * piUnitPrice;
-    const advance = Math.round(total * 0.4);
+    const lines         = PI_IS_BALLS ? 1 : piQty;   // a balls pack is one line at its whole price
+    const total         = lines * piUnitPrice;
+    const originalTotal = piOriginalPrice ? lines * piOriginalPrice : null;
+    const advance       = Math.round(total * 0.4);
+    // Automatic balls pricing quotes per 5 balls; everything else shows the line's unit price
+    const unitScale     = PI_IS_BALLS && PI_BALLS_AUTOMATIC ? 5 / piQty : 1;
 
     const elVariant     = document.getElementById('pi-summary-variant');
     const elQty         = document.getElementById('pi-summary-qty');
@@ -1799,22 +1958,25 @@ function piRefreshSummary() {
 
     if (elVariant) elVariant.textContent = piVariantName;
     if (elQty)     elQty.textContent     = PI_IS_BALLS ? piQty + ' Balls' : piQty;
-    if (elUnit)    elUnit.textContent    = 'PKR ' + piUnitPrice.toLocaleString();
+    if (elUnit)    elUnit.innerHTML      = priceHtml(piUnitPrice * unitScale, piOriginalPrice ? piOriginalPrice * unitScale : null);
+
+    const displayPrice = document.getElementById('pi-display-price');
+    if (displayPrice) displayPrice.innerHTML = priceHtml(piUnitPrice, piOriginalPrice);
 
     if (piIsPreorder) {
         if (elTotalLabel) elTotalLabel.textContent = 'Advance (40%)';
-        if (elTotal)  elTotal.textContent  = 'PKR ' + advance.toLocaleString();
+        if (elTotal)  elTotal.textContent  = fmtPkr(advance);
         if (elRemainBox) elRemainBox.style.display = '';
         if (elSpacer) elSpacer.style.display = 'none';
         if (elBtnLabel) elBtnLabel.textContent = 'Pre-order Now';
-        if (elBtn)    elBtn.textContent    = 'PKR ' + advance.toLocaleString();
+        if (elBtn)    elBtn.textContent    = fmtPkr(advance);
     } else {
         if (elTotalLabel) elTotalLabel.textContent = 'Total';
-        if (elTotal) elTotal.textContent = 'PKR ' + total.toLocaleString();
+        if (elTotal) elTotal.innerHTML = priceHtml(total, originalTotal);
         if (elRemainBox) elRemainBox.style.display = 'none';
         if (elSpacer) elSpacer.style.display = '';
         if (elBtnLabel) elBtnLabel.textContent = 'Add to Cart';
-        if (elBtn)   elBtn.textContent   = 'PKR ' + total.toLocaleString();
+        if (elBtn)   elBtn.textContent   = fmtPkr(total);
     }
 }
 
@@ -1832,14 +1994,16 @@ function piAddToCart() {
         comment:            specials,
     };
 
-    // localStorage shape (works for guests + gives instant UI feedback)
+    // localStorage shape (works for guests + gives instant UI feedback) —
+    // same line shape as the DB cart: one balls pack = qty 1 at the pack price
     const localItem = {
         id:        PI_PRODUCT_ID,
         name:      PI_PRODUCT_NAME,
         subtitle:  subtitle,
         image:     PI_PRODUCT_IMG,
         unitPrice: piUnitPrice,
-        qty:       piQty,
+        originalPrice: piOriginalPrice,
+        qty:       PI_IS_BALLS ? 1 : piQty,
         preorder:  piIsPreorder,
         comment:   specials,
     };

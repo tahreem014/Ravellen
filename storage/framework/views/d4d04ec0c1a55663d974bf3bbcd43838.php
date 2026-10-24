@@ -118,6 +118,10 @@
 <?php
     $fallbackImage = 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80';
 
+    // Live updates: this page's product set, so adding / removing a product refreshes it (layouts/live-updates)
+    $liveListing   = 'category:' . ($dbCategories ?? collect())->pluck('name')->implode('|');
+    $liveSignature = app(\App\Services\LiveUpdateService::class)->listingSignature($liveListing);
+
     // Flatten all products from the loaded DB categories
     $allDbProducts = collect();
     foreach (($dbCategories ?? collect()) as $dbCat) {
@@ -191,19 +195,39 @@
     </div>
 
     
-    <div class="row g-4" id="gb-grid">
+    <div class="row g-4" id="gb-grid" data-live-listing="<?php echo e($liveListing); ?>" data-live-signature="<?php echo e($liveSignature); ?>">
         <?php $__empty_1 = true; $__currentLoopData = $allDbProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
         <?php
             $subName   = $product->_sub_name ?? $product->subCategory?->name ?? '';
             $tag       = $giftTagMap[$subName] ?? 'bts';
             $image     = $product->images->first()?->image_url ?? $fallbackImage;
-            $minPrice  = $product->variants->min('price');
-            $priceLabel = $minPrice ? 'From PKR ' . number_format($minPrice) : 'PKR —';
+            $cheapest  = $product->cheapestVariant();
+            $priceLabel = $cheapest ? 'From PKR ' . number_format($cheapest->effectivePrice()) : 'PKR —';
         ?>
-        <div class="col-6 col-md-4 gb-item" data-tag="<?php echo e($tag); ?>">
+        <div class="col-6 col-md-4 gb-item" data-tag="<?php echo e($tag); ?>" data-live-product="<?php echo e($product->id); ?>">
             <div class="gb-card">
                 <div class="gb-card-img-wrap">
-                    <img src="<?php echo e($image); ?>" alt="<?php echo e($product->name); ?>" class="gb-card-img">
+                    <img src="<?php echo e($image); ?>" alt="<?php echo e($product->name); ?>" class="gb-card-img" data-live-image>
+                    <?php if (isset($component)) { $__componentOriginalc259565ab925afbe6d933017bcb8ab06 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalc259565ab925afbe6d933017bcb8ab06 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.discount-badge','data' => ['label' => $product->discountLabel(),'live' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('discount-badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->discountLabel()),'live' => true]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
+<?php $attributes = $__attributesOriginalc259565ab925afbe6d933017bcb8ab06; ?>
+<?php unset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
+<?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
+<?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
                     <?php if($subName): ?>
                         <span class="gb-badge" style="background:#ec4899;"><?php echo e($subName); ?></span>
                     <?php endif; ?>
@@ -218,13 +242,32 @@
                     </button>
                 </div>
                 <div class="p-3 d-flex flex-column">
-                    <h6 class="gb-name mb-1"><?php echo e($product->name); ?></h6>
+                    <h6 class="gb-name mb-1" data-live-name><?php echo e($product->name); ?></h6>
                     <p class="gb-desc"><?php echo e($product->description); ?></p>
-                    <p class="gb-price"><?php echo e($priceLabel); ?></p>
+                    <p class="gb-price" data-live-price data-live-prefix="From "><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['variant' => $cheapest,'prefix' => 'From ']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('price'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['variant' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($cheapest),'prefix' => 'From ']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?></p>
                     <?php if($product->variants->count() > 1): ?>
                         <p class="text-muted mb-2" style="font-size:.75rem;"><?php echo e($product->variants->count()); ?> variants available</p>
                     <?php endif; ?>
-                    <a href="<?php echo e(route('product-item', $product->id)); ?>" class="gb-add-btn" style="background:linear-gradient(135deg,#f472b6,#ec4899);text-decoration:none!important;">
+                    <a href="<?php echo e(route('product-item', $product->slug)); ?>" class="gb-add-btn" style="background:linear-gradient(135deg,#f472b6,#ec4899);text-decoration:none!important;">
                         View Product <i class="ri-arrow-right-line ms-1"></i>
                     </a>
                 </div>
@@ -283,19 +326,39 @@
         </div>
 
         
-        <div class="row g-4" id="bts-gb-grid">
+        <div class="row g-4" id="bts-gb-grid" data-live-listing="<?php echo e($liveListing); ?>" data-live-signature="<?php echo e($liveSignature); ?>">
             <?php $__empty_1 = true; $__currentLoopData = $allDbProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
             <?php
                 $subName    = $product->_sub_name ?? $product->subCategory?->name ?? '';
                 $tag        = $btsGiftTagMap[$subName] ?? 'era';
                 $image      = $product->images->first()?->image_url ?? $fallbackImage;
-                $minPrice   = $product->variants->min('price');
-                $priceLabel = $minPrice ? 'From PKR ' . number_format($minPrice) : 'PKR —';
+                $cheapest   = $product->cheapestVariant();
+                $priceLabel = $cheapest ? 'From PKR ' . number_format($cheapest->effectivePrice()) : 'PKR —';
             ?>
-            <div class="col-6 col-md-4 bts-gb-item" data-tag="<?php echo e($tag); ?>">
+            <div class="col-6 col-md-4 bts-gb-item" data-tag="<?php echo e($tag); ?>" data-live-product="<?php echo e($product->id); ?>">
                 <div class="gb-card">
                     <div class="gb-card-img-wrap">
-                        <img src="<?php echo e($image); ?>" alt="<?php echo e($product->name); ?>" class="gb-card-img">
+                        <img src="<?php echo e($image); ?>" alt="<?php echo e($product->name); ?>" class="gb-card-img" data-live-image>
+                        <?php if (isset($component)) { $__componentOriginalc259565ab925afbe6d933017bcb8ab06 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalc259565ab925afbe6d933017bcb8ab06 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.discount-badge','data' => ['label' => $product->discountLabel(),'live' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('discount-badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->discountLabel()),'live' => true]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
+<?php $attributes = $__attributesOriginalc259565ab925afbe6d933017bcb8ab06; ?>
+<?php unset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
+<?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
+<?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
                         <?php if($subName): ?>
                             <span class="gb-badge" style="background:#7c3aed;"><?php echo e($subName); ?></span>
                         <?php endif; ?>
@@ -310,13 +373,32 @@
                         </button>
                     </div>
                     <div class="p-3 d-flex flex-column">
-                        <h6 class="gb-name mb-1"><?php echo e($product->name); ?></h6>
+                        <h6 class="gb-name mb-1" data-live-name><?php echo e($product->name); ?></h6>
                         <p class="gb-desc"><?php echo e($product->description); ?></p>
-                        <p class="bts-gb-price"><?php echo e($priceLabel); ?></p>
+                        <p class="bts-gb-price" data-live-price data-live-prefix="From "><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['variant' => $cheapest,'prefix' => 'From ']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('price'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['variant' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($cheapest),'prefix' => 'From ']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?></p>
                         <?php if($product->variants->count() > 1): ?>
                             <p class="text-muted mb-2" style="font-size:.75rem;"><?php echo e($product->variants->count()); ?> variants available</p>
                         <?php endif; ?>
-                        <a href="<?php echo e(route('product-item', $product->id)); ?>" class="bts-gb-explore-btn">
+                        <a href="<?php echo e(route('product-item', $product->slug)); ?>" class="bts-gb-explore-btn">
                             View Product <i class="ri-arrow-right-line ms-1"></i>
                         </a>
                     </div>
@@ -368,20 +450,40 @@
     </div>
 
     
-    <div class="row g-4" id="cer-grid">
+    <div class="row g-4" id="cer-grid" data-live-listing="<?php echo e($liveListing); ?>" data-live-signature="<?php echo e($liveSignature); ?>">
         <?php $__empty_1 = true; $__currentLoopData = $allDbProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
         <?php
             $subName    = $product->_sub_name ?? $product->subCategory?->name ?? '';
             $tag        = $ceramicTagMap[$subName] ?? 'mug';
             $image      = $product->images->first()?->image_url ?? $fallbackImage;
-            $minPrice   = $product->variants->min('price');
-            $priceLabel = $minPrice ? 'PKR ' . number_format($minPrice) : 'PKR —';
+            $cheapest   = $product->cheapestVariant();
+            $priceLabel = $cheapest ? 'PKR ' . number_format($cheapest->effectivePrice()) : 'PKR —';
             $variantName = $product->variants->first()?->variant_name;
         ?>
-        <div class="col-6 col-md-4 cer-item" data-tag="<?php echo e($tag); ?>">
+        <div class="col-6 col-md-4 cer-item" data-tag="<?php echo e($tag); ?>" data-live-product="<?php echo e($product->id); ?>">
             <div class="gb-card">
                 <div class="gb-card-img-wrap">
-                    <img src="<?php echo e($image); ?>" alt="<?php echo e($product->name); ?>" class="gb-card-img">
+                    <img src="<?php echo e($image); ?>" alt="<?php echo e($product->name); ?>" class="gb-card-img" data-live-image>
+                    <?php if (isset($component)) { $__componentOriginalc259565ab925afbe6d933017bcb8ab06 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalc259565ab925afbe6d933017bcb8ab06 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.discount-badge','data' => ['label' => $product->discountLabel(),'live' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('discount-badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->discountLabel()),'live' => true]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
+<?php $attributes = $__attributesOriginalc259565ab925afbe6d933017bcb8ab06; ?>
+<?php unset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
+<?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
+<?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
                     <?php if($subName): ?>
                         <span class="gb-badge" style="background:#C8A98A;"><?php echo e($subName); ?></span>
                     <?php endif; ?>
@@ -396,13 +498,32 @@
                     </button>
                 </div>
                 <div class="p-3 d-flex flex-column">
-                    <h6 class="gb-name mb-1"><?php echo e($product->name); ?></h6>
+                    <h6 class="gb-name mb-1" data-live-name><?php echo e($product->name); ?></h6>
                     <p class="gb-desc"><?php echo e($product->description); ?></p>
-                    <p class="gb-price"><?php echo e($priceLabel); ?></p>
+                    <p class="gb-price" data-live-price><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['variant' => $cheapest]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('price'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['variant' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($cheapest)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?></p>
                     <?php if($variantName): ?>
                         <p class="text-muted mb-2" style="font-size:.75rem;"><?php echo e($variantName); ?></p>
                     <?php endif; ?>
-                    <a href="<?php echo e(route('product-item', $product->id)); ?>" class="gb-add-btn" style="background:linear-gradient(135deg,#C8A98A,#8B5E3C);text-decoration:none!important;">
+                    <a href="<?php echo e(route('product-item', $product->slug)); ?>" class="gb-add-btn" style="background:linear-gradient(135deg,#C8A98A,#8B5E3C);text-decoration:none!important;">
                         View Product <i class="ri-arrow-right-line ms-1"></i>
                     </a>
                 </div>

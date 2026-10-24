@@ -187,7 +187,7 @@
                         <p class="text-muted small mb-3">Exclusive themed mystery items for ARMY! Available in Classic, Standard, and Premium sizes.</p>
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="text-muted small">Starting from</span>
-                            <span class="fw-bold" style="color:#7c3aed;">PKR 2,500</span>
+                            <span class="fw-bold" id="dynScoopPrice" style="color:#7c3aed;">PKR 2,500</span>
                         </div>
                         <button class="bts-explore-btn w-100 justify-content-center mt-auto" onclick="goToProduct('scoop')">Order Mystery Scoop</button>
                     </div>
@@ -206,8 +206,8 @@
                         <h5 class="fw-bold mb-1" id="dynBallsTitle">Mystery Balls 💜</h5>
                         <p class="text-muted small mb-3">Surprise mystery balls with ARMY-themed goodies! Minimum 5 balls, add by multiples of 5.</p>
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted small">5 balls for</span>
-                            <span class="fw-bold" style="color:#7c3aed;">PKR 1,000</span>
+                            <span class="text-muted small" id="dynBallsQty">5 balls for</span>
+                            <span class="fw-bold" id="dynBallsPrice" style="color:#7c3aed;">PKR 1,000</span>
                         </div>
                         <button class="bts-explore-btn w-100 justify-content-center mt-auto" onclick="goToProduct('balls')">Order Mystery Balls</button>
                     </div>
@@ -242,11 +242,27 @@
         updateCards();
     }
 
+    // Each member's cheapest scoop and smallest balls pack, sale prices applied
+    const biasPrices = @json($biasPrices ?? []);
+
+    function fmtPkr(n) { return 'PKR ' + Math.round(n).toLocaleString(); }
+    function priceHtml(amount, original) {
+        return fmtPkr(amount) + (original && original > amount
+            ? ' <s style="color:#9ca3af;font-weight:500;font-size:.8em;margin-left:.3em;">' + fmtPkr(original) + '</s>'
+            : '');
+    }
+
     function updateCards() {
         if (!selectedBias) return;
         const label = memberLabels[selectedBias];
         document.getElementById('dynScoopTitle').textContent = label + ' Mystery Scoop 💜';
         document.getElementById('dynBallsTitle').textContent = label + ' Mystery Balls 💜';
+        const prices = biasPrices[selectedBias] || {};
+        if (prices.scoop) document.getElementById('dynScoopPrice').innerHTML = priceHtml(prices.scoop.price, prices.scoop.original);
+        if (prices.balls) {
+            document.getElementById('dynBallsQty').textContent   = prices.balls.qty + ' balls for';
+            document.getElementById('dynBallsPrice').innerHTML = priceHtml(prices.balls.price, prices.balls.original);
+        }
         document.getElementById('dynamicCards').style.setProperty('display', 'flex', 'important');
     }
 

@@ -18,7 +18,7 @@ Route::get('/contact', fn() => view('pages.contact'))->name('contact');
 // ── Products ─────────────────────────────────────────────────────────────────
 Route::get('/mystery-balls',  [App\Http\Controllers\HomeController::class, 'genericProductPage'])->defaults('type', 'mystery-balls')->name('mystery-balls');
 Route::get('/mystery-scoops', [App\Http\Controllers\HomeController::class, 'genericProductPage'])->defaults('type', 'mystery-scoops')->name('mystery-scoops');
-Route::get('/bts-merch',      fn() => view('pages.bts-merch'))->name('bts-merch');
+Route::get('/bts-merch',      [App\Http\Controllers\HomeController::class, 'btsMerch'])->name('bts-merch');
 Route::get('/ceramic-mug',    [App\Http\Controllers\HomeController::class, 'genericProductPage'])->defaults('type', 'ceramic')->name('ceramic-mug');
 Route::get('/gift-box',       [App\Http\Controllers\HomeController::class, 'genericProductPage'])->defaults('type', 'gift-box')->name('gift-box');
 Route::get('/category',        [App\Http\Controllers\HomeController::class, 'categoryPage'])->name('category');
@@ -30,6 +30,9 @@ Route::get('/product/{type}', [App\Http\Controllers\HomeController::class, 'gene
 // ── Product detail by slug ────────────────────────────────────────────────────
 Route::get('/product-item/{product:slug}', [App\Http\Controllers\HomeController::class, 'productDetail'])->name('product-item');
 
+// ── Live storefront updates (polled by layouts/live-updates.blade.php) ──────────
+Route::get('/live', App\Http\Controllers\LiveController::class)->name('live')->middleware('throttle:120,1');
+
 // ── Internal catalog data browser ──────────────────────────────────────────────
 Route::get('/catalog-browser', [App\Http\Controllers\CatalogController::class, 'index'])->name('catalog.browser');
 
@@ -37,9 +40,20 @@ Route::get('/catalog-browser', [App\Http\Controllers\CatalogController::class, '
 Route::middleware('auth')->group(function () {
     Route::post('/orders', [App\Http\Controllers\OrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{order}', [App\Http\Controllers\OrderController::class, 'show'])->name('orders.show');
-    Route::post('/orders/{order}/pay-remaining', [App\Http\Controllers\OrderController::class, 'payRemaining'])->name('orders.pay-remaining');
     Route::get('/checkout/shipping-fee', [App\Http\Controllers\CheckoutController::class, 'shippingFee'])->name('checkout.shipping-fee');
+
+    // ── Safepay payments ─────────────────────────────────────────────────
+    Route::post('/orders/{order}/pay', [App\Http\Controllers\PaymentController::class, 'initiate'])
+        ->name('payments.initiate')->middleware('throttle:10,1');
+    Route::post('/orders/{order}/pay-remaining', [App\Http\Controllers\PaymentController::class, 'initiateRemaining'])
+        ->name('orders.pay-remaining')->middleware('throttle:10,1');
+    Route::match(['get', 'post'], '/payments/safepay/return/{token}', [App\Http\Controllers\PaymentController::class, 'return'])
+        ->name('payments.safepay.return');
 });
+
+// Safepay webhook — authenticated by the X-SFPY-SIGNATURE HMAC, not a session, and excluded from CSRF below.
+Route::post('/payments/safepay/webhook', [App\Http\Controllers\PaymentController::class, 'webhook'])
+    ->name('payments.safepay.webhook');
 
 Route::get('/cart',     fn() => view('pages.add-to-cart'))->name('cart');
 Route::get('/checkout', function () {
@@ -112,13 +126,14 @@ Route::post('/update-profile/{id}',  [App\Http\Controllers\HomeController::class
 Route::post('/update-password/{id}', [App\Http\Controllers\HomeController::class, 'updatePassword'])->name('updatePassword');
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', App\Http\Middleware\RespondToBackgroundForms::class])->group(function () {
     Route::get('/', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('products', Admin\ProductController::class)->except(['show']);
     Route::post('products/{product}/variants', [Admin\ProductVariantController::class, 'store'])->name('products.variants.store');
     Route::put('products/{product}/variants/{variant}', [Admin\ProductVariantController::class, 'update'])->name('products.variants.update');
     Route::delete('products/{product}/variants/{variant}', [Admin\ProductVariantController::class, 'destroy'])->name('products.variants.destroy');
+    Route::post('products/{product}/sale', [Admin\ProductVariantController::class, 'sale'])->name('products.sale');
     Route::post('products/{product}/images', [Admin\ProductImageController::class, 'store'])->name('products.images.store');
     Route::delete('products/{product}/images/{image}', [Admin\ProductImageController::class, 'destroy'])->name('products.images.destroy');
 
@@ -128,11 +143,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::delete('sub-categories/{subCategory}', [Admin\SubCategoryController::class, 'destroy'])->name('sub-categories.destroy');
 
     Route::get('orders', [Admin\OrderController::class, 'index'])->name('orders.index');
-    Route::get('orders/{order}', [Admin\OrderController::class, 'show'])->name('orders.show');
-    Route::put('orders/{order}', [Admin\OrderController::class, 'update'])->name('orders.update');
+    // Admin is staff-only, so it keeps the numeric id (customer routes bind by uuid).
+    Route::get('orders/{order:id}', [Admin\OrderController::class, 'show'])->name('orders.show');
+    Route::put('orders/{order:id}', [Admin\OrderController::class, 'update'])->name('orders.update');
 
     Route::get('pre-orders', [Admin\OrderController::class, 'preOrders'])->name('pre-orders.index');
-    Route::post('pre-orders/{order}/collect-remaining', [Admin\OrderController::class, 'collectRemaining'])->name('pre-orders.collect-remaining');
+    Route::post('pre-orders/{order:id}/collect-remaining', [Admin\OrderController::class, 'collectRemaining'])->name('pre-orders.collect-remaining');
 
     Route::get('refund-requests', [Admin\RefundRequestController::class, 'index'])->name('refund-requests.index');
     Route::put('refund-requests/{refundRequest}', [Admin\RefundRequestController::class, 'update'])->name('refund-requests.update');

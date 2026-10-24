@@ -345,6 +345,7 @@
 
             updateNotifBadge(data.unread_count);
             renderNotifDropdown(data.notifications);
+            return data;
         } catch (e) {}
     }
 
@@ -383,10 +384,14 @@
 
     document.addEventListener('DOMContentLoaded', loadNotifFeed);
 
-    setInterval(() => {
-        if (document.visibilityState === 'visible') {
-            loadNotifFeed();
+    // The unread count is checked by layouts/live-updates every few seconds;
+    // refresh the bell when it changes and pop up anything new.
+    document.addEventListener('live:notifications', async (e) => {
+        const data = await loadNotifFeed();
+        const newest = data?.notifications?.find(n => !n.read);
+        if (e.detail.increased && newest && window.showToast) {
+            showToast(newest.message, 'info');
         }
-    }, 20000);
+    });
     @endauth
 </script>

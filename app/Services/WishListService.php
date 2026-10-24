@@ -74,7 +74,7 @@ class WishListService
             ->filter(fn (WishList $wishlist) => $wishlist->product !== null)
             ->mapWithKeys(function (WishList $wishlist) {
                 $product  = $wishlist->product;
-                $minPrice = $product->variants->min('price');
+                $minPrice = $product->cheapestVariant()?->effectivePrice();
                 $id       = 'p-' . $product->id;
 
                 return [$id => [

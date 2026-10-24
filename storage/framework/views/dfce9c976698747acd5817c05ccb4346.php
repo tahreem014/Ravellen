@@ -7,7 +7,7 @@
 
     <div class="admin-card card">
         <div class="card-body">
-            <form action="<?php echo e(route('admin.products.store')); ?>" method="POST">
+            <form action="<?php echo e(route('admin.products.store')); ?>" method="POST" enctype="multipart/form-data">
                 <?php echo csrf_field(); ?>
 
                 <div class="mb-3">
@@ -38,7 +38,14 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-admin-primary">Create Product</button>
+                <?php echo $__env->make('admin.products.partials.pricing-fields', ['currentMode' => null, 'hasVariants' => false], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+                <div class="border rounded-3 p-3 mb-3">
+                    <div class="fw-semibold mb-2">Photos &amp; videos <span class="text-muted fw-normal small">(optional)</span></div>
+                    <?php echo $__env->make('admin.products.partials.media-picker', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                </div>
+
+                <button type="submit" class="btn btn-admin-primary" data-media-submit>Create Product</button>
             </form>
         </div>
     </div>

@@ -237,35 +237,20 @@
                 </div>
 
                 <div class="payment-grid" id="payment-grid">
-                    <div class="payment-option selected" data-method="visa" onclick="selectPayment(this)">
+                    <div class="payment-option selected" data-method="credit_card" onclick="selectPayment(this)">
                         <div class="pay-radio"></div>
-                        <i class="ri-visa-line pay-icon" style="color:#1a56db;"></i>
-                        <span>Visa</span>
-                    </div>
-                    <div class="payment-option" data-method="mastercard" onclick="selectPayment(this)">
-                        <div class="pay-radio"></div>
-                        <i class="ri-mastercard-line pay-icon" style="color:#eb001b;"></i>
-                        <span>Mastercard</span>
-                    </div>
-                    <div class="payment-option" data-method="unionpay" onclick="selectPayment(this)">
-                        <div class="pay-radio"></div>
-                        <i class="ri-bank-card-2-line pay-icon" style="color:#e31837;"></i>
-                        <span>UnionPay</span>
+                        <i class="ri-bank-card-line pay-icon" style="color:#1a56db;"></i>
+                        <span>Credit / Debit Card</span>
                     </div>
                     <div class="payment-option" data-method="easypaisa" onclick="selectPayment(this)">
                         <div class="pay-radio"></div>
                         <i class="ri-smartphone-line pay-icon" style="color:#3ab54a;"></i>
                         <span>Easypaisa</span>
                     </div>
-                    <div class="payment-option" data-method="nayapay" onclick="selectPayment(this)">
-                        <div class="pay-radio"></div>
-                        <i class="ri-wallet-3-line pay-icon" style="color:#6d28d9;"></i>
-                        <span>NayaPay</span>
-                    </div>
                 </div>
 
                 <div class="cod-note">
-                    <strong>Note:</strong> No Cash on Delivery. Online payment only via selected methods.
+                    <strong>Note:</strong> No Cash on Delivery. Online payment only. You'll complete your payment on Safepay's secure page.
                 </div>
             </div>
 
@@ -314,7 +299,7 @@
         <div id="confirm-orders-list"></div>
         <div class="d-flex gap-2 justify-content-center">
             <button class="track-btn" id="conf-track-btn"
-                    onclick="window.location.href='/orders/'+this.dataset.orderId">
+                    onclick="window.location.href='/orders/'+this.dataset.orderUuid">
                 View Order
             </button>
             <button class="continue-shop-btn" onclick="window.location.href='<?php echo e(url('/shop')); ?>'">Continue Shopping</button>
@@ -324,7 +309,8 @@
 
 <?php $__env->startSection('script'); ?>
 <script>
-const CART_KEY   = 'rv_cart';
+const CART_KEY       = 'rv_cart';
+const DESELECTED_KEY = 'rv_cart_deselected';   // written by the cart page
 const IS_AUTH    = <?php echo e(auth()->check() ? 'true' : 'false'); ?>;
 const CSRF_TOKEN = '<?php echo e(csrf_token()); ?>';
 const SHIPPING_FEE_URL = '<?php echo e(route('checkout.shipping-fee')); ?>';
@@ -334,21 +320,72 @@ let SHIPPING_AVAILABLE = false;
 let SELECTED_ADDRESS_ID = <?php echo e(optional($defaultAddress)->id ?? 'null'); ?>;
 
 function fmt(n) { return 'PKR ' + Number(n).toLocaleString(); }
+/* Price plus the crossed-out regular price while the item is on sale. */
+function priceHtml(amount, original) {
+    return fmt(amount) + (original && original > amount
+        ? ' <s style="color:#9ca3af;font-weight:500;font-size:.8em;margin-left:.3em;">' + fmt(original) + '</s>'
+        : '');
+}
 function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
 }
 
-/* ── populate order summary from localStorage ────────────────────────────── */
+/* ── cart selection (chosen on the cart page) ────────────────────────────── */
+function readCart() {
+    try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch(e) { return []; }
+}
+function itemKey(item) {
+    return item.id.startsWith('db-') ? item.id : item.id + '|' + (item.subtitle || '');
+}
+/* Cart items the user left selected — everything except the deselected set. */
+function getSelectedCart() {
+    let deselected = new Set();
+    try { deselected = new Set(JSON.parse(localStorage.getItem(DESELECTED_KEY) || '[]')); } catch(e) {}
+    return readCart().filter(item => !deselected.has(itemKey(item)));
+}
+/* After an order, drop just the ordered items; unselected ones stay in the cart. */
+function removeOrderedItemsFromCart() {
+    const ordered   = new Set(getSelectedCart().map(itemKey));
+    const remaining = readCart().filter(item => !ordered.has(itemKey(item)));
+
+    if (remaining.length) {
+        localStorage.setItem(CART_KEY, JSON.stringify(remaining));
+    } else {
+        localStorage.removeItem(CART_KEY);
+        localStorage.removeItem(DESELECTED_KEY);
+    }
+}
+
+/* Refresh db-backed rows from the server before showing totals, so the
+   summary matches what the order will be charged (a sale may have started
+   or ended since the item was added). The server prices the order itself. */
+async function syncPricesFromDb() {
+    if (!IS_AUTH) return;
+    try {
+        const res = await fetch('<?php echo e(route('cart.index')); ?>', { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) return;
+        const fresh = new Map(((await res.json()).items || []).map(i => [i.id, i]));
+        const cart  = readCart()
+            .filter(item => !item.id.startsWith('db-') || fresh.has(item.id))
+            .map(item => fresh.has(item.id) ? { ...item, ...fresh.get(item.id) } : item);
+        localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    } catch (e) {
+        console.error('Cart price sync failed:', e);
+    }
+}
+
+/* ── populate order summary from the selected cart items ─────────────────── */
 function loadSummary() {
-    let cart = [];
-    try { cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch(e) {}
+    const cart = getSelectedCart();
 
     const container = document.getElementById('checkout-items');
 
     if (!cart.length) {
-        container.innerHTML = '<p class="text-muted small">No items in cart.</p>';
+        container.innerHTML = readCart().length
+            ? '<p class="text-muted small">No items selected. <a href="<?php echo e(url('/cart')); ?>">Go back to your cart</a> to choose what to check out.</p>'
+            : '<p class="text-muted small">No items in cart.</p>';
         document.getElementById('co-subtotal').textContent = fmt(0);
         document.getElementById('co-total').textContent    = fmt(0);
         return;
@@ -358,6 +395,7 @@ function loadSummary() {
     container.innerHTML = cart.map(item => {
         const lineTotal = item.unitPrice * item.qty;
         const display   = item.preorder ? Math.round(lineTotal * 0.4) : lineTotal;
+        const original  = item.originalPrice && !item.preorder ? item.originalPrice * item.qty : null;
         subtotal += display;
         return `
         <div class="d-flex align-items-start gap-3 mb-3">
@@ -372,7 +410,7 @@ function loadSummary() {
                 </div>
                 ${item.comment ? `<div class="item-comment mt-1"><i class="ri-chat-1-line me-1"></i>${escapeHtml(item.comment)}</div>` : ''}
             </div>
-            <div class="item-line-price">${fmt(display)}</div>
+            <div class="item-line-price">${priceHtml(display, original)}</div>
         </div>`;
     }).join('');
 
@@ -479,8 +517,40 @@ function showConfirmation(orders, methodLabel) {
         </div>`;
     }).join('');
 
-    document.getElementById('conf-track-btn').dataset.orderId = orders[0].id;
+    document.getElementById('conf-track-btn').dataset.orderUuid = orders[0].uuid;
     document.getElementById('confirm-overlay').classList.add('show');
+}
+
+/* ── hand off to Safepay for one order, chaining to the next if given ───── */
+async function startPayment(orderUuid, nextOrderUuid) {
+    try {
+        const res = await fetch(`/orders/${orderUuid}/pay`, {
+            method:  'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': CSRF_TOKEN,
+                'Accept':       'application/json',
+            },
+            body: JSON.stringify({ next_order_uuid: nextOrderUuid }),
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.redirect) {
+            showToast(data.message || 'Unable to start payment. Please try again.', 'error');
+            const btn = document.querySelector('.place-order-btn');
+            btn.disabled = false;
+            btn.textContent = 'Place Order';
+            return;
+        }
+
+        window.location.href = data.redirect;
+    } catch (e) {
+        console.error('Payment start failed:', e);
+        showToast('Something went wrong starting payment. Please try again.', 'error');
+        const btn = document.querySelector('.place-order-btn');
+        btn.disabled = false;
+        btn.textContent = 'Place Order';
+    }
 }
 
 /* ── place order ─────────────────────────────────────────────────────────── */
@@ -504,6 +574,12 @@ async function placeOrder() {
         return;
     }
 
+    const selectedItems = getSelectedCart();
+    if (!selectedItems.length) {
+        showToast('Select at least one item in your cart to check out.', 'error');
+        return;
+    }
+
     const btn = document.querySelector('.place-order-btn');
     btn.disabled = true;
     btn.textContent = 'Placing Order…';
@@ -524,6 +600,10 @@ async function placeOrder() {
                     shipping_address: address,
                     payment_method:   method,
                     address_id:       SELECTED_ADDRESS_ID,
+                    // only db-backed rows exist server-side: 'db-12' → 12
+                    cart_item_ids:    selectedItems
+                        .filter(i => i.id.startsWith('db-'))
+                        .map(i => Number(i.id.slice(3))),
                 }),
             });
 
@@ -537,10 +617,17 @@ async function placeOrder() {
                 return;
             }
 
-            // Clear localStorage cart (DB cart already cleared server-side)
-            localStorage.removeItem(CART_KEY);
+            // Drop the ordered items from the localStorage cart (the server
+            // already removed them from the DB cart; unselected ones remain)
+            removeOrderedItemsFromCart();
 
-            showConfirmation(data.orders, methodLabel);
+            // Orders are created unpaid — hand off to Safepay for the first
+            // one now. A mixed cart (normal + preorder) makes two orders;
+            // the second is chained in via next_order_uuid and picked up
+            // automatically once the first payment succeeds.
+            const orders = data.orders;
+            btn.textContent = 'Redirecting to payment…';
+            await startPayment(orders[0].uuid, orders[1]?.uuid ?? null);
 
         } catch (e) {
             console.error('Order error:', e);
@@ -565,7 +652,7 @@ async function placeOrder() {
     orders.unshift({ id: fakeId, date: dateStr, total: totalNum, status: 'confirmed', trackingId: tracking });
     localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
 
-    localStorage.removeItem(CART_KEY);
+    removeOrderedItemsFromCart();
 
     showConfirmation(fakeId, tracking, totalNum, methodLabel);
 
@@ -573,7 +660,8 @@ async function placeOrder() {
     btn.textContent = 'Place Order';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await syncPricesFromDb();
     loadSummary();
     if (IS_AUTH && SELECTED_ADDRESS_ID) {
         fetchShippingFee();

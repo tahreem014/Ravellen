@@ -70,6 +70,7 @@
         font-size: .7rem; font-weight: 700; border-radius: .4rem;
         padding: .25rem .65rem; color: #fff; text-transform: capitalize;
     }
+    .pill-confirmed      { background: #059669; }
     .pill-processing     { background: #2563eb; }
     .pill-shipped         { background: #7c3aed; }
     .pill-delivered       { background: #16a34a; }
@@ -164,8 +165,8 @@
         </div>
     </div>
 
-    {{-- Recent orders --}}
-    <div id="recent-orders-section" class="mt-5 pt-3">
+    {{-- Recent orders (data-live-region: re-rendered when an order changes, layouts/live-updates) --}}
+    <div id="recent-orders-section" class="mt-5 pt-3" data-live-region="track-recent-orders">
         <h5 class="fw-bold text-center mb-4">Your Recent Orders</h5>
         <div id="recent-orders-list" style="max-width:38rem;margin:0 auto;">
             @foreach($orders as $order)
@@ -179,7 +180,7 @@
                     <div class="order-price">PKR {{ number_format($order->total_amount) }}</div>
                     <div style="display:flex;align-items:center;gap:.5rem;">
                         <span class="status-pill pill-{{ $order->order_status }}" style="line-height:1.6;">{{ str_replace('_', ' ', $order->order_status) }}</span>
-                        <button class="row-track-btn" style="height:1.9rem;line-height:1;" onclick="fillAndTrack('{{ $order->id }}')">Track</button>
+                        <button class="row-track-btn" style="height:1.9rem;line-height:1;" onclick="fillAndTrack({{ Js::from($order->tracking_number ?: $order->uuid) }})">Track</button>
                     </div>
                 </div>
             </div>
@@ -203,7 +204,9 @@ function fmtDateLabel(step) {
     return step.date ?? '';
 }
 
-function renderResult(order) {
+let trackedQuery = null;   // the order currently shown, refreshed live below
+
+function renderResult(order, scroll = true) {
     document.getElementById('res-order-id').textContent = 'Order #' + order.id + ' · ' + order.tracking_number;
     document.getElementById('res-date').textContent = 'Placed on ' + order.order_date;
 
@@ -225,7 +228,7 @@ function renderResult(order) {
     document.getElementById('track-error').style.display = 'none';
     const resultEl = document.getElementById('track-result');
     resultEl.style.display = 'block';
-    resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (scroll) resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function showError(message) {
@@ -259,14 +262,26 @@ async function trackOrder() {
             return;
         }
 
+        trackedQuery = val;
         renderResult(data);
     } catch (e) {
         showError('Something went wrong. Please try again.');
     }
 }
 
+// The admin changed one of this shopper's orders (layouts/live-updates): quietly
+// refresh the status and timeline of the order on screen, without scrolling.
+document.addEventListener('live:orders', async () => {
+    if (!trackedQuery) return;
+    try {
+        const res = await fetch(`${LOOKUP_URL}?query=${encodeURIComponent(trackedQuery)}`, { headers: { 'Accept': 'application/json' } });
+        if (res.ok) renderResult(await res.json(), false);
+    } catch (e) {}
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     if (initialResult) {
+        trackedQuery = @json($query);
         renderResult(initialResult);
     }
 });

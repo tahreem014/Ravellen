@@ -35,6 +35,7 @@
     </div>
 
     @include('layouts.toastify')
+    @include('layouts.live-updates')
 
     {{-- </div> --}}
   {{-- </div> --}}

@@ -90,6 +90,7 @@
         padding: .25rem .75rem;
     }
     .status-delivered { background: #dcfce7; color: #16a34a; }
+    .status-confirmed  { background: #ecfdf5; color: #059669; }
     .status-processing { background: #eff6ff; color: #2563eb; }
     .status-pending    { background: #fefce8; color: #ca8a04; }
     .status-shipped        { background: #ede9fe; color: #7c3aed; }
@@ -223,6 +224,7 @@
 <?php
     $statusMap = [
         'delivered'      => ['label'=>'Delivered',      'class'=>'status-delivered',      'icon'=>'ri-checkbox-circle-line'],
+        'confirmed'      => ['label'=>'Confirmed',      'class'=>'status-confirmed',      'icon'=>'ri-checkbox-circle-line'],
         'processing'     => ['label'=>'Processing',     'class'=>'status-processing',     'icon'=>'ri-time-line'],
         'pending'        => ['label'=>'Pending',        'class'=>'status-pending',        'icon'=>'ri-hourglass-line'],
         'shipped'        => ['label'=>'Shipped',        'class'=>'status-shipped',        'icon'=>'ri-truck-line'],
@@ -302,7 +304,7 @@ unset($__errorArgs, $__bag); ?>
         </div>
 
         
-        <div id="tab-overview" class="tab-panel active">
+        <div id="tab-overview" class="tab-panel active" data-live-region="profile-overview">
             <div class="row g-3 mb-4">
                 <div class="col-4">
                     <div class="stat-card">
@@ -353,7 +355,7 @@ unset($__errorArgs, $__bag); ?>
         </div>
 
         
-        <div id="tab-orders" class="tab-panel">
+        <div id="tab-orders" class="tab-panel" data-live-region="profile-orders">
             <div class="content-card">
                 <div class="section-heading">Order History</div>
                 <div class="section-sub">View and track all your orders</div>
@@ -403,7 +405,7 @@ unset($__errorArgs, $__bag); ?>
                             <span class="status-badge status-awaiting_stock"><i class="ri-hourglass-line"></i> Awaiting Stock</span>
                             <?php elseif($itemPaymentDue): ?>
                             <button type="button" class="pay-remaining-item-btn"
-                                onclick="payRemainingItem(<?php echo e($order->id); ?>, this)">Complete Remaining Payment</button>
+                                onclick="payRemainingItem(<?php echo e(Js::from($order->uuid)); ?>, this)">Complete Remaining Payment</button>
                             <?php endif; ?>
                             <?php if(!$refund && $item->isRefundEligible()): ?>
                             <button type="button" class="refund-request-btn" style="margin-left:0;"
@@ -438,7 +440,7 @@ unset($__errorArgs, $__bag); ?>
 
                     <div class="d-flex gap-2 mt-3 flex-wrap">
                         <button type="button" class="track-btn"
-                            onclick="window.location.href='<?php echo e(route('track-order', ['order_id' => $order->id])); ?>'">Track Package</button>
+                            onclick="window.location.href='<?php echo e(route('track-order', ['order_id' => $order->tracking_number ?: $order->uuid])); ?>'">Track Package</button>
                         <button class="invoice-btn">View Invoice</button>
                     </div>
                 </div>
@@ -1079,12 +1081,12 @@ function submitRefundRequest() {
     });
 }
 
-function payRemainingItem(orderId, btn) {
+function payRemainingItem(orderUuid, btn) {
     btn.disabled = true;
     const originalText = btn.textContent;
     btn.textContent = 'Processing…';
 
-    fetch(`/orders/${orderId}/pay-remaining`, {
+    fetch(`/orders/${orderUuid}/pay-remaining`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

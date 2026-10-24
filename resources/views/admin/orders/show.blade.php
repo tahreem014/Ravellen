@@ -9,7 +9,8 @@
         </a>
     </div>
 
-    <div class="row g-4">
+    {{-- data-admin-region / data-ajax: the status form saves in place (layouts/admin) --}}
+    <div class="row g-4" data-admin-region="order">
         <div class="col-lg-8">
             <div class="admin-card card mb-4">
                 <div class="card-body">
@@ -36,7 +37,7 @@
             <div class="admin-card card">
                 <div class="card-body">
                     <h5 class="mb-3">Update Status</h5>
-                    <form action="{{ route('admin.orders.update', $order) }}" method="POST" class="row g-3">
+                    <form action="{{ route('admin.orders.update', $order) }}" method="POST" class="row g-3" data-ajax>
                         @csrf @method('PUT')
                         <div class="col-md-6">
                             <label class="form-label">Order Status</label>
@@ -79,13 +80,38 @@
             <div class="admin-card card">
                 <div class="card-body">
                     <h5 class="mb-3">Payment</h5>
-                    <p class="mb-1">Method: {{ ucfirst($order->payment_method) }}</p>
-                    <p class="mb-1">Status: {{ ucfirst($order->payment_status) }}</p>
-                    @if ($order->isPreOrder())
-                        <p class="mb-1">Advance: PKR {{ number_format($order->advance_amount) }}</p>
-                        <p class="mb-1">Remaining: PKR {{ number_format($order->remaining_amount) }}</p>
+                    <p class="mb-1">Method: {{ $order->payment_method_label }}</p>
+                    <p class="mb-1">Status: {{ ucfirst(str_replace('_', ' ', $order->payment_status)) }}</p>
+                    @if ($order->payment_reference)
+                        <p class="mb-1 text-muted small">Safepay ref: {{ $order->payment_reference }}</p>
                     @endif
-                    <p class="mb-0 fw-bold">Total: PKR {{ number_format($order->total_amount) }}</p>
+                    @if ($order->paid_at)
+                        <p class="mb-1 text-muted small">Paid: {{ $order->paid_at->format('d M Y H:i') }}</p>
+                    @endif
+                    @if ($order->isPreOrder())
+                        <hr class="my-2">
+                        <p class="mb-1">Advance: PKR {{ number_format($order->advance_amount) }}
+                            @if ($order->payment_stage === \App\Models\Order::STAGE_ADVANCE_PAID || $order->payment_stage === \App\Models\Order::STAGE_COMPLETED)
+                                <span class="badge bg-success">paid</span>
+                            @else
+                                <span class="badge bg-secondary">pending</span>
+                            @endif
+                        </p>
+                        <p class="mb-1">Remaining: PKR {{ number_format($order->remaining_amount) }}
+                            @if ($order->payment_stage === \App\Models\Order::STAGE_COMPLETED)
+                                <span class="badge bg-success">paid</span>
+                            @else
+                                <span class="badge bg-secondary">pending</span>
+                            @endif
+                        </p>
+                        @if ($order->remaining_payment_reference)
+                            <p class="mb-1 text-muted small">Remaining Safepay ref: {{ $order->remaining_payment_reference }}</p>
+                        @endif
+                        @if ($order->remaining_paid_at)
+                            <p class="mb-1 text-muted small">Remaining paid: {{ $order->remaining_paid_at->format('d M Y H:i') }}</p>
+                        @endif
+                    @endif
+                    <p class="mb-0 fw-bold mt-2">Total: PKR {{ number_format($order->total_amount) }}</p>
                 </div>
             </div>
         </div>

@@ -203,24 +203,44 @@
         </div>
 
         
-        <div class="row g-3" id="shop-grid">
+        <div class="row g-3" id="shop-grid" data-live-listing="shop" data-live-signature="<?php echo e(app(\App\Services\LiveUpdateService::class)->listingSignature('shop')); ?>">
             <?php $__empty_1 = true; $__currentLoopData = $allProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                 <?php
                     $cat        = $product->_cat;
                     $sub        = $product->_sub;
                     $image      = $product->images->first()?->image_url ?? $fallbackImage;
-                    $minPrice   = $product->variants->min('price');
-                    $priceLabel = $minPrice ? 'From PKR ' . number_format($minPrice) : 'PKR —';
+                    $cheapest   = $product->cheapestVariant();
+                    $priceLabel = $cheapest ? 'From PKR ' . number_format($cheapest->effectivePrice()) : 'PKR —';
                     $searchText = strtolower($cat->name . ' ' . ($sub->name ?? '') . ' ' . $product->name);
                     $theme      = $shopThemeMap[$cat->name] ?? $shopDefaultTheme;
                 ?>
-                <div class="col-6 col-md-4 col-lg-3 shop-item"
+                <div class="col-6 col-md-4 col-lg-3 shop-item" data-live-product="<?php echo e($product->id); ?>"
                      data-cat="<?php echo e($cat->id); ?>"
                      data-sub="<?php echo e($sub->id ?? ''); ?>"
                      data-search="<?php echo e($searchText); ?>">
                     <div class="shop-prod-card">
                         <div class="shop-prod-img-wrap">
-                            <img src="<?php echo e($image); ?>" alt="<?php echo e($product->name); ?>">
+                            <img src="<?php echo e($image); ?>" alt="<?php echo e($product->name); ?>" data-live-image>
+                            <?php if (isset($component)) { $__componentOriginalc259565ab925afbe6d933017bcb8ab06 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalc259565ab925afbe6d933017bcb8ab06 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.discount-badge','data' => ['label' => $product->discountLabel(),'live' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('discount-badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->discountLabel()),'live' => true]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
+<?php $attributes = $__attributesOriginalc259565ab925afbe6d933017bcb8ab06; ?>
+<?php unset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
+<?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
+<?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
                             <?php if($sub): ?>
                                 <span class="shop-prod-badge" style="background:<?php echo e($theme['accent']); ?>;"><?php echo e($sub->name); ?></span>
                             <?php endif; ?>
@@ -236,8 +256,27 @@
                         </div>
                         <div class="p-3">
                             <p class="shop-prod-cat-label" style="color:<?php echo e($theme['accent']); ?>;"><?php echo e($cat->name); ?></p>
-                            <h6 class="shop-prod-name"><?php echo e($product->name); ?></h6>
-                            <p class="shop-prod-price" style="background:linear-gradient(to right,<?php echo e($theme['accent']); ?>,<?php echo e($theme['accent2']); ?>);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><?php echo e($priceLabel); ?></p>
+                            <h6 class="shop-prod-name" data-live-name><?php echo e($product->name); ?></h6>
+                            <p class="shop-prod-price" data-live-price data-live-prefix="From " style="background:linear-gradient(to right,<?php echo e($theme['accent']); ?>,<?php echo e($theme['accent2']); ?>);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['variant' => $cheapest,'prefix' => 'From ']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('price'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['variant' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($cheapest),'prefix' => 'From ']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
+<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
+<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
+<?php endif; ?></p>
                             <a href="<?php echo e(route('product-item', $product->slug)); ?>" class="shop-explore-btn" style="background:<?php echo e($theme['grad']); ?>;">
                                 View Product <i class="ri-arrow-right-line ms-1"></i>
                             </a>

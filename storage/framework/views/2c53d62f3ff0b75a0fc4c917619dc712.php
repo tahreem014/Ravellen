@@ -53,13 +53,6 @@
             <p style="color:#6b7280;font-size:.85rem;margin:0;">Enter your email and we'll send you a reset link</p>
         </div>
 
-        <?php if(session('status')): ?>
-            <div style="background:#dcfce7;border:1px solid #86efac;border-radius:.5rem;padding:.75rem 1rem;font-size:.85rem;color:#166534;margin-bottom:1.25rem;text-align:center;">
-                <i class="ri-checkbox-circle-line me-1"></i> <?php echo e(session('status')); ?>
-
-            </div>
-        <?php endif; ?>
-
         <form method="POST" action="<?php echo e(route('password.email')); ?>" id="fp-form">
             <?php echo csrf_field(); ?>
             <div style="margin-top:1.5rem;margin-bottom:1.5rem;">
