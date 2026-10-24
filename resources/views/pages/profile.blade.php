@@ -1,4 +1,5 @@
 @extends('layouts.landing-page-layout')
+@section('title', 'My Profile')
 
 @section('css')
 <style>
@@ -84,7 +85,6 @@
     .order-meta-label { font-size: .7rem; color: #9ca3af; margin-bottom: .15rem; }
     .order-meta-val   { font-size: .82rem; font-weight: 600; color: #1f2937; }
     .order-meta-val.pink { color: #ec4899; }
-    .order-id-label   { font-size: .75rem; color: #9ca3af; }
 
     .status-badge {
         display: inline-flex; align-items: center; gap: .3rem;
@@ -96,6 +96,7 @@
     .status-processing { background: #eff6ff; color: #2563eb; }
     .status-pending    { background: #fefce8; color: #ca8a04; }
     .status-shipped        { background: #ede9fe; color: #7c3aed; }
+    .status-out_for_delivery { background: #fce7f3; color: #be185d; }
     .status-awaiting_stock { background: #fef3c7; color: #92400e; }
     .status-payment_due    { background: #fee2e2; color: #991b1b; }
     .status-cancelled      { background: #f3f4f6; color: #4b5563; }
@@ -230,6 +231,7 @@
         'processing'     => ['label'=>'Processing',     'class'=>'status-processing',     'icon'=>'ri-time-line'],
         'pending'        => ['label'=>'Pending',        'class'=>'status-pending',        'icon'=>'ri-hourglass-line'],
         'shipped'        => ['label'=>'Shipped',        'class'=>'status-shipped',        'icon'=>'ri-truck-line'],
+        'out_for_delivery' => ['label'=>'Out for Delivery', 'class'=>'status-out_for_delivery', 'icon'=>'ri-e-bike-2-line'],
         'awaiting_stock' => ['label'=>'Awaiting Stock', 'class'=>'status-awaiting_stock', 'icon'=>'ri-hourglass-line'],
         'payment_due'    => ['label'=>'Payment Due',    'class'=>'status-payment_due',    'icon'=>'ri-error-warning-line'],
         'cancelled'      => ['label'=>'Cancelled',      'class'=>'status-cancelled',      'icon'=>'ri-close-circle-line'],
@@ -330,7 +332,7 @@
                 <div class="order-row">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="fw-bold" style="font-size:.9rem;">Order #{{ $order->id }}</div>
+                            <div class="fw-bold" style="font-size:.9rem;">{{ $order->tracking_number }}</div>
                             <div class="text-muted" style="font-size:.78rem;">Placed on {{ $order->order_date?->format('d/m/Y') }}</div>
                             <div class="text-muted" style="font-size:.78rem;">{{ $order->items->count() }} item{{ $order->items->count()>1?'s':'' }} · PKR {{ number_format($order->total_amount) }}</div>
                         </div>
@@ -338,7 +340,7 @@
                             <span class="status-badge {{ $st['class'] }}">
                                 <i class="{{ $st['icon'] }}"></i> {{ $st['label'] }}
                             </span>
-                            <button class="invoice-btn" style="font-size:.75rem;padding:.3rem .75rem;" onclick="switchTab('orders', document.querySelectorAll('.profile-tab')[1])">View Details</button>
+                            <a href="{{ route('orders.show', $order) }}" class="invoice-btn text-decoration-none" style="font-size:.75rem;padding:.3rem .75rem;">View Details</a>
                         </div>
                     </div>
                 </div>
@@ -357,8 +359,8 @@
                 @forelse($orders as $order)
                 @php $st = $statusMap[$order->order_status] ?? $statusMap['pending']; @endphp
                 <div class="order-row mb-3">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="d-flex gap-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                        <div class="d-flex flex-wrap gap-4">
                             <div>
                                 <div class="order-meta-label">Order Placed</div>
                                 <div class="order-meta-val">{{ $order->order_date?->format('d/m/Y') }}</div>
@@ -372,14 +374,16 @@
                                 <div class="order-meta-val pink">{{ $order->shipping_name }}</div>
                             </div>
                         </div>
-                        <div class="order-id-label">Order # {{ $order->id }}</div>
+                        <div class="text-sm-end">
+                            <div class="order-meta-label">Tracking Number</div>
+                            <div class="order-meta-val">{{ $order->tracking_number }}</div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
                         <span class="status-badge {{ $st['class'] }} me-2">
                             <i class="{{ $st['icon'] }}"></i> {{ strtoupper($st['label']) }}
                         </span>
-                        <span class="text-muted" style="font-size:.75rem;">Tracking: {{ $order->tracking_number }}</span>
                     </div>
 
                     @php $itemAwaitingStock = $order->order_type === 'pre_order' && $order->order_status === 'awaiting_stock'; @endphp
@@ -432,9 +436,9 @@
                     @endforeach
 
                     <div class="d-flex gap-2 mt-3 flex-wrap">
+                        <a href="{{ route('orders.show', $order) }}" class="track-btn text-decoration-none">Order Details</a>
                         <button type="button" class="track-btn"
-                            onclick="window.location.href='{{ route('track-order', ['order_id' => $order->tracking_number ?: $order->uuid]) }}'">Track Package</button>
-                        <button class="invoice-btn">View Invoice</button>
+                            onclick="window.location.href='{{ route('track-order', ['tracking_number' => $order->tracking_number]) }}'">Track Package</button>
                     </div>
                 </div>
                 @empty

@@ -1,7 +1,9 @@
-<meta charset="utf-8" />
-<title>@yield('title') | Velzon - Admin & Dashboard Template</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta content="Premium Multipurpose Admin & Dashboard Template" name="description" />
-<meta content="Themesbrand" name="author" />
-<!-- App favicon -->
-<link rel="shortcut icon" href="{{ URL::asset('build/images/favicon.ico') }}">
+{{--
+    Tab title and icon, included by every layout. The title reads
+    "Page | Ravellen" from the page's @section('title'), or just "Ravellen"
+    when it sets none; the icon is the Ravellen logo (public/favicon.ico and
+    apple-touch-icon.png, made from images/ravellen-logo.png).
+--}}
+<title>@hasSection('title')@yield('title') |@endif Ravellen</title>
+<link rel="icon" href="{{ asset('favicon.ico') }}?v=2">
+<link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">

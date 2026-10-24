@@ -2,9 +2,8 @@
 <html lang="en" class="bg-white">
 <head>
     <meta charset="utf-8" />
-    <title>@yield('title', 'Admin') | Ravellen</title>
+    @include('layouts.title-meta')
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" href="{{ URL::asset('build/images/favicon.ico')}}">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     @include('layouts.head-css')

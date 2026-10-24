@@ -41,7 +41,7 @@ class AwaitingStockOrderNotification extends Notification
         return (new MailMessage)
             ->subject('Your pre-order is now available — Ravellen')
             ->greeting('Good news, ' . $notifiable->name . '!')
-            ->line("Your pre-order product '{$this->variant->product->name}' (order #{$this->order->id}, {$this->order->tracking_number}) is now available.")
+            ->line("Your pre-order product '{$this->variant->product->name}' (tracking number {$this->order->tracking_number}) is now available.")
             ->line('Please complete the remaining payment of PKR ' . number_format((float) $this->order->remaining_amount, 2) . ' so we can ship it.')
             ->action('Pay Remaining Balance', route('orders.show', $this->order))
             ->line('Thanks for your patience!');

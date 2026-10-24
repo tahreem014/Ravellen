@@ -1,4 +1,5 @@
 @extends('layouts.landing-page-layout')
+@section('title', 'Checkout')
 
 @section('css')
 <style>
@@ -499,8 +500,8 @@ function showConfirmation(orders, methodLabel) {
         return `
         <div class="confirm-meta">
             <div>
-                <div class="confirm-meta-label">${isPreorder ? 'Preorder ID' : 'Order ID'}</div>
-                <div class="confirm-meta-value order-id">#${order.id}</div>
+                <div class="confirm-meta-label">${isPreorder ? 'Preorder Tracking Number' : 'Tracking Number'}</div>
+                <div class="confirm-meta-value order-id">${order.tracking_number}</div>
             </div>
             <div>
                 <div class="confirm-meta-label">${isPreorder ? 'Advance Paid (40%)' : 'Total Paid'}</div>

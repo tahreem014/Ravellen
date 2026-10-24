@@ -29,19 +29,6 @@ class HomeController extends Controller
     //     $this->middleware('auth');
     // }
 
-    /**
-     * Show the application dashboard.
-     *
-     * @return \Illuminate\Contracts\Support\Renderable
-     */
-    public function index(Request $request)
-    {
-        if (view()->exists($request->path())) {
-            return view($request->path());
-        }
-        return abort(404);
-    }
-
     public function root()
     {
         $categories = Category::with([

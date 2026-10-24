@@ -1,3 +1,5 @@
+<?php $__env->startSection('title', 'Shop'); ?>
+
 <?php $__env->startSection('css'); ?>
 <style>
     .shop-wrapper { background: linear-gradient(to bottom, #fdf2f8, #f5f3ff); min-height: 100vh; }

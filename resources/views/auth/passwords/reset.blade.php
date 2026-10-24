@@ -1,4 +1,5 @@
 @extends('layouts.master-without-nav')
+@section('title', 'Reset Password')
 
 @section('content')
 <style>

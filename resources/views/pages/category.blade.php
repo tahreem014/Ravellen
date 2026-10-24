@@ -1,4 +1,5 @@
 @extends('layouts.landing-page-layout')
+@section('title', ['bts-gift-box' => 'BTS Gift Boxes', 'ceramic' => 'Ceramic Collection'][$section ?? 'gift-box'] ?? 'Mystery Gift Boxes')
 
 @section('css')
 <style>

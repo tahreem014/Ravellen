@@ -1,3 +1,5 @@
+<?php $__env->startSection('title', $order->tracking_number); ?>
+
 <?php $__env->startSection('css'); ?>
 <style>
     .order-wrapper { background: linear-gradient(to bottom, #fdf2f8, #f5f3ff); min-height: 100vh; }
@@ -16,15 +18,50 @@
     .status-pill {
         display: inline-flex; align-items: center; gap: .35rem;
         font-size: .78rem; font-weight: 700; padding: .3rem .75rem;
-        border-radius: 2rem; text-transform: capitalize;
+        border-radius: 2rem;
     }
     .status-pending, .status-awaiting_stock  { background: #fef3c7; color: #92400e; }
     .status-payment_due                       { background: #fee2e2; color: #991b1b; }
     .status-confirmed                         { background: #d1fae5; color: #065f46; }
     .status-processing                        { background: #dbeafe; color: #1e40af; }
     .status-shipped                           { background: #e0e7ff; color: #3730a3; }
+    .status-out_for_delivery                  { background: #fce7f3; color: #9d174d; }
     .status-delivered                         { background: #dcfce7; color: #166534; }
     .status-cancelled                         { background: #f3f4f6; color: #4b5563; }
+
+    /* ── Delivery progress (Order::trackingSteps): a row of steps, a column on phones ── */
+    .track-steps { display: flex; }
+    .track-step {
+        flex: 1 1 0; position: relative; display: flex; flex-direction: column;
+        align-items: center; text-align: center; gap: .45rem; padding: 0 .2rem;
+    }
+    .track-step + .track-step::before {
+        content: ''; position: absolute; top: .5rem; height: 3px;
+        left: calc(-50% + .6rem); right: calc(50% + .6rem); background: #e5e7eb;
+    }
+    .track-step.done + .track-step::before { background: #a855f7; }
+    .track-dot {
+        width: 1.15rem; height: 1.15rem; border-radius: 50%; flex-shrink: 0;
+        border: 3px solid #e5e7eb; background: #fff; position: relative; z-index: 1;
+    }
+    .track-step.done .track-dot      { background: #a855f7; border-color: #a855f7; }
+    .track-step.active .track-dot    { background: #ec4899; border-color: #ec4899; box-shadow: 0 0 0 4px rgba(236,72,153,.2); }
+    .track-step.cancelled .track-dot { background: #6b7280; border-color: #6b7280; }
+    .track-label { font-size: .78rem; font-weight: 600; color: #1f2937; line-height: 1.25; }
+    .track-step.pending .track-label { color: #9ca3af; }
+    .track-step.active .track-label  { color: #db2777; }
+    .track-date  { font-size: .7rem; color: #9ca3af; }
+
+    @media (max-width: 767.98px) {
+        .track-steps { flex-direction: column; }
+        .track-step { flex-direction: row; align-items: flex-start; text-align: left; gap: .75rem; padding: 0 0 1.1rem; }
+        .track-step + .track-step::before { display: none; }
+        .track-step:not(:last-child)::after {
+            content: ''; position: absolute; left: .5rem; top: 1.25rem; bottom: .1rem;
+            width: 3px; background: #e5e7eb;
+        }
+        .track-step.done:not(:last-child)::after { background: #a855f7; }
+    }
 
     .order-item-row {
         display: flex; align-items: center; justify-content: space-between;
@@ -63,12 +100,28 @@
     <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <div>
             <h1 class="fw-bold mb-1" style="font-size:1.75rem;background:linear-gradient(to right,#ec4899,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-                Order #<?php echo e($order->id); ?>
+                <?php echo e($order->tracking_number); ?>
 
             </h1>
-            <p class="text-muted small mb-0"><?php echo e($order->tracking_number); ?> &middot; placed <?php echo e($order->order_date?->format('d M Y') ?? $order->created_at->format('d M Y')); ?></p>
+            <p class="text-muted small mb-0">Placed on <?php echo e($order->order_date?->format('d M Y') ?? $order->created_at->format('d M Y')); ?></p>
         </div>
-        <span class="status-pill status-<?php echo e($order->order_status); ?>"><?php echo e(str_replace('_', ' ', $order->order_status)); ?></span>
+        <span class="status-pill status-<?php echo e($order->order_status); ?>"><?php echo e($order->status_label); ?></span>
+    </div>
+
+    
+    <div class="order-card mb-4">
+        <div class="section-title"><i class="ri-truck-line"></i> Delivery Status</div>
+        <div class="track-steps">
+            <?php $__currentLoopData = $order->trackingSteps(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $step): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="track-step <?php echo e($step['state']); ?>">
+                <span class="track-dot"></span>
+                <div>
+                    <div class="track-label"><?php echo e($step['label']); ?></div>
+                    <div class="track-date"><?php echo e($step['date']); ?></div>
+                </div>
+            </div>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        </div>
     </div>
 
     <?php if($order->order_type === 'pre_order' && $order->order_status === 'payment_due'): ?>

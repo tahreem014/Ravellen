@@ -1,3 +1,5 @@
+<?php $__env->startSection('title', 'Home'); ?>
+
 <?php $__env->startSection('css'); ?>
 <style>
     /* ── General ── */

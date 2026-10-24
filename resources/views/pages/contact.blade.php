@@ -1,4 +1,5 @@
 @extends('layouts.landing-page-layout')
+@section('title', 'Contact Us')
 
 @section('css')
 <style>

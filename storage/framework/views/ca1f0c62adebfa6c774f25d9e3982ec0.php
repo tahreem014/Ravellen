@@ -1,3 +1,5 @@
+<?php $__env->startSection('title', 'Shopping Cart'); ?>
+
 <?php $__env->startSection('css'); ?>
 <style>
     .cart-wrapper { background: linear-gradient(to bottom, #fdf2f8, #f5f3ff); min-height: 100vh; }

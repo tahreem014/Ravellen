@@ -1,4 +1,5 @@
 @extends('layouts.landing-page-layout')
+@section('title', 'Shopping Cart')
 
 @section('css')
 <style>

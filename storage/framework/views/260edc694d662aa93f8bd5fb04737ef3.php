@@ -1,3 +1,5 @@
+<?php $__env->startSection('title', 'Checkout'); ?>
+
 <?php $__env->startSection('css'); ?>
 <style>
     .checkout-wrapper { background: linear-gradient(to bottom, #fdf2f8, #f5f3ff); min-height: 100vh; }
@@ -498,8 +500,8 @@ function showConfirmation(orders, methodLabel) {
         return `
         <div class="confirm-meta">
             <div>
-                <div class="confirm-meta-label">${isPreorder ? 'Preorder ID' : 'Order ID'}</div>
-                <div class="confirm-meta-value order-id">#${order.id}</div>
+                <div class="confirm-meta-label">${isPreorder ? 'Preorder Tracking Number' : 'Tracking Number'}</div>
+                <div class="confirm-meta-value order-id">${order.tracking_number}</div>
             </div>
             <div>
                 <div class="confirm-meta-label">${isPreorder ? 'Advance Paid (40%)' : 'Total Paid'}</div>
@@ -666,6 +668,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (IS_AUTH && SELECTED_ADDRESS_ID) {
         fetchShippingFee();
     }
+});
+
+// The admin changed prices / discounts while checkout is open (layouts/live-updates)
+document.addEventListener('live:catalog', async () => {
+    await syncPricesFromDb();
+    loadSummary();
 });
 </script>
 <?php $__env->stopSection(); ?>

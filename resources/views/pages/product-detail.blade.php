@@ -269,6 +269,7 @@
      MYSTERY BALLS
 ══════════════════════════════════════════════════════════════════════ --}}
 @if($productType === 'mystery-balls')
+@section('title', 'Mystery Balls')
 
     <div class="text-center mb-5">
         <h1 class="fw-bold mb-3" style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,{{ $theme['accent'] }},{{ $theme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
@@ -406,6 +407,7 @@
      MYSTERY SCOOPS
 ══════════════════════════════════════════════════════════════════════ --}}
 @elseif($productType === 'mystery-scoops')
+@section('title', 'Mystery Scoops')
 
     <div class="text-center mb-5">
         <h1 class="fw-bold mb-3" style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,{{ $theme['accent'] }},{{ $theme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
@@ -548,6 +550,8 @@
      BTS MYSTERY SCOOP
 ══════════════════════════════════════════════════════════════════════ --}}
 @elseif($productType === 'bts-scoop')
+{{-- a chosen bias shows that member's product, e.g. "Jungkook Mystery Scoop" --}}
+@section('title', $bias && ($genericProduct ?? null) ? $genericProduct->name : 'BTS Mystery Scoop')
 
     <div class="text-center mb-5">
         @if($biasLabel)
@@ -703,6 +707,7 @@
      BTS MYSTERY BALLS
 ══════════════════════════════════════════════════════════════════════ --}}
 @elseif($productType === 'bts-balls')
+@section('title', $bias && ($genericProduct ?? null) ? $genericProduct->name : 'BTS Mystery Balls')
 
     <div class="text-center mb-5">
         @if($biasLabel)
@@ -883,6 +888,7 @@
             ? 'https://images.unsplash.com/photo-1515401857507-c897a8f64e42?w=600&q=80'
             : ($giftBoxItem ? $giftBoxItem['image'] : 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80');
     @endphp
+    @section('title', $pageTitle)
 
     <div class="text-center mb-5">
         @if(!$isCeramic)
@@ -999,6 +1005,7 @@
      SPECIFIC PRODUCT (from DB via /product-item/{id})
 ══════════════════════════════════════════════════════════════════════ --}}
 @elseif($productType === 'product-item')
+@section('title', $product->name)
 
 @php
     /** @var \App\Models\Product $product */
@@ -1883,6 +1890,7 @@ function piSelectVariant(btn, variantId) {
 // Fresh prices / name / photo from the admin (called by the live:catalog handler below)
 function piApplyLive(product) {
     document.querySelectorAll('[data-pi-name]').forEach(el => el.textContent = product.name);
+    document.title = product.name + ' | Ravellen';
     document.querySelectorAll('[data-pi-description]').forEach(el => el.textContent = product.description || '');
 
     const img = document.querySelector('.product-img');

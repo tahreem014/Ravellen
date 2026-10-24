@@ -1,6 +1,6 @@
 @extends('layouts.master-without-nav')
 @section('title')
-@lang('translation.password-reset')
+Verify Email
 @endsection
 @section('content')
 

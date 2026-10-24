@@ -168,6 +168,3 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', App\Http\Mi
     Route::post('shipping-rates/{shippingRate}/toggle-active', [Admin\ShippingRateController::class, 'toggleActive'])->name('shipping-rates.toggle-active');
     Route::delete('shipping-rates/{shippingRate}', [Admin\ShippingRateController::class, 'destroy'])->name('shipping-rates.destroy');
 });
-
-// ── Catch-all (must be last) ──────────────────────────────────────────────────
-Route::get('{any}', [App\Http\Controllers\HomeController::class, 'index'])->name('index');

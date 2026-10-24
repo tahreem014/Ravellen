@@ -7,7 +7,7 @@
             <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">All statuses</option>
                 <?php $__currentLoopData = $statuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $status): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <option value="<?php echo e($status); ?>" <?php if(request('status') === $status): echo 'selected'; endif; ?>><?php echo e(ucfirst(str_replace('_',' ', $status))); ?></option>
+                    <option value="<?php echo e($status); ?>" <?php if(request('status') === $status): echo 'selected'; endif; ?>><?php echo e(\App\Models\Order::STATUS_LABELS[$status]); ?></option>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </select>
         </form>
@@ -35,7 +35,7 @@
                             <td><?php echo e($order->order_date?->format('M j, Y')); ?></td>
                             <td><?php echo e(number_format($order->total_amount)); ?></td>
                             <td><span class="badge bg-<?php echo e($order->payment_status === 'paid' ? 'success' : 'warning'); ?>"><?php echo e(ucfirst($order->payment_status)); ?></span></td>
-                            <td><span class="badge bg-secondary"><?php echo e(ucfirst(str_replace('_',' ', $order->order_status))); ?></span></td>
+                            <td><span class="badge bg-secondary"><?php echo e($order->status_label); ?></span></td>
                             <td class="text-end">
                                 <a href="<?php echo e(route('admin.orders.show', $order)); ?>" class="btn btn-sm btn-outline-secondary"><i class="ri-eye-line"></i> View</a>
                             </td>

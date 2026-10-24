@@ -265,6 +265,7 @@
 
 
 <?php if($productType === 'mystery-balls'): ?>
+<?php $__env->startSection('title', 'Mystery Balls'); ?>
 
     <div class="text-center mb-5">
         <h1 class="fw-bold mb-3" style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,<?php echo e($theme['accent']); ?>,<?php echo e($theme['accent2']); ?>);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
@@ -457,6 +458,7 @@
 
 
 <?php elseif($productType === 'mystery-scoops'): ?>
+<?php $__env->startSection('title', 'Mystery Scoops'); ?>
 
     <div class="text-center mb-5">
         <h1 class="fw-bold mb-3" style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,<?php echo e($theme['accent']); ?>,<?php echo e($theme['accent2']); ?>);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
@@ -692,6 +694,8 @@
 
 
 <?php elseif($productType === 'bts-scoop'): ?>
+
+<?php $__env->startSection('title', $bias && ($genericProduct ?? null) ? $genericProduct->name : 'BTS Mystery Scoop'); ?>
 
     <div class="text-center mb-5">
         <?php if($biasLabel): ?>
@@ -959,6 +963,7 @@
 
 
 <?php elseif($productType === 'bts-balls'): ?>
+<?php $__env->startSection('title', $bias && ($genericProduct ?? null) ? $genericProduct->name : 'BTS Mystery Balls'); ?>
 
     <div class="text-center mb-5">
         <?php if($biasLabel): ?>
@@ -1194,6 +1199,7 @@
             ? 'https://images.unsplash.com/photo-1515401857507-c897a8f64e42?w=600&q=80'
             : ($giftBoxItem ? $giftBoxItem['image'] : 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80');
     ?>
+    <?php $__env->startSection('title', $pageTitle); ?>
 
     <div class="text-center mb-5">
         <?php if(!$isCeramic): ?>
@@ -1310,6 +1316,7 @@
 
 
 <?php elseif($productType === 'product-item'): ?>
+<?php $__env->startSection('title', $product->name); ?>
 
 <?php
     /** @var \App\Models\Product $product */
@@ -2312,6 +2319,7 @@ function piSelectVariant(btn, variantId) {
 // Fresh prices / name / photo from the admin (called by the live:catalog handler below)
 function piApplyLive(product) {
     document.querySelectorAll('[data-pi-name]').forEach(el => el.textContent = product.name);
+    document.title = product.name + ' | Ravellen';
     document.querySelectorAll('[data-pi-description]').forEach(el => el.textContent = product.description || '');
 
     const img = document.querySelector('.product-img');

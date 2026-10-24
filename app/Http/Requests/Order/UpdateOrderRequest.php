@@ -20,7 +20,7 @@ class UpdateOrderRequest extends FormRequest
             'total_amount'     => 'sometimes|required|numeric|min:0',
             'order_date'       => 'nullable|date',
             'order_type'       => 'sometimes|required|string|in:normal,pre_order',
-            'order_status'     => 'sometimes|required|string|in:pending,awaiting_stock,payment_due,confirmed,processing,shipped,delivered,cancelled',
+            'order_status'     => 'sometimes|required|string|in:pending,awaiting_stock,payment_due,confirmed,processing,shipped,out_for_delivery,delivered,cancelled',
             'payment_method'   => 'sometimes|required|string|max:255',
             'payment_status'   => 'sometimes|required|string|in:pending,paid,failed,refunded',
             'payment_stage'    => 'nullable|string|in:advance_paid,completed',

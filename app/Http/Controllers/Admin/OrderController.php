@@ -16,6 +16,7 @@ class OrderController extends Controller
         Order::STATUS_CONFIRMED,
         Order::STATUS_PROCESSING,
         Order::STATUS_SHIPPED,
+        Order::STATUS_OUT_FOR_DELIVERY,
         Order::STATUS_DELIVERED,
         Order::STATUS_CANCELLED,
     ];
@@ -59,15 +60,21 @@ class OrderController extends Controller
         return view('admin.orders.show', compact('order'), ['statuses' => self::STATUSES]);
     }
 
+    /**
+     * Delivery is handled by hand, so the admin just moves the order to its
+     * next status; the customer sees it in their account (no emails). The
+     * order's tracking number is Ravellen's own reference from checkout, so
+     * it isn't edited here.
+     */
     public function update(Request $request, Order $order)
     {
         $data = $request->validate([
             'order_status' => ['required', 'in:' . implode(',', self::STATUSES)],
-            'tracking_number' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if ($data['order_status'] === Order::STATUS_DELIVERED && ! $order->delivered_at) {
-            $data['delivered_at'] = now();
+        // the delivered date follows the status, also when a mistake is corrected
+        if ($data['order_status'] !== $order->order_status) {
+            $data['delivered_at'] = $data['order_status'] === Order::STATUS_DELIVERED ? now() : null;
         }
 
         $order->update($data);

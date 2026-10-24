@@ -36,25 +36,30 @@
 
             <div class="admin-card card">
                 <div class="card-body">
-                    <h5 class="mb-3">Update Status</h5>
+                    <h5 class="mb-1">Update Status</h5>
+                    <p class="text-muted small mb-3">The customer sees the new status in their account (Order Details, My Orders, Track Order). No email is sent.</p>
                     <form action="{{ route('admin.orders.update', $order) }}" method="POST" class="row g-3" data-ajax>
                         @csrf @method('PUT')
                         <div class="col-md-6">
                             <label class="form-label">Order Status</label>
                             <select name="order_status" class="form-select">
                                 @foreach ($statuses as $status)
-                                    <option value="{{ $status }}" @selected($order->order_status === $status)>{{ ucfirst(str_replace('_',' ', $status)) }}</option>
+                                    <option value="{{ $status }}" @selected($order->order_status === $status)>{{ \App\Models\Order::STATUS_LABELS[$status] }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Tracking Number</label>
-                            <input type="text" name="tracking_number" value="{{ $order->tracking_number }}" class="form-control">
+                            <label class="form-label">Order Reference</label>
+                            <div class="form-control-plaintext">{{ $order->tracking_number ?? '—' }}</div>
+                            <div class="form-text">Customers can search this on Track Order.</div>
                         </div>
                         <div class="col-12">
                             <button class="btn btn-admin-primary" type="submit">Save</button>
                         </div>
                     </form>
+                    @if ($order->delivered_at)
+                        <p class="text-muted small mt-3 mb-0">Delivered {{ $order->delivered_at->format('d M Y, g:i a') }}</p>
+                    @endif
                 </div>
             </div>
         </div>

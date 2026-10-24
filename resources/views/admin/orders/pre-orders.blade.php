@@ -9,7 +9,7 @@
             <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">All statuses</option>
                 @foreach ($statuses as $status)
-                    <option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst(str_replace('_',' ', $status)) }}</option>
+                    <option value="{{ $status }}" @selected(request('status') === $status)>{{ \App\Models\Order::STATUS_LABELS[$status] }}</option>
                 @endforeach
             </select>
         </form>
@@ -37,7 +37,7 @@
                             <td>PKR {{ number_format($order->advance_amount) }}</td>
                             <td>PKR {{ number_format($order->remaining_amount) }}</td>
                             <td>{{ $order->payment_stage ? ucfirst(str_replace('_',' ', $order->payment_stage)) : '—' }}</td>
-                            <td><span class="badge bg-secondary">{{ ucfirst(str_replace('_',' ', $order->order_status)) }}</span></td>
+                            <td><span class="badge bg-secondary">{{ $order->status_label }}</span></td>
                             <td class="text-end">
                                 <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-outline-secondary"><i class="ri-eye-line"></i> View</a>
                                 @if ($order->order_status === \App\Models\Order::STATUS_PAYMENT_DUE)

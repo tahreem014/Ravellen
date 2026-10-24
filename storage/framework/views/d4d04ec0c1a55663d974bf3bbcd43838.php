@@ -1,3 +1,5 @@
+<?php $__env->startSection('title', ['bts-gift-box' => 'BTS Gift Boxes', 'ceramic' => 'Ceramic Collection'][$section ?? 'gift-box'] ?? 'Mystery Gift Boxes'); ?>
+
 <?php $__env->startSection('css'); ?>
 <style>
     .cat-wrapper { background: linear-gradient(to bottom,#fdf2f8,#f5f3ff); min-height: 100vh; }

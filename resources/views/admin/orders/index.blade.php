@@ -9,7 +9,7 @@
             <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">All statuses</option>
                 @foreach ($statuses as $status)
-                    <option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst(str_replace('_',' ', $status)) }}</option>
+                    <option value="{{ $status }}" @selected(request('status') === $status)>{{ \App\Models\Order::STATUS_LABELS[$status] }}</option>
                 @endforeach
             </select>
         </form>
@@ -37,7 +37,7 @@
                             <td>{{ $order->order_date?->format('M j, Y') }}</td>
                             <td>{{ number_format($order->total_amount) }}</td>
                             <td><span class="badge bg-{{ $order->payment_status === 'paid' ? 'success' : 'warning' }}">{{ ucfirst($order->payment_status) }}</span></td>
-                            <td><span class="badge bg-secondary">{{ ucfirst(str_replace('_',' ', $order->order_status)) }}</span></td>
+                            <td><span class="badge bg-secondary">{{ $order->status_label }}</span></td>
                             <td class="text-end">
                                 <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-outline-secondary"><i class="ri-eye-line"></i> View</a>
                             </td>

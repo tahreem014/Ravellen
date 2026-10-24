@@ -7,18 +7,20 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Sent to a user whenever their order's status changes (including the
- * initial confirmation right after checkout).
+ * initial confirmation right after checkout). Website only: it shows under
+ * the account's notifications, never as an email.
  */
 class OrderStatusUpdatedNotification extends Notification
 {
     private const MESSAGES = [
-        Order::STATUS_CONFIRMED      => 'Your payment was received and your order has been confirmed.',
-        Order::STATUS_PROCESSING     => 'Your order is being prepared.',
-        Order::STATUS_SHIPPED        => 'Your order has been shipped.',
-        Order::STATUS_DELIVERED      => 'Your order has been delivered.',
-        Order::STATUS_CANCELLED      => 'Your order has been cancelled.',
-        Order::STATUS_AWAITING_STOCK => 'Your order is awaiting stock and will ship once the item is back in stock.',
-        Order::STATUS_PAYMENT_DUE    => 'Your order needs the remaining payment before it can be prepared for shipping.',
+        Order::STATUS_CONFIRMED        => 'Your payment was received and your order has been confirmed.',
+        Order::STATUS_PROCESSING       => 'Your order is being prepared.',
+        Order::STATUS_SHIPPED          => 'Your order has been shipped.',
+        Order::STATUS_OUT_FOR_DELIVERY => 'Your order is out for delivery and will reach you soon.',
+        Order::STATUS_DELIVERED        => 'Your order has been delivered.',
+        Order::STATUS_CANCELLED        => 'Your order has been cancelled.',
+        Order::STATUS_AWAITING_STOCK   => 'Your order is awaiting stock and will ship once the item is back in stock.',
+        Order::STATUS_PAYMENT_DUE      => 'Your order needs the remaining payment before it can be prepared for shipping.',
     ];
 
     public function __construct(

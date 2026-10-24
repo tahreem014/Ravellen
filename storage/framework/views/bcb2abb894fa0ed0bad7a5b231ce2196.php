@@ -1,3 +1,5 @@
+<?php $__env->startSection('title', 'My Wishlist'); ?>
+
 <?php $__env->startSection('css'); ?>
 <style>
     .wl-wrapper {

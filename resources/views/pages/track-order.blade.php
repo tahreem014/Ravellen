@@ -1,4 +1,5 @@
 @extends('layouts.landing-page-layout')
+@section('title', 'Track Order')
 
 @section('css')
 <style>
@@ -68,12 +69,14 @@
     }
     .status-pill {
         font-size: .7rem; font-weight: 700; border-radius: .4rem;
-        padding: .25rem .65rem; color: #fff; text-transform: capitalize;
+        padding: .25rem .65rem; color: #fff;
     }
     .pill-confirmed      { background: #059669; }
     .pill-processing     { background: #2563eb; }
     .pill-shipped         { background: #7c3aed; }
+    .pill-out_for_delivery { background: #db2777; }
     .pill-delivered       { background: #16a34a; }
+    .pill-pending         { background: #ca8a04; }
     .pill-awaiting_stock  { background: #b45309; }
     .pill-payment_due     { background: #dc2626; }
     .pill-cancelled       { background: #6b7280; }
@@ -93,7 +96,7 @@
         box-shadow: 0 2px 16px rgba(0,0,0,.07);
         padding: 1.75rem; max-width: 38rem; margin: 1.5rem auto 0;
     }
-    .result-view-link { font-size: .8rem; font-weight: 600; color: #6366f1; }
+    .result-view-link, .result-view-link:hover { font-size: .8rem; font-weight: 600; color: #6366f1; text-decoration: none; }
     .timeline { position: relative; padding-left: 1.5rem; }
     .timeline::before {
         content: ''; position: absolute; left: .55rem; top: .5rem;
@@ -127,23 +130,23 @@
             Track Your Order
         </h1>
         <p class="text-muted mx-auto" style="max-width:32rem;font-size:.95rem;">
-            Enter your order ID or tracking number to see real-time updates on your delivery
+            Enter your tracking number to see real-time updates on your delivery
         </p>
     </div>
 
     {{-- Search card --}}
     <div class="search-card mb-5">
-        <div class="fw-semibold mb-2" style="font-size:.9rem;">Order ID / Tracking Number</div>
+        <div class="fw-semibold mb-2" style="font-size:.9rem;">Tracking Number</div>
         <div class="d-flex gap-2 mb-2">
             <input type="text" class="track-input" id="track-input"
-                   placeholder="Enter order ID or tracking number..."
+                   placeholder="Enter your tracking number, e.g. RVL-AB12CD34"
                    value="{{ $query }}">
             <button class="track-search-btn" onclick="trackOrder()">
                 <i class="ri-search-line"></i> Track
             </button>
         </div>
         <p class="text-muted mb-0" style="font-size:.78rem;">
-            You can find your order ID in your confirmation email or account orders page
+            You can find your tracking number in your orders below or in your profile's Order History
         </p>
         <p class="track-error" id="track-error" style="display:none;"></p>
     </div>
@@ -153,7 +156,7 @@
         <div class="result-card">
             <div class="d-flex justify-content-between align-items-start mb-4">
                 <div>
-                    <div class="fw-bold" id="res-order-id" style="font-size:.95rem;color:#4f46e5;"></div>
+                    <div class="fw-bold" id="res-tracking-number" style="font-size:.95rem;color:#4f46e5;"></div>
                     <div class="text-muted" id="res-date" style="font-size:.78rem;"></div>
                 </div>
                 <div class="d-flex flex-column align-items-end gap-2">
@@ -173,14 +176,14 @@
             <div class="recent-order-row">
                 <div class="order-icon-sm"><i class="ri-box-3-line"></i></div>
                 <div class="flex-grow-1">
-                    <div class="order-id-text">Order #{{ $order->id }}</div>
-                    <div class="order-date-text">{{ $order->order_date?->format('d M Y') }} &middot; {{ $order->tracking_number }}</div>
+                    <div class="order-id-text">{{ $order->tracking_number }}</div>
+                    <div class="order-date-text">Placed on {{ $order->order_date?->format('d M Y') }}</div>
                 </div>
                 <div class="ms-auto d-flex flex-column align-items-end gap-1">
                     <div class="order-price">PKR {{ number_format($order->total_amount) }}</div>
                     <div style="display:flex;align-items:center;gap:.5rem;">
-                        <span class="status-pill pill-{{ $order->order_status }}" style="line-height:1.6;">{{ str_replace('_', ' ', $order->order_status) }}</span>
-                        <button class="row-track-btn" style="height:1.9rem;line-height:1;" onclick="fillAndTrack({{ Js::from($order->tracking_number ?: $order->uuid) }})">Track</button>
+                        <span class="status-pill pill-{{ $order->order_status }}" style="line-height:1.6;">{{ $order->status_label }}</span>
+                        <button class="row-track-btn" style="height:1.9rem;line-height:1;" onclick="fillAndTrack({{ Js::from($order->tracking_number) }})">Track</button>
                     </div>
                 </div>
             </div>
@@ -207,7 +210,7 @@ function fmtDateLabel(step) {
 let trackedQuery = null;   // the order currently shown, refreshed live below
 
 function renderResult(order, scroll = true) {
-    document.getElementById('res-order-id').textContent = 'Order #' + order.id + ' · ' + order.tracking_number;
+    document.getElementById('res-tracking-number').textContent = order.tracking_number;
     document.getElementById('res-date').textContent = 'Placed on ' + order.order_date;
 
     const pillEl = document.getElementById('res-status-pill');
@@ -238,8 +241,8 @@ function showError(message) {
     errorEl.style.display = 'block';
 }
 
-function fillAndTrack(id) {
-    document.getElementById('track-input').value = id;
+function fillAndTrack(trackingNumber) {
+    document.getElementById('track-input').value = trackingNumber;
     trackOrder();
 }
 
@@ -247,18 +250,18 @@ async function trackOrder() {
     const val = document.getElementById('track-input').value.trim();
 
     if (!val) {
-        showError('Please enter an order ID or tracking number.');
+        showError('Please enter your tracking number.');
         return;
     }
 
     try {
-        const res = await fetch(`${LOOKUP_URL}?query=${encodeURIComponent(val)}`, {
+        const res = await fetch(`${LOOKUP_URL}?tracking_number=${encodeURIComponent(val)}`, {
             headers: { 'Accept': 'application/json' },
         });
         const data = await res.json();
 
         if (!res.ok) {
-            showError(data.message || 'Order not found. Please check your order ID or tracking number.');
+            showError(data.message || 'No order found with that tracking number. Please check it and try again.');
             return;
         }
 
@@ -274,7 +277,7 @@ async function trackOrder() {
 document.addEventListener('live:orders', async () => {
     if (!trackedQuery) return;
     try {
-        const res = await fetch(`${LOOKUP_URL}?query=${encodeURIComponent(trackedQuery)}`, { headers: { 'Accept': 'application/json' } });
+        const res = await fetch(`${LOOKUP_URL}?tracking_number=${encodeURIComponent(trackedQuery)}`, { headers: { 'Accept': 'application/json' } });
         if (res.ok) renderResult(await res.json(), false);
     } catch (e) {}
 });

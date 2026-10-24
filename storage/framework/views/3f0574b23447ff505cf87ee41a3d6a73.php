@@ -35,25 +35,30 @@
 
             <div class="admin-card card">
                 <div class="card-body">
-                    <h5 class="mb-3">Update Status</h5>
+                    <h5 class="mb-1">Update Status</h5>
+                    <p class="text-muted small mb-3">The customer sees the new status in their account (Order Details, My Orders, Track Order). No email is sent.</p>
                     <form action="<?php echo e(route('admin.orders.update', $order)); ?>" method="POST" class="row g-3" data-ajax>
                         <?php echo csrf_field(); ?> <?php echo method_field('PUT'); ?>
                         <div class="col-md-6">
                             <label class="form-label">Order Status</label>
                             <select name="order_status" class="form-select">
                                 <?php $__currentLoopData = $statuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $status): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <option value="<?php echo e($status); ?>" <?php if($order->order_status === $status): echo 'selected'; endif; ?>><?php echo e(ucfirst(str_replace('_',' ', $status))); ?></option>
+                                    <option value="<?php echo e($status); ?>" <?php if($order->order_status === $status): echo 'selected'; endif; ?>><?php echo e(\App\Models\Order::STATUS_LABELS[$status]); ?></option>
                                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Tracking Number</label>
-                            <input type="text" name="tracking_number" value="<?php echo e($order->tracking_number); ?>" class="form-control">
+                            <label class="form-label">Order Reference</label>
+                            <div class="form-control-plaintext"><?php echo e($order->tracking_number ?? '—'); ?></div>
+                            <div class="form-text">Customers can search this on Track Order.</div>
                         </div>
                         <div class="col-12">
                             <button class="btn btn-admin-primary" type="submit">Save</button>
                         </div>
                     </form>
+                    <?php if($order->delivered_at): ?>
+                        <p class="text-muted small mt-3 mb-0">Delivered <?php echo e($order->delivered_at->format('d M Y, g:i a')); ?></p>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

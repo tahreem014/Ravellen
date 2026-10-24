@@ -2,12 +2,10 @@
 <html lang="en" data-theme="corporate" class="bg-white">
 <head>
     <meta charset="utf-8" />
-    <title>@yield('title') | Velzon - Admin & Dashboard Template</title>
+    @include('layouts.title-meta')
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta content="Premium Multipurpose Admin & Dashboard Template" name="description" />
-    <meta content="Themesbrand" name="author" />
-    <!-- App favicon -->
-    <link rel="shortcut icon" href="{{ URL::asset('build/images/favicon.ico')}}">
+    <meta content="Your destination for mystery scoops, BTS merch, and curated gift boxes." name="description" />
+    <meta content="Ravellen" name="author" />
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     @include('layouts.head-css')

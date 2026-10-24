@@ -1,3 +1,5 @@
+<?php $__env->startSection('title', 'BTS Merch'); ?>
+
 <?php $__env->startSection('css'); ?>
 <style>
     .bts-wrapper { background: #fff; min-height: 100vh; }
