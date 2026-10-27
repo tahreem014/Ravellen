@@ -115,7 +115,9 @@
     .navbar-rv .rv-avatar-btn:hover { border-color: #a855f7; }
     .navbar-rv .rv-avatar-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-    /* Mobile offcanvas */
+    /* Mobile offcanvas — above the sticky navbar (1050), or it covers the menu's header and close button */
+    .offcanvas-rv { z-index: 1100; }
+    .offcanvas-backdrop { z-index: 1090; }
     .offcanvas-rv .nav-link-m {
         display: block; padding: .55rem .75rem; border-radius: .375rem;
         color: #374151; text-decoration: none; font-size: .9rem;

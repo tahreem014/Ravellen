@@ -1,3 +1,5 @@
+
+
 <?php $__env->startSection('title', $title); ?>
 
 <?php $__env->startSection('content'); ?>

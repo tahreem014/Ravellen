@@ -45,40 +45,67 @@
         overflow: hidden;
         transition: transform .3s, box-shadow .3s;
         height: 100%;
+        display: flex; flex-direction: column;
     }
-    .shop-prod-card:hover { transform: translateY(-6px); box-shadow: 0 16px 32px rgba(0,0,0,.13); }
-    .shop-prod-img-wrap { position: relative; height: 11rem; overflow: hidden; }
+    /* Hover lift only where there is a real hover — on a phone it sticks to the last card tapped */
+    @media (hover: hover) {
+        .shop-prod-card:hover { transform: translateY(-6px); box-shadow: 0 16px 32px rgba(0,0,0,.13); }
+        .shop-prod-card:hover .shop-prod-img-wrap img { transform: scale(1.08); }
+    }
+    .shop-prod-img-wrap { position: relative; height: 11rem; overflow: hidden; flex-shrink: 0; }
     .shop-prod-img-wrap img {
         width: 100%; height: 100%; object-fit: cover;
         display: block; transition: transform .5s;
     }
-    .shop-prod-card:hover .shop-prod-img-wrap img { transform: scale(1.08); }
     .shop-prod-badge {
         position: absolute; top: .6rem; left: .6rem;
+        max-width: calc(100% - 3.5rem);
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         color: #fff;
         font-size: .65rem; font-weight: 700;
         padding: .18rem .55rem; border-radius: .35rem;
     }
+    .shop-prod-body { padding: 1rem; flex: 1; display: flex; flex-direction: column; }
     .shop-prod-cat-label {
         font-size: .68rem; font-weight: 600;
         text-transform: uppercase; letter-spacing: .03em; margin-bottom: .15rem;
     }
+    /* Two lines at most, and always two lines of room, so cards in a row line up */
     .shop-prod-name {
-        font-weight: 700; font-size: .9rem; color: #1f2937; margin-bottom: .3rem;
+        font-weight: 700; font-size: .9rem; line-height: 1.3; color: #1f2937; margin-bottom: .3rem;
+        min-height: 2.6em;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
     .shop-prod-price {
         font-weight: 700; font-size: .85rem;
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         background-clip: text; margin-bottom: .75rem;
     }
+    .shop-prod-price .price-was { white-space: nowrap; }   /* wrap as a whole, never mid-"PKR 5,500" */
     .shop-explore-btn {
         border: 0; color: #fff; font-weight: 600; font-size: .85rem;
         border-radius: .5rem; padding: .55rem 1rem;
         transition: opacity .2s; width: 100%;
         display: flex; align-items: center; justify-content: center; gap: .35rem;
+        white-space: nowrap; margin-top: auto;
         text-decoration: none !important;
     }
     .shop-explore-btn:hover { opacity: .85; color: #fff; text-decoration: none !important; }
+
+    /* ── Phones: two compact, even cards per row ── */
+    @media (max-width: 575.98px) {
+        .shop-prod-card { border-radius: .85rem; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+        .shop-prod-img-wrap { height: auto; aspect-ratio: 1 / 1; }
+        .shop-prod-badge { top: .5rem; left: .5rem; font-size: .6rem; padding: .15rem .45rem; max-width: calc(100% - 3rem); }
+        .shop-prod-img-wrap .wl-heart-btn { top: .5rem; right: .5rem; width: 1.9rem; height: 1.9rem; }
+        .shop-prod-img-wrap .discount-badge { left: .5rem !important; bottom: .5rem !important; font-size: .65rem !important; padding: .3rem .5rem !important; }
+        .shop-prod-body { padding: .7rem .7rem .8rem; }
+        .shop-prod-cat-label { font-size: .62rem; }
+        .shop-prod-name { font-size: .85rem; }
+        .shop-prod-price { font-size: .8rem; margin-bottom: .6rem; }
+        .shop-explore-btn { font-size: .8rem; padding: .5rem .4rem; gap: .2rem; }
+        .shop-explore-btn i { margin-left: 0 !important; }
+    }
 
     /* ── Pagination ── */
     .shop-page-btn {
@@ -137,7 +164,7 @@
 @section('content')
 
 <div class="shop-wrapper">
-    <div class="container px-4 py-5">
+    <div class="container px-3 px-sm-4 py-4 py-sm-5">
 
         {{-- ── Header ── --}}
         <div class="text-center mb-4 fade-up">
@@ -196,7 +223,7 @@
         </div>
 
         {{-- ── Sub-category filter pills (shown once a category with sub-categories is selected) ── --}}
-        <div class="d-flex flex-wrap gap-2 justify-content-center mb-4" id="shop-sub-pills" style="display:none;">
+        <div class="flex-wrap gap-2 justify-content-center mb-4" id="shop-sub-pills" style="display:none;">
             <button type="button" class="shop-pill sub active" data-sub="all" data-parent="all" onclick="selectShopSub('all', this)">All</button>
             @foreach($categories as $category)
                 @foreach($category->subCategories as $sub)
@@ -206,7 +233,7 @@
         </div>
 
         {{-- ── Product grid ── --}}
-        <div class="row g-3" id="shop-grid" data-live-listing="shop" data-live-signature="{{ app(\App\Services\LiveUpdateService::class)->listingSignature('shop') }}">
+        <div class="row g-2 g-sm-3" id="shop-grid" data-live-listing="shop" data-live-signature="{{ app(\App\Services\LiveUpdateService::class)->listingSignature('shop') }}">
             @forelse($allProducts as $product)
                 @php
                     $cat        = $product->_cat;
@@ -238,7 +265,7 @@
                                 <i class="ri-heart-line"></i>
                             </button>
                         </div>
-                        <div class="p-3">
+                        <div class="shop-prod-body">
                             <p class="shop-prod-cat-label" style="color:{{ $theme['accent'] }};">{{ $cat->name }}</p>
                             <h6 class="shop-prod-name" data-live-name>{{ $product->name }}</h6>
                             <p class="shop-prod-price" data-live-price data-live-prefix="From " style="background:linear-gradient(to right,{{ $theme['accent'] }},{{ $theme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><x-price :variant="$cheapest" prefix="From " /></p>
@@ -303,9 +330,10 @@ function selectShopCategory(catId, btn) {
     const subBtns = subWrap.querySelectorAll('.shop-pill.sub[data-parent]');
     let anyForCat = false;
     subBtns.forEach(b => {
-        const show = catId !== 'all' && b.dataset.parent === catId;
+        const isAll = b.dataset.sub === 'all';
+        const show = catId !== 'all' && (isAll || b.dataset.parent === catId);
         b.style.display = show ? '' : 'none';
-        if (show) anyForCat = true;
+        if (show && !isAll) anyForCat = true;   // the "All" pill alone isn't worth a row
     });
     subWrap.style.display = anyForCat ? 'flex' : 'none';
 

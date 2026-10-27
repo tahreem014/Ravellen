@@ -1,3 +1,5 @@
+
+
 <?php
     // ── Determine product type ──────────────────────────────────────────────
     // Priority: PHP $type var (from route) → query param

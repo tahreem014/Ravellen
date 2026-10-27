@@ -743,7 +743,6 @@
 @endsection
 
 @section('script')
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 function switchTab(tab, btn) {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));

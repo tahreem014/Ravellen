@@ -1,3 +1,5 @@
+
+
 <?php $__env->startSection('title', 'Edit Product'); ?>
 
 <?php $__env->startSection('content'); ?>

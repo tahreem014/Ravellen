@@ -32,6 +32,9 @@
 
     </div>
 
+    {{-- Bootstrap's JS drives the mobile menu (offcanvas) and the profile modals; pages must not load it again. --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     @include('layouts.toastify')
     @include('layouts.live-updates')
 
