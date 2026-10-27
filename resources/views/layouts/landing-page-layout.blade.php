@@ -19,6 +19,7 @@
     <div class=" flex flex-col">
         {{-- ✅ Sticky Navbar --}}
         @include('layouts.navbar')
+        @include('layouts.back-button')
 
       {{-- ✅ Main Content (scrollable) --}}
       <main class="overflow-y-hidden overflow-x-hidden">

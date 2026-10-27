@@ -119,8 +119,6 @@
     .navbar-rv .rv-avatar-btn:hover { border-color: #a855f7; }
     .navbar-rv .rv-avatar-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-    .navbar-rv .rv-back-btn { display: inline-flex; align-items: center; margin-left: -.4rem; }
-
     /* Phones: heart, cart, bell, avatar and menu button share one row, and the bell's
        dropdown spans the screen (at 320px wide it would run off the left edge) */
     @media (max-width: 575.98px) {
@@ -145,21 +143,10 @@
     <div class="container">
         <div class="inner">
 
-            <div class="d-flex align-items-center gap-1">
-                
-                <?php if($currentPage !== '/'): ?>
-                    <a href="<?php echo e(request()->is('product-item/*', 'product/*', 'gift-box') ? url('/shop') : url('/')); ?>"
-                       class="rv-icon-btn rv-back-btn" id="rv-back-btn" aria-label="Go back" title="Back"
-                       onclick="return rvGoBack(event)">
-                        <i class="ri-arrow-left-line fs-5"></i>
-                    </a>
-                <?php endif; ?>
-
-                
-                <a href="<?php echo e(url('/')); ?>" class="rv-logo text-decoration-none">
-                    <img src="<?php echo e(asset('images/ravellen-logo.png')); ?>" alt="Ravellen Logo" height="40">
-                </a>
-            </div>
+            
+            <a href="<?php echo e(url('/')); ?>" class="rv-logo text-decoration-none">
+                <img src="<?php echo e(asset('images/ravellen-logo.png')); ?>" alt="Ravellen Logo" height="40">
+            </a>
 
             
             <div class="rv-nav d-none d-lg-flex">
@@ -293,21 +280,6 @@
 </div>
 
 <script>
-    // Back arrow: return to the page the visitor came from (the browser restores it as they left it,
-    // including the shop / BTS selections kept in the URL). With no earlier page on this site, follow
-    // the link's own href instead.
-    function rvGoBack(e) {
-        let cameFromThisSite = false;
-        try { cameFromThisSite = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (err) {}
-
-        if (cameFromThisSite && history.length > 1) {
-            e.preventDefault();
-            history.back();
-            return false;
-        }
-        return true;
-    }
-
     function updateCartBadge() {
         let cart = [];
         try { cart = JSON.parse(localStorage.getItem('rv_cart') || '[]'); } catch (e) {}

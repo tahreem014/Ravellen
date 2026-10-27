@@ -1,4 +1,3 @@
-
 <?php $__env->startSection('title', 'Notifications'); ?>
 
 <?php $__env->startSection('css'); ?>
@@ -33,7 +32,7 @@
 <?php $__env->stopSection(); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="notif-wrapper py-5">
+<div class="notif-wrapper pb-5 rv-pt-back">
 <div class="container px-4" style="max-width: 720px;">
 
     <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">

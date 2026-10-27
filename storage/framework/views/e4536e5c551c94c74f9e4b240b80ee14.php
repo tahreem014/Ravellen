@@ -19,6 +19,7 @@
     <div class=" flex flex-col">
         
         <?php echo $__env->make('layouts.navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+        <?php echo $__env->make('layouts.back-button', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
       
       <main class="overflow-y-hidden overflow-x-hidden">

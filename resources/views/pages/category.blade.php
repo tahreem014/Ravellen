@@ -199,7 +199,7 @@
 @endphp
 
 @if(($section ?? 'gift-box') === 'gift-box')
-<div class="cat-wrapper py-5">
+<div class="cat-wrapper pb-5 rv-pt-back">
 <div class="container px-3 px-sm-4">
 
     {{-- ── Header ── --}}

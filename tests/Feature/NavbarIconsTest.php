@@ -40,7 +40,7 @@ class NavbarIconsTest extends TestCase
         $this->get('/')->assertOk()->assertDontSee('id="rv-back-btn"', false);
 
         // The arrow's own link is where it goes when the visitor didn't arrive from another page on the site
-        $backLinkTo = fn (string $href) => '#<a href="' . preg_quote($href, '#') . '"\s+class="rv-icon-btn rv-back-btn"#';
+        $backLinkTo = fn (string $href) => '#<a href="' . preg_quote($href, '#') . '"\s+class="rv-back-btn"#';
 
         $product = Product::create(['name' => 'Back Test ' . uniqid(), 'category_id' => Category::firstOrCreate(['name' => 'Gift Boxes'])->id]);
 
@@ -48,7 +48,11 @@ class NavbarIconsTest extends TestCase
             $this->get($url)->assertOk()->assertSee('id="rv-back-btn"', false)->assertSee('onclick="return rvGoBack(event)"', false);
         }
 
-        $this->assertMatchesRegularExpression($backLinkTo(url('/')), $this->get('/shop')->getContent());
+        // it sits under the top bar, not inside it
+        $shop = $this->get('/shop')->getContent();
+        $this->assertGreaterThan(strpos($shop, '</nav>'), strpos($shop, 'id="rv-back-btn"'));
+
+        $this->assertMatchesRegularExpression($backLinkTo(url('/')), $shop);
         $this->assertMatchesRegularExpression($backLinkTo(url('/shop')), $this->get(route('product-item', $product))->assertOk()->getContent());
     }
 

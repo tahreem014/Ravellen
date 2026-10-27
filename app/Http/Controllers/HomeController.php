@@ -179,7 +179,7 @@ class HomeController extends Controller
 
         if ($map) {
             $isBalls = str_contains($type, 'balls');
-            $query   = \App\Models\Product::with(['variants', 'images']);
+            $query   = \App\Models\Product::with(['variants', 'images', 'reviews.user', 'reviews.images']);
 
             if ($bias || ! $map['name']) {
                 $query->whereHas('category', fn ($q) => $q->where('name', 'BTS Merch'))

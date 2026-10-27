@@ -1,4 +1,3 @@
-
 <?php $__env->startSection('title', $order->tracking_number); ?>
 
 <?php $__env->startSection('css'); ?>
@@ -94,7 +93,7 @@
 <?php $__env->stopSection(); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="order-wrapper py-5">
+<div class="order-wrapper pb-5 rv-pt-back">
 
 <div class="container px-4" style="max-width: 900px;" data-live-region="order-detail">
 

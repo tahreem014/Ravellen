@@ -78,48 +78,25 @@
     $biasLabel = $bias ? ($memberLabels[$bias] ?? ucfirst($bias)) : null;
     $btsLabel  = $biasLabel . ($era ? ' · '.$era : '');
 
-    // ── Reviews per product type (no duplicates, contextually relevant) ──────
-    $allReviews = [
-        'mystery-balls' => [
-            ['name'=>'Sara K.',    'date'=>'12 March, 2026',    'stars'=>5, 'text'=>'Got 10 balls and every single one was a surprise! The quality is amazing and the packaging was so cute.'],
-            ['name'=>'Hina R.',    'date'=>'28 February, 2026', 'stars'=>4, 'text'=>'Really fun to unbox! A couple of items were similar but overall great value for PKR 1,000 per 5.'],
-            ['name'=>'Zara M.',    'date'=>'5 January, 2026',   'stars'=>5, 'text'=>'Ordered 15 balls as gifts — everyone loved them. Will definitely order again!'],
-        ],
-        'mystery-scoops' => [
-            ['name'=>'Ayesha T.',  'date'=>'18 April, 2026',    'stars'=>5, 'text'=>'The Premium scoop was absolutely worth it. So many cute items, nothing repeated!'],
-            ['name'=>'Maryam N.', 'date'=>'24 September, 2026', 'stars'=>4, 'text'=>"Everything looks amazing, I'll make sure to order here every time!"],
-            ['name'=>'Fatima B.', 'date'=>'10 March, 2026',     'stars'=>5, 'text'=>'Ordered the Classic scoop and was blown away. Great curation, fast delivery.'],
-        ],
-        'bts-scoop' => [
-            ['name'=>'Army4ever',  'date'=>'2 May, 2026',       'stars'=>5, 'text'=>'The Jungkook themed scoop had the most adorable items 💜 Totally worth every rupee!'],
-            ['name'=>'PurpleYou', 'date'=>'15 April, 2026',     'stars'=>5, 'text'=>'OT7 scoop was perfect — items from all members. Borahae! 💜'],
-            ['name'=>'Sana A.',   'date'=>'1 March, 2026',      'stars'=>4, 'text'=>'BTS themed items are so unique. Loved the packaging and the surprise element!'],
-        ],
-        'bts-balls' => [
-            ['name'=>'Noor F.',    'date'=>'20 April, 2026',    'stars'=>5, 'text'=>'Ordered 20 BTS balls for my ARMY friends — they were obsessed! Great quality.'],
-            ['name'=>'Rimsha K.', 'date'=>'8 March, 2026',      'stars'=>4, 'text'=>'Every ball had something different. The BTS theme really comes through in the items 💜'],
-            ['name'=>'Laiba S.',  'date'=>'14 February, 2026',  'stars'=>5, 'text'=>'Perfect gift for any ARMY. Minimum 5 is very reasonable. Will order more!'],
-        ],
-        'ceramic' => [
-            ['name'=>'Iqra M.',    'date'=>'30 March, 2026',    'stars'=>5, 'text'=>'The ceramic mug is gorgeous! High quality and the design is exactly as shown.'],
-            ['name'=>'Dua H.',    'date'=>'11 February, 2026',  'stars'=>4, 'text'=>'Pre-order was smooth, arrived in 2 weeks. The mug is sturdy and so aesthetic!'],
-            ['name'=>'Mahnoor A.','date'=>'5 January, 2026',    'stars'=>5, 'text'=>'Bought 2 mugs as gifts. Everyone loved them. The ceramic quality is top notch.'],
-        ],
-        'gift-box' => [
-            ['name'=>'Alina R.',   'date'=>'22 April, 2026',    'stars'=>5, 'text'=>"Tata's Space gift box was the cutest thing ever! Perfect for any BTS fan 💜"],
-            ['name'=>'Bisma T.',  'date'=>'3 March, 2026',      'stars'=>5, 'text'=>'Gifted this to my friend and she cried happy tears. The packaging is beautiful!'],
-            ['name'=>'Hira N.',   'date'=>'19 January, 2026',   'stars'=>4, 'text'=>'Great value, lots of cute items inside. Would love more variety in future boxes.'],
-        ],
-    ];
-    // Fall back to mystery-scoops reviews if type not found
-    $reviews = $allReviews[$productType] ?? $allReviews['mystery-scoops'];
-
     // ── DB product behind the generic (non product-item) mystery pages ──────
     // HomeController::genericProductPage resolves it (the BTS member's product
     // for ?bias=). Prices shown here and the ids addToCart() sends to the cart
     // API all come from it; ceramic/gift-box pages have none.
     $genericProduct = $genericProduct ?? null;
     $dbProductMap   = ['product_id' => $genericProduct?->id];
+
+    // ── Reviews: the database's own ─────────────────────────────────────────
+    // A product page gets them from HomeController::productDetail. The generic
+    // mystery pages show the reviews left on the product behind them (the BTS
+    // member's own product for ?bias=); a page with no product behind it (the
+    // static gift box page) has none — nothing is made up.
+    if (! isset($productReviews)) {
+        $productReviews = $genericProduct
+            ? $genericProduct->reviews->sortByDesc('created_at')->values()
+            : collect();
+        $reviewCount = $productReviews->count();
+        $avgRating   = $reviewCount ? round($productReviews->avg('rating'), 1) : 0;
+    }
 
     // Mystery Balls quantity options — see Product::packOptions()
     $ballPacks = $genericProduct?->packOptions() ?? [];
@@ -351,27 +328,7 @@
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm rounded-3 p-4">
-                <button class="d-flex justify-content-between align-items-center w-100 bg-transparent border-0 p-0 mb-3"
-                        onclick="toggleReviews(this)" aria-expanded="true">
-                    <h5 class="fw-bold mb-0">Reviews</h5>
-                    <i class="ri-arrow-down-s-line" style="font-size:1.25rem;color:#6b7280;transition:transform .3s;display:inline-block;transform:rotate(180deg);"></i>
-                </button>
-                <div id="reviews-body">
-                    @foreach($reviews as $review)
-                        <div class="review-item">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-semibold small">{{ $review['name'] }}</span>
-                                <span class="text-muted" style="font-size:.75rem;">{{ $review['date'] }}</span>
-                            </div>
-                            <div class="mb-2">
-                                @for($s=1;$s<=5;$s++)<i class="ri-star-{{ $s<=$review['stars']?'fill':'line' }} star"></i>@endfor
-                            </div>
-                            <p class="text-muted small mb-0">{{ $review['text'] }}</p>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
+            @include('pages.partials.product-reviews')
         </div>
 
         <div class="col-lg-4">
@@ -491,27 +448,7 @@
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm rounded-3 p-4">
-                <button class="d-flex justify-content-between align-items-center w-100 bg-transparent border-0 p-0 mb-3"
-                        onclick="toggleReviews(this)" aria-expanded="true">
-                    <h5 class="fw-bold mb-0">Reviews</h5>
-                    <i class="ri-arrow-down-s-line" style="font-size:1.25rem;color:#6b7280;transition:transform .3s;display:inline-block;transform:rotate(180deg);"></i>
-                </button>
-                <div id="reviews-body">
-                    @foreach($reviews as $review)
-                        <div class="review-item">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-semibold small">{{ $review['name'] }}</span>
-                                <span class="text-muted" style="font-size:.75rem;">{{ $review['date'] }}</span>
-                            </div>
-                            <div class="mb-2">
-                                @for($s=1;$s<=5;$s++)<i class="ri-star-{{ $s<=$review['stars']?'fill':'line' }} star"></i>@endfor
-                            </div>
-                            <p class="text-muted small mb-0">{{ $review['text'] }}</p>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
+            @include('pages.partials.product-reviews')
         </div>
 
         <div class="col-lg-4">
@@ -642,27 +579,7 @@
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm rounded-3 p-4">
-                <button class="d-flex justify-content-between align-items-center w-100 bg-transparent border-0 p-0 mb-3"
-                        onclick="toggleReviews(this)" aria-expanded="true">
-                    <h5 class="fw-bold mb-0">Reviews</h5>
-                    <i class="ri-arrow-down-s-line" style="font-size:1.25rem;color:#6b7280;transition:transform .3s;display:inline-block;transform:rotate(180deg);"></i>
-                </button>
-                <div id="reviews-body">
-                    @foreach($reviews as $review)
-                        <div class="review-item">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-semibold small">{{ $review['name'] }}</span>
-                                <span class="text-muted" style="font-size:.75rem;">{{ $review['date'] }}</span>
-                            </div>
-                            <div class="mb-2">
-                                @for($s=1;$s<=5;$s++)<i class="ri-star-{{ $s<=$review['stars']?'fill':'line' }} star"></i>@endfor
-                            </div>
-                            <p class="text-muted small mb-0">{{ $review['text'] }}</p>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
+            @include('pages.partials.product-reviews')
         </div>
 
         <div class="col-lg-4">
@@ -791,27 +708,7 @@
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm rounded-3 p-4">
-                <button class="d-flex justify-content-between align-items-center w-100 bg-transparent border-0 p-0 mb-3"
-                        onclick="toggleReviews(this)" aria-expanded="true">
-                    <h5 class="fw-bold mb-0">Reviews</h5>
-                    <i class="ri-arrow-down-s-line" style="font-size:1.25rem;color:#6b7280;transition:transform .3s;display:inline-block;transform:rotate(180deg);"></i>
-                </button>
-                <div id="reviews-body">
-                    @foreach($reviews as $review)
-                        <div class="review-item">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-semibold small">{{ $review['name'] }}</span>
-                                <span class="text-muted" style="font-size:.75rem;">{{ $review['date'] }}</span>
-                            </div>
-                            <div class="mb-2">
-                                @for($s=1;$s<=5;$s++)<i class="ri-star-{{ $s<=$review['stars']?'fill':'line' }} star"></i>@endfor
-                            </div>
-                            <p class="text-muted small mb-0">{{ $review['text'] }}</p>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
+            @include('pages.partials.product-reviews')
         </div>
 
         <div class="col-lg-4">
@@ -948,27 +845,7 @@
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm rounded-3 p-4">
-                <button class="d-flex justify-content-between align-items-center w-100 bg-transparent border-0 p-0 mb-3"
-                        onclick="toggleReviews(this)" aria-expanded="true">
-                    <h5 class="fw-bold mb-0">Reviews</h5>
-                    <i class="ri-arrow-down-s-line" style="font-size:1.25rem;color:#6b7280;transition:transform .3s;display:inline-block;transform:rotate(180deg);"></i>
-                </button>
-                <div id="reviews-body">
-                    @foreach($reviews as $review)
-                        <div class="review-item">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-semibold small">{{ $review['name'] }}</span>
-                                <span class="text-muted" style="font-size:.75rem;">{{ $review['date'] }}</span>
-                            </div>
-                            <div class="mb-2">
-                                @for($s=1;$s<=5;$s++)<i class="ri-star-{{ $s<=$review['stars']?'fill':'line' }} star"></i>@endfor
-                            </div>
-                            <p class="text-muted small mb-0">{{ $review['text'] }}</p>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
+            @include('pages.partials.product-reviews')
         </div>
 
         <div class="col-lg-4">
@@ -1316,46 +1193,7 @@
             @endif
 
             {{-- Reviews --}}
-            <div class="card border-0 shadow-sm rounded-3 p-4">
-                <button class="d-flex justify-content-between align-items-center w-100 bg-transparent border-0 p-0 mb-3"
-                        onclick="toggleReviews(this)" aria-expanded="true">
-                    <h5 class="fw-bold mb-0">Reviews</h5>
-                    <i class="ri-arrow-down-s-line" style="font-size:1.25rem;color:#6b7280;transition:transform .3s;display:inline-block;transform:rotate(180deg);"></i>
-                </button>
-                <div id="reviews-body">
-                    <div class="d-flex align-items-center gap-2 mb-3">
-                        <span class="fw-bold fs-5">{{ number_format($avgRating, 1) }}</span>
-                        <div>
-                            @for($s=1;$s<=5;$s++)<i class="ri-star-{{ $s<=round($avgRating)?'fill':'line' }} star"></i>@endfor
-                        </div>
-                        <span class="text-muted small">({{ $reviewCount }} review{{ $reviewCount === 1 ? '' : 's' }})</span>
-                    </div>
-                    @forelse($productReviews as $review)
-                        <div class="review-item">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-semibold small">{{ $review->user->name ?? 'Anonymous' }}</span>
-                                <span class="text-muted" style="font-size:.75rem;">{{ $review->created_at->format('d M Y') }}</span>
-                            </div>
-                            <div class="mb-2">
-                                @for($s=1;$s<=5;$s++)<i class="ri-star-{{ $s<=$review->rating?'fill':'line' }} star"></i>@endfor
-                            </div>
-                            @if($review->comments)
-                            <p class="text-muted small mb-2">{{ $review->comments }}</p>
-                            @endif
-                            @if($review->images->isNotEmpty())
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach($review->images as $reviewImage)
-                                <img src="{{ asset('images/reviews/' . $reviewImage->image_url) }}"
-                                     alt="Review image" class="review-img">
-                                @endforeach
-                            </div>
-                            @endif
-                        </div>
-                    @empty
-                        <p class="text-muted small mb-0">No reviews yet. Be the first to review this product!</p>
-                    @endforelse
-                </div>
-            </div>
+            @include('pages.partials.product-reviews')
         </div>
 
         {{-- Order Summary sidebar --}}

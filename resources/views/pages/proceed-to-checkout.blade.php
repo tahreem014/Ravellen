@@ -166,7 +166,7 @@
 @endsection
 
 @section('content')
-<div class="checkout-wrapper py-5">
+<div class="checkout-wrapper pb-5 rv-pt-back">
 <div class="container px-4">
 
     <h1 class="fw-bold mb-1" style="font-size:2rem;background:linear-gradient(to right,#ec4899,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">

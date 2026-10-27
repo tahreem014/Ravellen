@@ -94,7 +94,7 @@
 @endsection
 
 @section('content')
-<div class="order-wrapper py-5">
+<div class="order-wrapper pb-5 rv-pt-back">
 {{-- data-live-region: re-rendered when the admin changes this order (layouts/live-updates) --}}
 <div class="container px-4" style="max-width: 900px;" data-live-region="order-detail">
 
