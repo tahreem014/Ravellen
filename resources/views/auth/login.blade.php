@@ -165,6 +165,8 @@
             <p style="color:#6b7280;font-size:.875rem;margin:0;">Sign in to continue shopping</p>
         </div>
 
+        <x-checkout-login-notice />
+
         <form action="{{ route('login') }}" method="POST">
             @csrf
 

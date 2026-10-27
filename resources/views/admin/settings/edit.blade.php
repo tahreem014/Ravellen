@@ -33,4 +33,18 @@
             </form>
         </div>
     </div>
+
+    {{-- On a phone the header has no Log Out, so it lives here (the header keeps it from tablet width up) --}}
+    <div class="admin-card card mt-4 d-md-none">
+        <div class="card-body">
+            <h5 class="mb-1">Account</h5>
+            <p class="text-muted small mb-3">Signed in as {{ Auth::user()->name }}</p>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="btn btn-admin-logout w-100">
+                    <i class="ri-logout-box-r-line"></i> Log Out
+                </button>
+            </form>
+        </div>
+    </div>
 @endsection

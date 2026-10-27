@@ -465,6 +465,42 @@ function renderShopPage() {
     document.getElementById('shop-coming-soon').style.display = shopComingSoon ? 'block' : 'none';
     document.getElementById('no-results').style.display = (!shopComingSoon && matched.length === 0) ? 'block' : 'none';
     renderShopPagination(matched.length, totalPages);
+    rememberShopView();
+}
+
+// ── Keep the view in the URL so Back from a product page returns to it ──────
+// (replaceState: choosing filters doesn't add history entries of its own)
+function rememberShopView() {
+    const params = new URLSearchParams();
+    if (shopActiveCat !== 'all') params.set('category', shopActiveCat);
+    if (shopActiveSub !== 'all') params.set('sub', shopActiveSub);
+    if (shopSearchQuery) params.set('q', shopSearchQuery);
+    if (shopCurrentPage > 1) params.set('page', shopCurrentPage);
+
+    const qs = params.toString();
+    history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
+}
+
+function restoreShopView(search) {
+    const params = new URLSearchParams(search);
+
+    const catBtn = document.querySelector(`#shop-cat-pills .shop-pill[data-cat="${CSS.escape(params.get('category') || '')}"]`);
+    if (catBtn) selectShopCategory(catBtn.dataset.cat, catBtn);
+
+    const subBtn = document.querySelector(`#shop-sub-pills .shop-pill[data-sub="${CSS.escape(params.get('sub') || '')}"]`);
+    if (catBtn && subBtn && subBtn.style.display !== 'none') selectShopSub(subBtn.dataset.sub, subBtn);
+
+    const q = params.get('q');
+    if (q) {
+        document.getElementById('shop-search').value = q;
+        filterShop(q);
+    }
+
+    const page = parseInt(params.get('page'), 10);
+    if (page > 1) {
+        shopCurrentPage = page;
+        renderShopPage();
+    }
 }
 
 // ── Pagination controls ──────────────────────────────────────────────────────
@@ -541,7 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const savedView = location.search;   // read before the first render rewrites it
     applyShopFilters();
+    restoreShopView(savedView);
 });
 </script>
 <?php $__env->stopSection(); ?>

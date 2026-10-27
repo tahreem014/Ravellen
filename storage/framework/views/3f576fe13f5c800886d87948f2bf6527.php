@@ -1984,13 +1984,14 @@ async function persistToCart(payload, localItem) {
         }
     }
 
-    // Guest fallback — or if the API call failed: write localItem to localStorage
+    // Guest fallback — or if the API call failed: write localItem to localStorage.
+    // The payload rides along so checkout can move the item into the account's cart once they sign in.
     const cart     = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
     const existing = cart.find(i => i.id === localItem.id && i.subtitle === localItem.subtitle);
     if (existing) {
         existing.qty += localItem.qty;
     } else {
-        cart.push(localItem);
+        cart.push({ ...localItem, payload });
     }
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
     if (window.updateCartBadge) updateCartBadge();

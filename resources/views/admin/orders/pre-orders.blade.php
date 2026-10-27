@@ -5,7 +5,7 @@
 @section('content')
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <h5 class="mb-0">{{ $title }}</h5>
-        <form method="GET" class="d-flex gap-2">
+        <form method="GET" class="admin-toolbar-form">
             <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">All statuses</option>
                 @foreach ($statuses as $status)
@@ -17,7 +17,7 @@
 
     <div class="admin-card card">
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table class="table table-stack align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Tracking #</th>
@@ -32,13 +32,13 @@
                 <tbody>
                     @forelse ($orders as $order)
                         <tr>
-                            <td>{{ $order->tracking_number ?? '—' }}</td>
-                            <td>{{ $order->user?->name }}</td>
-                            <td>PKR {{ number_format($order->advance_amount) }}</td>
-                            <td>PKR {{ number_format($order->remaining_amount) }}</td>
-                            <td>{{ $order->payment_stage ? ucfirst(str_replace('_',' ', $order->payment_stage)) : '—' }}</td>
-                            <td><span class="badge bg-secondary">{{ $order->status_label }}</span></td>
-                            <td class="text-end">
+                            <td class="stack-title">{{ $order->tracking_number ?? '—' }}</td>
+                            <td data-label="Customer">{{ $order->user?->name }}</td>
+                            <td data-label="Advance">PKR {{ number_format($order->advance_amount) }}</td>
+                            <td data-label="Remaining">PKR {{ number_format($order->remaining_amount) }}</td>
+                            <td data-label="Stage">{{ $order->payment_stage ? ucfirst(str_replace('_',' ', $order->payment_stage)) : '—' }}</td>
+                            <td data-label="Status"><span class="badge bg-secondary">{{ $order->status_label }}</span></td>
+                            <td class="text-end stack-actions">
                                 <a href="{{ route('admin.orders.show', $order) }}" class="btn btn-sm btn-outline-secondary"><i class="ri-eye-line"></i> View</a>
                                 @if ($order->order_status === \App\Models\Order::STATUS_PAYMENT_DUE)
                                     <form action="{{ route('admin.pre-orders.collect-remaining', $order) }}" method="POST" class="d-inline" onsubmit="return confirmAction(this, 'Mark the remaining payment as collected?', 'btn-admin-primary');">

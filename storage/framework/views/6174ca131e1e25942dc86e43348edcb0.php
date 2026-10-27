@@ -251,6 +251,8 @@
         document.querySelectorAll('.bias-btn').forEach(b => b.classList.remove('active'));
         document.querySelector(`.bias-btn[data-bias="${id}"]`).classList.add('active');
         updateCards();
+        // kept in the URL so Back from a product page returns here with this member still chosen
+        history.replaceState(null, '', location.pathname + '?bias=' + encodeURIComponent(id));
     }
 
     // Each member's cheapest scoop and smallest balls pack, sale prices applied
@@ -283,6 +285,10 @@
         const base = type === 'scoop' ? '/mystery-scoops' : '/mystery-balls';
         window.location.href = base + '?' + params.toString();
     }
+
+    // Coming back (or opening a shared link) with ?bias=… shows that member's cards straight away
+    const savedBias = new URLSearchParams(location.search).get('bias');
+    if (savedBias && document.querySelector(`.bias-btn[data-bias="${CSS.escape(savedBias)}"]`)) selectBias(savedBias);
 </script>
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make('layouts.landing-page-layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\zubai\Herd\Ravellen\resources\views/pages/bts-merch.blade.php ENDPATH**/ ?>

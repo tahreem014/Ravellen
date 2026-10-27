@@ -75,7 +75,7 @@
 
     <div data-pricing-panel="custom">
         <div class="table-responsive">
-            <table class="table table-sm align-middle mb-2">
+            <table class="table table-sm table-stack align-middle mb-2">
                 <thead>
                     <tr>
                         <th>Balls</th>
@@ -87,10 +87,10 @@
                 <tbody id="customPackRows">
                     @foreach ($packs as $i => $pack)
                         <tr>
-                            <td><input type="number" name="packs[{{ $i }}][qty]" value="{{ $pack['qty'] ?? '' }}" step="5" min="5" max="100" class="form-control form-control-sm" style="width:90px;" required></td>
-                            <td><input type="number" name="packs[{{ $i }}][price]" value="{{ $pack['price'] ?? '' }}" step="0.01" min="0" class="form-control form-control-sm" style="width:130px;" required></td>
-                            <td><input type="number" name="packs[{{ $i }}][sale_price]" value="{{ $pack['sale_price'] ?? '' }}" step="0.01" min="0" class="form-control form-control-sm" style="width:130px;" placeholder="No sale"></td>
-                            <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-remove-pack title="Remove this quantity"><i class="ri-close-line"></i></button></td>
+                            <td data-label="Balls"><input type="number" name="packs[{{ $i }}][qty]" value="{{ $pack['qty'] ?? '' }}" step="5" min="5" max="100" class="form-control form-control-sm" style="width:90px;" required></td>
+                            <td data-label="Price (PKR)"><input type="number" name="packs[{{ $i }}][price]" value="{{ $pack['price'] ?? '' }}" step="0.01" min="0" class="form-control form-control-sm" style="width:130px;" required></td>
+                            <td data-label="Sale price"><input type="number" name="packs[{{ $i }}][sale_price]" value="{{ $pack['sale_price'] ?? '' }}" step="0.01" min="0" class="form-control form-control-sm" style="width:130px;" placeholder="No sale"></td>
+                            <td class="text-end stack-actions"><button type="button" class="btn btn-sm btn-outline-danger" data-remove-pack title="Remove this quantity"><i class="ri-close-line"></i></button></td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -108,10 +108,10 @@
 
 <template id="packRowTemplate">
     <tr>
-        <td><input type="number" name="packs[__INDEX__][qty]" value="__QTY__" step="5" min="5" max="100" class="form-control form-control-sm" style="width:90px;" required></td>
-        <td><input type="number" name="packs[__INDEX__][price]" step="0.01" min="0" class="form-control form-control-sm" style="width:130px;" required></td>
-        <td><input type="number" name="packs[__INDEX__][sale_price]" step="0.01" min="0" class="form-control form-control-sm" style="width:130px;" placeholder="No sale"></td>
-        <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-remove-pack title="Remove this quantity"><i class="ri-close-line"></i></button></td>
+        <td data-label="Balls"><input type="number" name="packs[__INDEX__][qty]" value="__QTY__" step="5" min="5" max="100" class="form-control form-control-sm" style="width:90px;" required></td>
+        <td data-label="Price (PKR)"><input type="number" name="packs[__INDEX__][price]" step="0.01" min="0" class="form-control form-control-sm" style="width:130px;" required></td>
+        <td data-label="Sale price"><input type="number" name="packs[__INDEX__][sale_price]" step="0.01" min="0" class="form-control form-control-sm" style="width:130px;" placeholder="No sale"></td>
+        <td class="text-end stack-actions"><button type="button" class="btn btn-sm btn-outline-danger" data-remove-pack title="Remove this quantity"><i class="ri-close-line"></i></button></td>
     </tr>
 </template>
 

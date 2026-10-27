@@ -16,16 +16,16 @@
                 <div class="card-body">
                     <h5 class="mb-3">Items</h5>
                     <div class="table-responsive">
-                        <table class="table align-middle">
+                        <table class="table table-stack align-middle">
                             <thead><tr><th>Product</th><th>Variant</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
                             <tbody>
                                 @foreach ($order->items as $item)
                                     <tr>
-                                        <td>{{ $item->product?->name }}</td>
-                                        <td>{{ $item->productVariant?->variant_name }}</td>
-                                        <td>{{ $item->qty }}</td>
-                                        <td>PKR {{ number_format($item->price) }}</td>
-                                        <td>PKR {{ number_format($item->price * $item->qty) }}</td>
+                                        <td class="stack-title">{{ $item->product?->name }}</td>
+                                        <td data-label="Variant">{{ $item->productVariant?->variant_name }}</td>
+                                        <td data-label="Qty">{{ $item->qty }}</td>
+                                        <td data-label="Price">PKR {{ number_format($item->price) }}</td>
+                                        <td data-label="Subtotal">PKR {{ number_format($item->price * $item->qty) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>

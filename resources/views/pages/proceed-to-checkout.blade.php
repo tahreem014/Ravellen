@@ -174,6 +174,14 @@
     </h1>
     <p class="text-muted mb-4 small">Complete your order</p>
 
+    @if($resume ?? null)
+        {{-- Just signed in from "Place Order": the saved details are already in the form below --}}
+        <div class="default-address-note mb-4" id="resume-banner">
+            <i class="ri-shield-check-fill"></i>
+            <span id="resume-banner-text">You're signed in. Your details are filled in below.</span>
+        </div>
+    @endif
+
     <div class="row g-4 align-items-start">
 
         {{-- ── Left: Forms ── --}}
@@ -230,6 +238,20 @@
                     <div class="form-label-sm">Shipping Address *</div>
                     <textarea class="form-control-custom" id="address" rows="2" placeholder="Street address, city, postal code" style="resize:none;">{{ $defaultAddress->address ?? '' }}</textarea>
                 </div>
+
+                @guest
+                {{-- Guests have no saved address yet: city and country are kept with the rest (and become their saved address once they sign in) so shipping can be quoted --}}
+                <div class="row g-3 mt-0">
+                    <div class="col-6">
+                        <div class="form-label-sm">City *</div>
+                        <input type="text" class="form-control-custom" id="city" placeholder="Karachi">
+                    </div>
+                    <div class="col-6">
+                        <div class="form-label-sm">Country *</div>
+                        <input type="text" class="form-control-custom" id="country" value="Pakistan">
+                    </div>
+                </div>
+                @endguest
             </div>
 
             {{-- Payment Method --}}
@@ -280,6 +302,11 @@
                 </div>
 
                 <button class="place-order-btn" onclick="placeOrder()">Place Order</button>
+                @guest
+                    <p class="text-muted small text-center mt-3 mb-0">
+                        Next you'll log in or create an account, then pay securely. Your cart and details are kept safe meanwhile.
+                    </p>
+                @endguest
             </div>
         </div>
 
@@ -320,6 +347,8 @@ const SHIPPING_FEE_URL = '{{ route('checkout.shipping-fee') }}';
 let SHIPPING = 0;
 let SHIPPING_AVAILABLE = false;
 let SELECTED_ADDRESS_ID = {{ optional($defaultAddress)->id ?? 'null' }};
+// Set when a guest has just signed in from "Place Order": checkout carries on to payment by itself
+const RESUME = @json($resume ?? null);
 
 function fmt(n) { return 'PKR ' + Number(n).toLocaleString(); }
 /* Price plus the crossed-out regular price while the item is on sale. */
@@ -555,13 +584,90 @@ async function startPayment(orderUuid, nextOrderUuid) {
     }
 }
 
+/* ── guests: phone in the "+countrycode…" form the server needs ──────────── */
+function normalizePhone(raw, country) {
+    let p = (raw || '').replace(/[\s\-().]/g, '');
+    if (p.startsWith('00')) p = '+' + p.slice(2);
+    // a local Pakistani number (0300 1234567) → +92 300 1234567
+    if (/^0\d{10}$/.test(p) && /^pakistan$/i.test((country || '').trim())) p = '+92' + p.slice(1);
+    return /^\+[1-9]\d{7,14}$/.test(p) ? p : null;
+}
+
+/* ── items a guest added live only in this browser; once signed in they move into the
+      account's cart, which is what an order is made from ────────────────────────────── */
+async function mergeGuestCart() {
+    if (!IS_AUTH) return;
+
+    const cart       = readCart();
+    const guestItems = cart.filter(i => !i.id.startsWith('db-'));
+    if (!guestItems.length) return;
+
+    let deselected;
+    try { deselected = new Set(JSON.parse(localStorage.getItem(DESELECTED_KEY) || '[]')); } catch (e) { deselected = new Set(); }
+
+    const merged = cart.filter(i => i.id.startsWith('db-'));
+    let notCarried = 0;
+
+    for (let i = 0; i < guestItems.length; i++) {
+        const item = guestItems[i];
+
+        if (item.payload) {
+            try {
+                const res = await fetch('{{ route('cart.store') }}', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+                    // the quantity and note as they are now, not as first added
+                    body: JSON.stringify({ ...item.payload, qty: item.qty, comment: item.comment ?? item.payload.comment ?? null }),
+                });
+
+                if (res.ok) {
+                    const { cartItem } = await res.json();
+                    const same = merged.find(m => m.id === cartItem.id);
+                    if (same) Object.assign(same, cartItem); else merged.push(cartItem);
+                    if (deselected.has(itemKey(item))) deselected.add(itemKey(cartItem));
+                } else {
+                    notCarried++;
+                }
+            } catch (e) {
+                notCarried++;
+            }
+        } else {
+            notCarried++;   // added before carts could move accounts, or not a catalog product
+        }
+
+        // saved after every item, so an interrupted merge never adds the same item twice
+        localStorage.setItem(CART_KEY, JSON.stringify([...merged, ...guestItems.slice(i + 1)]));
+    }
+
+    try { localStorage.setItem(DESELECTED_KEY, JSON.stringify([...deselected])); } catch (e) {}
+    if (window.updateCartBadge) updateCartBadge();
+
+    if (notCarried) {
+        showToast('Some items in your cart could not be carried over to your account. Please add them again.', 'error');
+    }
+}
+
+/* ── just signed in from "Place Order": pick up where the guest left off ─── */
+function continueAfterSignIn() {
+    const option = document.querySelector(`.payment-option[data-method="${RESUME.payment_method}"]`);
+    if (option) selectPayment(option);
+
+    const text = document.getElementById('resume-banner-text');
+
+    if (getSelectedCart().length && SELECTED_ADDRESS_ID && SHIPPING_AVAILABLE) {
+        if (text) text.textContent = "You're signed in. Taking you to payment…";
+        placeOrder();
+    } else if (text) {
+        text.textContent = "You're signed in. Check the details below, then place your order.";
+    }
+}
+
 /* ── place order ─────────────────────────────────────────────────────────── */
 async function placeOrder() {
     const name    = document.getElementById('full-name').value.trim();
     const phone   = document.getElementById('phone').value.trim();
     const address = document.getElementById('address').value.trim();
     const method  = document.querySelector('.payment-option.selected')?.dataset.method;
-    const methodLabel = document.querySelector('.payment-option.selected span')?.textContent || method;
 
     if (!name || !phone || !address) {
         showToast('Please fill in all required shipping fields.', 'error');
@@ -574,6 +680,24 @@ async function placeOrder() {
     if (IS_AUTH && (!SELECTED_ADDRESS_ID || !SHIPPING_AVAILABLE)) {
         showToast('Delivery is not available for this location.', 'error');
         return;
+    }
+
+    // Guests: city, and a phone with its country code, are needed to carry the order through sign-in
+    let guestDetails = null;
+    if (!IS_AUTH) {
+        const city      = document.getElementById('city')?.value.trim();
+        const country   = document.getElementById('country')?.value.trim();
+        const phoneIntl = normalizePhone(phone, country);
+
+        if (!city || !country) {
+            showToast('Please enter your city and country.', 'error');
+            return;
+        }
+        if (!phoneIntl) {
+            showToast('Phone number must start with + and country code (e.g. +923001234567).', 'error');
+            return;
+        }
+        guestDetails = { name, phone: phoneIntl, address, city, country, payment_method: method };
     }
 
     const selectedItems = getSelectedCart();
@@ -640,34 +764,42 @@ async function placeOrder() {
         return;
     }
 
-    /* ── guest fallback: localStorage only ──────────────────────────────── */
-    const totalText = document.getElementById('co-total').textContent;
-    const totalNum  = parseInt(totalText.replace(/[^0-9]/g, '')) || 0;
-    const now       = new Date();
-    const dateStr   = now.getDate().toString().padStart(2,'0') + '/' +
-                      (now.getMonth()+1).toString().padStart(2,'0') + '/' + now.getFullYear();
-    const fakeId    = Date.now();
-    const tracking  = 'RVL-' + fakeId;
+    /* ── guest: log in or register first ─────────────────────────────────────
+       The details wait in the guest's own session for a short while (CheckoutResume); the cart
+       stays in this browser. Signing in brings them back here to carry on to payment. ────── */
+    try {
+        const res  = await fetch('{{ route('checkout.resume') }}', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+            body:    JSON.stringify(guestDetails),
+        });
+        const data = await res.json();
 
-    const ORDERS_KEY = 'rv_orders';
-    const orders = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
-    orders.unshift({ id: fakeId, date: dateStr, total: totalNum, status: 'confirmed', trackingId: tracking });
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+        if (!res.ok) {
+            showToast(data.errors ? Object.values(data.errors).flat().join('\n') : (data.message || 'Something went wrong. Please try again.'), 'error');
+            btn.disabled = false;
+            btn.textContent = 'Place Order';
+            return;
+        }
 
-    removeOrderedItemsFromCart();
-
-    showConfirmation(fakeId, tracking, totalNum, methodLabel);
-
-    btn.disabled = false;
-    btn.textContent = 'Place Order';
+        btn.textContent = 'Taking you to sign in…';
+        window.location.href = data.redirect;
+    } catch (e) {
+        console.error('Checkout hand-off failed:', e);
+        showToast('Something went wrong. Please try again.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Place Order';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    await mergeGuestCart();
     await syncPricesFromDb();
     loadSummary();
     if (IS_AUTH && SELECTED_ADDRESS_ID) {
-        fetchShippingFee();
+        await fetchShippingFee();
     }
+    if (RESUME) continueAfterSignIn();
 });
 
 // The admin changed prices / discounts while checkout is open (layouts/live-updates)

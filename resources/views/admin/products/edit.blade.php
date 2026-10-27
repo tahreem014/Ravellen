@@ -115,7 +115,7 @@
             @endif
 
             <div class="table-responsive mb-3">
-                <table class="table align-middle">
+                <table class="table table-stack align-middle">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -135,9 +135,9 @@
                             @php $formId = 'variant-form-' . $variant->id; @endphp
                             <tr>
                                 @if ($isPackProduct)
-                                    <td class="fw-semibold">{{ $variant->variant_name }}</td>
-                                    <td>{{ number_format($variant->price) }}</td>
-                                    <td>
+                                    <td class="fw-semibold stack-title">{{ $variant->variant_name }}</td>
+                                    <td data-label="Price (PKR)">{{ number_format($variant->price) }}</td>
+                                    <td data-label="Sale Price">
                                         @if ($variant->hasDiscount())
                                             <span class="text-danger fw-semibold">{{ number_format($variant->sale_price) }}</span>
                                         @else
@@ -145,21 +145,21 @@
                                         @endif
                                     </td>
                                 @else
-                                    <td><input form="{{ $formId }}" type="text" name="variant_name" value="{{ $variant->variant_name }}" class="form-control form-control-sm" required></td>
-                                    <td><input form="{{ $formId }}" type="number" step="0.01" name="price" value="{{ $variant->price }}" class="form-control form-control-sm" style="width:110px;" required></td>
-                                    <td><input form="{{ $formId }}" type="number" step="0.01" name="sale_price" value="{{ $variant->sale_price }}" class="form-control form-control-sm" style="width:110px;" placeholder="No sale"></td>
-                                    <td><input form="{{ $formId }}" type="number" name="min_qty" value="{{ $variant->min_qty }}" class="form-control form-control-sm" style="width:70px;" required></td>
-                                    <td><input form="{{ $formId }}" type="number" name="max_qty" value="{{ $variant->max_qty }}" class="form-control form-control-sm" style="width:70px;" required></td>
+                                    <td data-label="Name"><input form="{{ $formId }}" type="text" name="variant_name" value="{{ $variant->variant_name }}" class="form-control form-control-sm" required></td>
+                                    <td data-label="Price (PKR)"><input form="{{ $formId }}" type="number" step="0.01" name="price" value="{{ $variant->price }}" class="form-control form-control-sm" style="width:110px;" required></td>
+                                    <td data-label="Sale Price"><input form="{{ $formId }}" type="number" step="0.01" name="sale_price" value="{{ $variant->sale_price }}" class="form-control form-control-sm" style="width:110px;" placeholder="No sale"></td>
+                                    <td data-label="Min"><input form="{{ $formId }}" type="number" name="min_qty" value="{{ $variant->min_qty }}" class="form-control form-control-sm" style="width:70px;" required></td>
+                                    <td data-label="Max"><input form="{{ $formId }}" type="number" name="max_qty" value="{{ $variant->max_qty }}" class="form-control form-control-sm" style="width:70px;" required></td>
                                 @endif
-                                <td><input form="{{ $formId }}" type="number" name="stock" value="{{ $variant->stock }}" class="form-control form-control-sm" style="width:80px;" required></td>
-                                <td>
+                                <td data-label="Stock"><input form="{{ $formId }}" type="number" name="stock" value="{{ $variant->stock }}" class="form-control form-control-sm" style="width:80px;" required></td>
+                                <td data-label="Status">
                                     <select form="{{ $formId }}" name="status" class="form-select form-select-sm">
                                         @foreach (['active','out_of_stock','pre_order','restocking','discontinued'] as $status)
                                             <option value="{{ $status }}" @selected($variant->status === $status)>{{ ucfirst(str_replace('_',' ', $status)) }}</option>
                                         @endforeach
                                     </select>
                                 </td>
-                                <td class="text-end text-nowrap">
+                                <td class="text-end text-nowrap stack-actions">
                                     <form id="{{ $formId }}" action="{{ route('admin.products.variants.update', [$product, $variant]) }}" method="POST" class="d-none" data-ajax>
                                         @csrf @method('PUT')
                                     </form>

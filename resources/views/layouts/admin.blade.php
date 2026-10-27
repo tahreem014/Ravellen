@@ -25,6 +25,70 @@
         .btn-admin-logout { border: 1px solid #DB2777; color: #DB2777; background: #fff; }
         .btn-admin-logout:hover { background: #DB2777; color: #fff; }
         .admin-container { max-width: 1320px; margin-left: auto; margin-right: auto; }
+
+        /* Search / filter / "Add" row above a list: full width each on a phone, side by side from tablet up */
+        .admin-toolbar-form { flex: 1 1 100%; display: flex; gap: .5rem; }
+        .admin-toolbar-form .form-control, .admin-toolbar-form .form-select { flex: 1 1 auto; min-width: 0; }
+        .admin-toolbar-btn { width: 100%; }
+        @media (min-width: 768px) {
+            .admin-toolbar-form { flex: 0 0 auto; }
+            .admin-toolbar-form .form-control { flex: 0 0 auto; min-width: 220px; }
+            .admin-toolbar-form .form-select { flex: 0 0 auto; }
+            .admin-toolbar-btn { width: auto; }
+        }
+
+        /* ── Phones ── */
+        @media (max-width: 767.98px) {
+            .admin-title { font-size: 1.5rem !important; }
+
+            /* The section tabs become one row that swipes sideways */
+            .admin-tabs {
+                display: flex; flex-wrap: nowrap; overflow-x: auto; gap: .2rem;
+                overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
+                scroll-snap-type: x proximity; scrollbar-width: none;
+            }
+            .admin-tabs::-webkit-scrollbar { display: none; }
+            .admin-tabs .nav-link { flex: 0 0 auto; white-space: nowrap; scroll-snap-align: center; padding: .5rem .95rem; }
+
+            /*
+             * Tables marked .table-stack become a list of cards: each row a card, each cell a
+             * "LABEL  value" line (the label comes from the cell's data-label). Same markup, so
+             * nothing that reads the rows changes.
+             *   .stack-title   the card's heading (no label)
+             *   .stack-block   long text: label above, value below
+             *   .stack-actions buttons, along the bottom of the card
+             */
+            .table-stack, .table-stack > tbody, .table-stack > tbody > tr, .table-stack > tbody > tr > td { display: block; }
+            .table-stack thead { display: none; }
+            .table-stack > tbody > tr { padding: .85rem 1rem; border-bottom: 1px solid #ede9f6; }
+            .table-stack > tbody > tr:last-child { border-bottom: 0; }
+            .table-stack > tbody > tr > td {
+                display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+                padding: .3rem 0; border: 0; text-align: right; background: transparent;
+                white-space: normal !important; overflow-wrap: anywhere;
+            }
+            .table-stack > tbody > tr > td::before {
+                content: attr(data-label); flex: 0 0 auto; text-align: left;
+                font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #9ca3af;
+            }
+            .table-stack > tbody > tr > td:not([data-label])::before { content: none; }
+            .table-stack > tbody > tr > td.stack-title { justify-content: flex-start; text-align: left; font-weight: 700; font-size: 1rem; padding-bottom: .45rem; }
+            .table-stack > tbody > tr > td.stack-block { flex-direction: column; align-items: flex-start; gap: .1rem; text-align: left; }
+            .table-stack > tbody > tr > td.stack-actions {
+                justify-content: flex-start; flex-wrap: wrap; gap: .5rem;
+                margin-top: .5rem; padding-top: .75rem; border-top: 1px dashed #e5e7eb;
+            }
+            .table-stack > tbody > tr > td[colspan] { display: block; text-align: center; }
+            /* fields inside a card line sit on the right, at a sensible width */
+            .table-stack > tbody > tr > td .form-control, .table-stack > tbody > tr > td .form-select { width: 58% !important; max-width: 13rem; flex: 0 1 58%; }
+
+            /* a product row: thumbnail beside its name, everything else full width below */
+            .table-stack-media > tbody > tr { display: grid; grid-template-columns: 52px 1fr; column-gap: .85rem; align-items: center; }
+            .table-stack-media > tbody > tr > td { grid-column: 1 / -1; }
+            .table-stack-media > tbody > tr > td:nth-child(1) { grid-column: 1; width: auto !important; }
+            .table-stack-media > tbody > tr > td:nth-child(2) { grid-column: 2; }
+            .table-stack-media > tbody > tr > td[colspan] { grid-column: 1 / -1; }
+        }
     </style>
     @yield('css')
 </head>
@@ -38,7 +102,8 @@
                     <h1 class="admin-title mb-1" style="font-size:2rem;">Admin Dashboard</h1>
                     <p class="admin-subtitle mb-0">Manage your store, products, and orders</p>
                 </div>
-                <div class="d-flex align-items-center gap-2">
+                {{-- On a phone, Log Out lives in the Settings tab instead --}}
+                <div class="d-none d-md-flex align-items-center gap-2">
                     <span class="text-muted small">{{ Auth::user()->name }}</span>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
@@ -88,6 +153,16 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // On a phone the tabs swipe sideways: start with the current section centred in view
+        (function () {
+            const nav = document.querySelector('.admin-tabs');
+            const active = nav && nav.querySelector('.nav-link.active');
+            if (active) {
+                const offset = active.getBoundingClientRect().left - nav.getBoundingClientRect().left + nav.scrollLeft;
+                nav.scrollLeft = offset - (nav.clientWidth - active.offsetWidth) / 2;
+            }
+        })();
+
         window.confirmAction = function (form, message, confirmClass) {
             const modalEl = document.getElementById('adminConfirmModal');
             const okBtn = document.getElementById('adminConfirmModalOk');

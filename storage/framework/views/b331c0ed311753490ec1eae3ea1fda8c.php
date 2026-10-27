@@ -31,6 +31,20 @@
             </form>
         </div>
     </div>
+
+    
+    <div class="admin-card card mt-4 d-md-none">
+        <div class="card-body">
+            <h5 class="mb-1">Account</h5>
+            <p class="text-muted small mb-3">Signed in as <?php echo e(Auth::user()->name); ?></p>
+            <form method="POST" action="<?php echo e(route('logout')); ?>">
+                <?php echo csrf_field(); ?>
+                <button type="submit" class="btn btn-admin-logout w-100">
+                    <i class="ri-logout-box-r-line"></i> Log Out
+                </button>
+            </form>
+        </div>
+    </div>
 <?php $__env->stopSection(); ?>
 
 <?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\zubai\Herd\Ravellen\resources\views/admin/settings/edit.blade.php ENDPATH**/ ?>

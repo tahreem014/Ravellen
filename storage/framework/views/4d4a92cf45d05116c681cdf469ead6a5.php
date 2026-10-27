@@ -165,6 +165,27 @@
             <p style="color:#6b7280;font-size:.875rem;margin:0;">Sign in to continue shopping</p>
         </div>
 
+        <?php if (isset($component)) { $__componentOriginal8acbd4837bbd25b9ec0fd8dc636511f4 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8acbd4837bbd25b9ec0fd8dc636511f4 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.checkout-login-notice','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('checkout-login-notice'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8acbd4837bbd25b9ec0fd8dc636511f4)): ?>
+<?php $attributes = $__attributesOriginal8acbd4837bbd25b9ec0fd8dc636511f4; ?>
+<?php unset($__attributesOriginal8acbd4837bbd25b9ec0fd8dc636511f4); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8acbd4837bbd25b9ec0fd8dc636511f4)): ?>
+<?php $component = $__componentOriginal8acbd4837bbd25b9ec0fd8dc636511f4; ?>
+<?php unset($__componentOriginal8acbd4837bbd25b9ec0fd8dc636511f4); ?>
+<?php endif; ?>
+
         <form action="<?php echo e(route('login')); ?>" method="POST">
             <?php echo csrf_field(); ?>
 

@@ -2,18 +2,18 @@
 
 <?php $__env->startSection('content'); ?>
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <form method="GET" class="d-flex gap-2">
-            <input type="text" name="q" value="<?php echo e(request('q')); ?>" class="form-control form-control-sm" placeholder="Search users..." style="min-width:220px;">
+        <form method="GET" class="admin-toolbar-form">
+            <input type="text" name="q" value="<?php echo e(request('q')); ?>" class="form-control form-control-sm" placeholder="Search users...">
             <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="ri-search-line"></i></button>
         </form>
-        <button class="btn btn-admin-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
+        <button class="btn btn-admin-primary btn-sm admin-toolbar-btn" data-bs-toggle="modal" data-bs-target="#createUserModal">
             <i class="ri-add-line"></i> Add User
         </button>
     </div>
 
     <div class="admin-card card">
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table class="table table-stack align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -28,25 +28,25 @@
                 <tbody>
                     <?php $__empty_1 = true; $__currentLoopData = $users; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $user): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <tr>
-                            <td><?php echo e($user->name); ?></td>
-                            <td><?php echo e($user->email); ?></td>
-                            <td><?php echo e($user->phone_number ?? '—'); ?></td>
-                            <td><?php echo e($user->orders_count); ?></td>
-                            <td>
+                            <td class="stack-title"><?php echo e($user->name); ?></td>
+                            <td data-label="Email"><?php echo e($user->email); ?></td>
+                            <td data-label="Phone"><?php echo e($user->phone_number ?? '—'); ?></td>
+                            <td data-label="Orders"><?php echo e($user->orders_count); ?></td>
+                            <td data-label="Role">
                                 <?php if($user->is_admin): ?>
                                     <span class="badge bg-primary">Admin</span>
                                 <?php else: ?>
                                     <span class="badge bg-light text-dark">Customer</span>
                                 <?php endif; ?>
                             </td>
-                            <td>
+                            <td data-label="Status">
                                 <?php if($user->is_blocked): ?>
                                     <span class="badge bg-danger">Blocked</span>
                                 <?php else: ?>
                                     <span class="badge bg-success">Active</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-end text-nowrap">
+                            <td class="text-end text-nowrap stack-actions">
                                 <?php if($user->id !== Auth::id()): ?>
                                     <form action="<?php echo e(route('admin.users.toggle-block', $user)); ?>" method="POST" class="d-inline">
                                         <?php echo csrf_field(); ?>
@@ -101,8 +101,5 @@
     </div>
 <?php $__env->stopSection(); ?>
 
-<?php $__env->startSection('script'); ?>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<?php $__env->stopSection(); ?>
 
 <?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\zubai\Herd\Ravellen\resources\views/admin/users/index.blade.php ENDPATH**/ ?>

@@ -56,12 +56,10 @@ Route::post('/payments/safepay/webhook', [App\Http\Controllers\PaymentController
     ->name('payments.safepay.webhook');
 
 Route::get('/cart',     fn() => view('pages.add-to-cart'))->name('cart');
-Route::get('/checkout', function () {
-    $addresses = Auth::check() ? Auth::user()->addresses()->latest()->get() : collect();
-    $defaultAddress = $addresses->firstWhere('is_default', true) ?? $addresses->first();
-
-    return view('pages.proceed-to-checkout', compact('defaultAddress', 'addresses'));
-})->name('checkout');
+Route::get('/checkout', [App\Http\Controllers\CheckoutController::class, 'show'])->name('checkout');
+// A guest pressing "Place Order": their details wait in the session while they log in or register
+Route::post('/checkout/resume', [App\Http\Controllers\CheckoutController::class, 'stash'])
+    ->name('checkout.resume')->middleware('throttle:20,1');
 
 // ── Cart API (authenticated users persist to DB; guests use localStorage) ─────
 Route::middleware('auth')->group(function () {

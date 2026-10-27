@@ -119,6 +119,8 @@
     .navbar-rv .rv-avatar-btn:hover { border-color: #a855f7; }
     .navbar-rv .rv-avatar-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+    .navbar-rv .rv-back-btn { display: inline-flex; align-items: center; margin-left: -.4rem; }
+
     /* Phones: heart, cart, bell, avatar and menu button share one row, and the bell's
        dropdown spans the screen (at 320px wide it would run off the left edge) */
     @media (max-width: 575.98px) {
@@ -143,10 +145,21 @@
     <div class="container">
         <div class="inner">
 
-            
-            <a href="<?php echo e(url('/')); ?>" class="rv-logo text-decoration-none">
-                <img src="<?php echo e(asset('images/ravellen-logo.png')); ?>" alt="Ravellen Logo" height="40">
-            </a>
+            <div class="d-flex align-items-center gap-1">
+                
+                <?php if($currentPage !== '/'): ?>
+                    <a href="<?php echo e(request()->is('product-item/*', 'product/*', 'gift-box') ? url('/shop') : url('/')); ?>"
+                       class="rv-icon-btn rv-back-btn" id="rv-back-btn" aria-label="Go back" title="Back"
+                       onclick="return rvGoBack(event)">
+                        <i class="ri-arrow-left-line fs-5"></i>
+                    </a>
+                <?php endif; ?>
+
+                
+                <a href="<?php echo e(url('/')); ?>" class="rv-logo text-decoration-none">
+                    <img src="<?php echo e(asset('images/ravellen-logo.png')); ?>" alt="Ravellen Logo" height="40">
+                </a>
+            </div>
 
             
             <div class="rv-nav d-none d-lg-flex">
@@ -179,13 +192,13 @@
                     <span class="cart-badge" id="cart-badge" style="display:none;"></span>
                 </a>
                 
-                <?php if(auth()->guard()->check()): ?>
                  <div class="position-relative">
-                    <button type="button" class="rv-icon-btn" id="notif-bell-btn" onclick="toggleNotifDropdown()">
+                    <button type="button" class="rv-icon-btn" id="notif-bell-btn" onclick="toggleNotifDropdown()" aria-label="Notifications">
                         <i class="ri-notification-3-line fs-5"></i>
                         <span class="cart-badge" id="notif-badge" style="display:none;"></span>
                     </button>
                     <div class="notif-dropdown" id="notif-dropdown">
+                        <?php if(auth()->guard()->check()): ?>
                         <div class="notif-dropdown-header">
                             <h6>Notifications</h6>
                             <button type="button" onclick="markAllNotificationsRead(event)">Mark all as read</button>
@@ -194,8 +207,23 @@
                             <div class="notif-dropdown-empty">Loading…</div>
                         </div>
                         <a href="<?php echo e(route('notifications.index')); ?>" class="notif-dropdown-footer">View all</a>
+                        <?php else: ?>
+                        <div class="notif-dropdown-header">
+                            <h6>Notifications</h6>
+                        </div>
+                        <div class="notif-dropdown-empty">
+                            Sign in to see your order updates and notifications.
+                            <div class="d-flex gap-2 justify-content-center mt-3">
+                                <a href="<?php echo e(route('login')); ?>" class="rv-login-btn">Login</a>
+                                <a href="<?php echo e(route('register')); ?>" class="rv-register-btn">Register</a>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
+
+                
+                <?php if(auth()->guard()->check()): ?>
                 <a href="<?php echo e(url('/profile')); ?>" class="rv-avatar-btn" title="<?php echo e(auth()->user()->name); ?>">
                     <img src="<?php echo e(auth()->user()->avatar ? asset('images/'.auth()->user()->avatar) : asset('images/default-avatar.png')); ?>" alt="<?php echo e(auth()->user()->name); ?>">
                 </a>
@@ -256,9 +284,6 @@
                 </button>
             </form>
         <?php else: ?>
-            <a href="<?php echo e(url('/profile')); ?>" class="nav-link-m d-flex align-items-center gap-2">
-                <i class="ri-user-line"></i> Profile
-            </a>
             <a href="<?php echo e(route('login')); ?>"
                class="rv-login-btn text-center w-100 d-block">Login</a>
             <a href="<?php echo e(route('register')); ?>" class="rv-register-btn text-center w-100 d-block">Register</a>
@@ -268,6 +293,21 @@
 </div>
 
 <script>
+    // Back arrow: return to the page the visitor came from (the browser restores it as they left it,
+    // including the shop / BTS selections kept in the URL). With no earlier page on this site, follow
+    // the link's own href instead.
+    function rvGoBack(e) {
+        let cameFromThisSite = false;
+        try { cameFromThisSite = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (err) {}
+
+        if (cameFromThisSite && history.length > 1) {
+            e.preventDefault();
+            history.back();
+            return false;
+        }
+        return true;
+    }
+
     function updateCartBadge() {
         let cart = [];
         try { cart = JSON.parse(localStorage.getItem('rv_cart') || '[]'); } catch (e) {}
@@ -410,6 +450,19 @@
         if (e.detail.increased && newest && window.showToast) {
             showToast(newest.message, 'info');
         }
+    });
+    <?php else: ?>
+    // Guests: the bell just opens its "sign in" note
+    function toggleNotifDropdown() {
+        document.getElementById('notif-dropdown')?.classList.toggle('show');
+    }
+
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('notif-dropdown');
+        const bellBtn = document.getElementById('notif-bell-btn');
+        if (!dropdown || !dropdown.classList.contains('show')) return;
+        if (dropdown.contains(e.target) || bellBtn.contains(e.target)) return;
+        dropdown.classList.remove('show');
     });
     <?php endif; ?>
 </script>

@@ -5,14 +5,14 @@
 @section('content')
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <div></div>
-        <button class="btn btn-admin-primary btn-sm" onclick="openShippingRateModal(null)">
+        <button class="btn btn-admin-primary btn-sm admin-toolbar-btn" onclick="openShippingRateModal(null)">
             <i class="ri-add-line"></i> Add Shipping Rate
         </button>
     </div>
 
     <div class="admin-card card">
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table class="table table-stack align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Country</th>
@@ -25,17 +25,17 @@
                 <tbody>
                     @forelse ($shippingRates as $rate)
                         <tr>
-                            <td>{{ $rate->country }}</td>
-                            <td>{{ $rate->city ?? 'All cities (country-wide)' }}</td>
-                            <td>PKR {{ number_format($rate->amount, 2) }}</td>
-                            <td>
+                            <td class="stack-title">{{ $rate->country }}</td>
+                            <td data-label="City">{{ $rate->city ?? 'All cities (country-wide)' }}</td>
+                            <td data-label="Amount">PKR {{ number_format($rate->amount, 2) }}</td>
+                            <td data-label="Status">
                                 @if ($rate->is_active)
                                     <span class="badge bg-success">Active</span>
                                 @else
                                     <span class="badge bg-secondary">Inactive</span>
                                 @endif
                             </td>
-                            <td class="text-end text-nowrap">
+                            <td class="text-end text-nowrap stack-actions">
                                 <button type="button" class="btn btn-sm btn-outline-secondary"
                                         onclick='openShippingRateModal(@json($rate))'>Edit</button>
 
@@ -104,7 +104,6 @@
 @endsection
 
 @section('script')
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const shippingRateStoreUrl = "{{ route('admin.shipping-rates.store') }}";
 const shippingRateModalEl = document.getElementById('shippingRateModal');

@@ -21,15 +21,20 @@
         overflow: hidden;
         transition: transform .3s, box-shadow .3s;
         height: 100%;
+        display: flex; flex-direction: column;
     }
-    .gb-card:hover { transform: translateY(-6px); box-shadow: 0 16px 32px rgba(0,0,0,.13); }
+    /* Hover lift only where there is a real hover — on a phone it sticks to the last card tapped */
+    @media (hover: hover) {
+        .gb-card:hover { transform: translateY(-6px); box-shadow: 0 16px 32px rgba(0,0,0,.13); }
+        .gb-card:hover .gb-card-img { transform: scale(1.08); }
+    }
 
-    .gb-card-img-wrap { position: relative; overflow: hidden; height: 13rem; }
+    .gb-card-img-wrap { position: relative; overflow: hidden; height: 13rem; flex-shrink: 0; }
     .gb-card-img {
         width: 100%; height: 100%; object-fit: cover;
         display: block; transition: transform .5s;
     }
-    .gb-card:hover .gb-card-img { transform: scale(1.08); }
+    .gb-card-body { padding: 1rem; flex: 1; display: flex; flex-direction: column; }
 
     .gb-badge {
         position: absolute; top: .75rem; left: .75rem;
@@ -50,12 +55,15 @@
     .gb-heart-btn i { font-size: 1.1rem; color: #d1d5db; pointer-events: none; }
     .gb-heart-btn.active i { color: #ef4444; }
 
+    /* Names and descriptions take at most two lines, with room for two, so cards in a row line up */
     .gb-name {
-        font-weight: 700; font-size: .95rem;
-        color: #1f2937; margin-bottom: .2rem;
+        font-weight: 700; font-size: .95rem; line-height: 1.3;
+        color: #1f2937; margin-bottom: .2rem; min-height: 2.6em;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
     .gb-desc {
-        font-size: .8rem; color: #6b7280; margin-bottom: .4rem;
+        font-size: .8rem; line-height: 1.35; color: #6b7280; margin-bottom: .4rem; min-height: 2.7em;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
     .gb-price {
         font-weight: 700; font-size: .9rem;
@@ -68,6 +76,7 @@
         font-weight: 600; font-size: .85rem; padding: .55rem 1rem;
         transition: opacity .2s; width: 100%;
         display: flex; align-items: center; justify-content: center; gap: .35rem;
+        white-space: nowrap; margin-top: auto;   /* "View Product" stays on one line, pinned to the card's bottom */
         text-decoration: none !important;
     }
     .gb-add-btn:hover { opacity: .85; color: #fff; text-decoration: none !important; }
@@ -111,9 +120,26 @@
         background: linear-gradient(135deg, #7c3aed, #a855f7);
         transition: opacity .2s; width: 100%;
         display: flex; align-items: center; justify-content: center; gap: .35rem;
+        white-space: nowrap; margin-top: auto;
         text-decoration: none !important;
     }
     .bts-gb-explore-btn:hover { opacity: .85; color: #fff; text-decoration: none !important; }
+
+    /* ── Phones: two compact, even cards per row ── */
+    @media (max-width: 575.98px) {
+        .gb-card { border-radius: .85rem; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+        .gb-card-img-wrap { height: auto; aspect-ratio: 1 / 1; }
+        .gb-badge { top: .5rem; left: .5rem; font-size: .6rem; padding: .15rem .45rem; max-width: calc(100% - 3rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .gb-heart-btn { top: .5rem; right: .5rem; width: 1.9rem; height: 1.9rem; }
+        .gb-card-img-wrap .discount-badge { left: .5rem !important; bottom: .5rem !important; font-size: .65rem !important; padding: .3rem .5rem !important; }
+        .gb-card-body { padding: .7rem .7rem .8rem; }
+        .gb-name { font-size: .85rem; }
+        .gb-desc { font-size: .72rem; }
+        .gb-price, .bts-gb-price { font-size: .8rem; margin-bottom: .6rem; }
+        .gb-price .price-was, .bts-gb-price .price-was { white-space: nowrap; }
+        .gb-add-btn, .bts-gb-explore-btn { font-size: .8rem; padding: .5rem .4rem; gap: .2rem; }
+        .gb-add-btn i, .bts-gb-explore-btn i { margin-left: 0 !important; }
+    }
 </style>
 @endsection
 
@@ -174,7 +200,7 @@
 
 @if(($section ?? 'gift-box') === 'gift-box')
 <div class="cat-wrapper py-5">
-<div class="container px-4">
+<div class="container px-3 px-sm-4">
 
     {{-- ── Header ── --}}
     <div class="text-center mb-5">
@@ -198,7 +224,7 @@
     </div>
 
     {{-- ── Grid ── --}}
-    <div class="row g-4" id="gb-grid" data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}">
+    <div class="row g-2 g-sm-4" id="gb-grid" data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}">
         @forelse($allDbProducts as $product)
         @php
             $subName   = $product->_sub_name ?? $product->subCategory?->name ?? '';
@@ -225,7 +251,7 @@
                         <i class="ri-heart-line"></i>
                     </button>
                 </div>
-                <div class="p-3 d-flex flex-column">
+                <div class="gb-card-body">
                     <h6 class="gb-name mb-1" data-live-name>{{ $product->name }}</h6>
                     <p class="gb-desc">{{ $product->description }}</p>
                     <p class="gb-price" data-live-price data-live-prefix="From "><x-price :variant="$cheapest" prefix="From " /></p>
@@ -282,7 +308,7 @@
         </div>
     </div>
 
-    <div class="container px-4 pb-5">
+    <div class="container px-3 px-sm-4 pb-5">
 
         {{-- ── Filter bar ── --}}
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
@@ -293,7 +319,7 @@
         </div>
 
         {{-- ── Grid ── --}}
-        <div class="row g-4" id="bts-gb-grid" data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}">
+        <div class="row g-2 g-sm-4" id="bts-gb-grid" data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}">
             @forelse($allDbProducts as $product)
             @php
                 $subName    = $product->_sub_name ?? $product->subCategory?->name ?? '';
@@ -320,7 +346,7 @@
                             <i class="ri-heart-line"></i>
                         </button>
                     </div>
-                    <div class="p-3 d-flex flex-column">
+                    <div class="gb-card-body">
                         <h6 class="gb-name mb-1" data-live-name>{{ $product->name }}</h6>
                         <p class="gb-desc">{{ $product->description }}</p>
                         <p class="bts-gb-price" data-live-price data-live-prefix="From "><x-price :variant="$cheapest" prefix="From " /></p>
@@ -356,7 +382,7 @@
 ══════════════════════════════════════════════════════ --}}
 
 <div id="ceramic-collection" style="background:linear-gradient(to bottom,#fdf8f0,#f5ede0);padding:4rem 0 3rem;">
-<div class="container px-4">
+<div class="container px-3 px-sm-4">
 
     {{-- Ceramic Header --}}
     <div class="text-center mb-5">
@@ -387,7 +413,7 @@
     </div>
 
     {{-- Ceramic Grid --}}
-    <div class="row g-4" id="cer-grid" data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}">
+    <div class="row g-2 g-sm-4" id="cer-grid" data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}">
         @forelse($allDbProducts as $product)
         @php
             $subName    = $product->_sub_name ?? $product->subCategory?->name ?? '';
@@ -415,7 +441,7 @@
                         <i class="ri-heart-line"></i>
                     </button>
                 </div>
-                <div class="p-3 d-flex flex-column">
+                <div class="gb-card-body">
                     <h6 class="gb-name mb-1" data-live-name>{{ $product->name }}</h6>
                     <p class="gb-desc">{{ $product->description }}</p>
                     <p class="gb-price" data-live-price><x-price :variant="$cheapest" /></p>
@@ -462,6 +488,12 @@ function filterBoxes(tag, btn) {
         if (match) visible++;
     });
     document.getElementById('gb-no-results').style.display = visible === 0 ? 'block' : 'none';
+    rememberCategoryFilter(tag);
+}
+
+// The chosen filter lives in the URL (?filter=…) so Back from a product page returns to it
+function rememberCategoryFilter(tag) {
+    history.replaceState(null, '', location.pathname + (tag === 'all' ? '' : '?filter=' + encodeURIComponent(tag)));
 }
 
 // ── BTS Gift Boxes Filter ───────────────────────────────────────────────────
@@ -476,6 +508,7 @@ function filterBtsGiftBoxes(tag, btn) {
         if (match) visible++;
     });
     document.getElementById('bts-gb-no-results').style.display = visible === 0 ? 'block' : 'none';
+    rememberCategoryFilter(tag);
 }
 
 // ── Wishlist ─────────────────────────────────────────────────────────────
@@ -553,6 +586,13 @@ document.addEventListener('DOMContentLoaded', () => {
         first.style.background  = '#f9f5f0';
         first.style.color       = '#8B5E3C';
         first.style.fontWeight  = '600';
+    }
+
+    // Back from a product page: re-apply the filter chip that was chosen
+    const savedFilter = new URLSearchParams(location.search).get('filter');
+    if (savedFilter) {
+        const chip = [...document.querySelectorAll('.filter-btn')].find(b => (b.getAttribute('onclick') || '').includes(`'${savedFilter}'`));
+        if (chip) chip.click();
     }
 
     const saved = JSON.parse(localStorage.getItem('rv_wishlist') || '{}');

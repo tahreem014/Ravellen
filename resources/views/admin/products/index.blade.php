@@ -4,18 +4,18 @@
 
 @section('content')
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <form method="GET" class="d-flex gap-2">
-            <input type="text" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Search products..." style="min-width:220px;">
+        <form method="GET" class="admin-toolbar-form">
+            <input type="text" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Search products...">
             <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="ri-search-line"></i></button>
         </form>
-        <a href="{{ route('admin.products.create') }}" class="btn btn-admin-primary btn-sm">
+        <a href="{{ route('admin.products.create') }}" class="btn btn-admin-primary btn-sm admin-toolbar-btn">
             <i class="ri-add-line"></i> Add Product
         </a>
     </div>
 
     <div class="admin-card card">
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table class="table table-stack table-stack-media align-middle mb-0">
                 <thead>
                     <tr>
                         <th></th>
@@ -45,25 +45,29 @@
                                     </div>
                                 @endif
                             </td>
-                            <td>
+                            <td class="stack-title">
                                 <div class="fw-semibold">{{ $product->name }}</div>
                             </td>
-                            <td>
-                                {{ $product->category?->name }}
-                                @if ($product->subCategory)
-                                    <span class="text-muted small">/ {{ $product->subCategory->name }}</span>
-                                @endif
+                            <td data-label="Category">
+                                <span>
+                                    {{ $product->category?->name }}
+                                    @if ($product->subCategory)
+                                        <span class="text-muted small">/ {{ $product->subCategory->name }}</span>
+                                    @endif
+                                </span>
                             </td>
-                            <td>{{ $product->variants->count() }}</td>
-                            <td>
+                            <td data-label="Variants">{{ $product->variants->count() }}</td>
+                            <td data-label="Price">
+                                <div>
                                 @if ($prices->isNotEmpty())
                                     <span data-row-price>PKR {{ number_format($prices->min()) }}@if ($prices->min() != $prices->max()) &ndash; {{ number_format($prices->max()) }}@endif</span>
                                     @if ($product->usesPackPricing())<div class="text-muted small">Mystery Balls &middot; {{ $product->pricing_mode }} pricing</div>@endif
                                 @else
                                     <span class="text-muted">&mdash;</span>
                                 @endif
+                                </div>
                             </td>
-                            <td class="text-nowrap">
+                            <td class="text-nowrap" data-label="Discount">
                                 <span data-row-discount>
                                     @if ($discount)
                                         <span class="badge rounded-pill me-1" style="background:#e11d48;">{{ $discount }}</span>
@@ -82,7 +86,7 @@
                                     </button>
                                 @endif
                             </td>
-                            <td class="text-end text-nowrap">
+                            <td class="text-end text-nowrap stack-actions">
                                 <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-sm btn-outline-secondary"><i class="ri-edit-line"></i></a>
                                 <form action="{{ route('admin.products.destroy', $product) }}" method="POST" class="d-inline" onsubmit="return confirmAction(this, 'Delete this product and all its variants/images?');">
                                     @csrf @method('DELETE')

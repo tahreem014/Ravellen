@@ -4,18 +4,18 @@
 
 @section('content')
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <form method="GET" class="d-flex gap-2">
-            <input type="text" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Search users..." style="min-width:220px;">
+        <form method="GET" class="admin-toolbar-form">
+            <input type="text" name="q" value="{{ request('q') }}" class="form-control form-control-sm" placeholder="Search users...">
             <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="ri-search-line"></i></button>
         </form>
-        <button class="btn btn-admin-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
+        <button class="btn btn-admin-primary btn-sm admin-toolbar-btn" data-bs-toggle="modal" data-bs-target="#createUserModal">
             <i class="ri-add-line"></i> Add User
         </button>
     </div>
 
     <div class="admin-card card">
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table class="table table-stack align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -30,25 +30,25 @@
                 <tbody>
                     @forelse ($users as $user)
                         <tr>
-                            <td>{{ $user->name }}</td>
-                            <td>{{ $user->email }}</td>
-                            <td>{{ $user->phone_number ?? '—' }}</td>
-                            <td>{{ $user->orders_count }}</td>
-                            <td>
+                            <td class="stack-title">{{ $user->name }}</td>
+                            <td data-label="Email">{{ $user->email }}</td>
+                            <td data-label="Phone">{{ $user->phone_number ?? '—' }}</td>
+                            <td data-label="Orders">{{ $user->orders_count }}</td>
+                            <td data-label="Role">
                                 @if ($user->is_admin)
                                     <span class="badge bg-primary">Admin</span>
                                 @else
                                     <span class="badge bg-light text-dark">Customer</span>
                                 @endif
                             </td>
-                            <td>
+                            <td data-label="Status">
                                 @if ($user->is_blocked)
                                     <span class="badge bg-danger">Blocked</span>
                                 @else
                                     <span class="badge bg-success">Active</span>
                                 @endif
                             </td>
-                            <td class="text-end text-nowrap">
+                            <td class="text-end text-nowrap stack-actions">
                                 @if ($user->id !== Auth::id())
                                     <form action="{{ route('admin.users.toggle-block', $user) }}" method="POST" class="d-inline">
                                         @csrf
@@ -103,6 +103,3 @@
     </div>
 @endsection
 
-@section('script')
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-@endsection

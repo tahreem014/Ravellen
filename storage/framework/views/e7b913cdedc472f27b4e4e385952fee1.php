@@ -4,18 +4,18 @@
 
 <?php $__env->startSection('content'); ?>
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <form method="GET" class="d-flex gap-2">
-            <input type="text" name="q" value="<?php echo e(request('q')); ?>" class="form-control form-control-sm" placeholder="Search products..." style="min-width:220px;">
+        <form method="GET" class="admin-toolbar-form">
+            <input type="text" name="q" value="<?php echo e(request('q')); ?>" class="form-control form-control-sm" placeholder="Search products...">
             <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="ri-search-line"></i></button>
         </form>
-        <a href="<?php echo e(route('admin.products.create')); ?>" class="btn btn-admin-primary btn-sm">
+        <a href="<?php echo e(route('admin.products.create')); ?>" class="btn btn-admin-primary btn-sm admin-toolbar-btn">
             <i class="ri-add-line"></i> Add Product
         </a>
     </div>
 
     <div class="admin-card card">
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table class="table table-stack table-stack-media align-middle mb-0">
                 <thead>
                     <tr>
                         <th></th>
@@ -45,26 +45,30 @@
                                     </div>
                                 <?php endif; ?>
                             </td>
-                            <td>
+                            <td class="stack-title">
                                 <div class="fw-semibold"><?php echo e($product->name); ?></div>
                             </td>
-                            <td>
-                                <?php echo e($product->category?->name); ?>
+                            <td data-label="Category">
+                                <span>
+                                    <?php echo e($product->category?->name); ?>
 
-                                <?php if($product->subCategory): ?>
-                                    <span class="text-muted small">/ <?php echo e($product->subCategory->name); ?></span>
-                                <?php endif; ?>
+                                    <?php if($product->subCategory): ?>
+                                        <span class="text-muted small">/ <?php echo e($product->subCategory->name); ?></span>
+                                    <?php endif; ?>
+                                </span>
                             </td>
-                            <td><?php echo e($product->variants->count()); ?></td>
-                            <td>
+                            <td data-label="Variants"><?php echo e($product->variants->count()); ?></td>
+                            <td data-label="Price">
+                                <div>
                                 <?php if($prices->isNotEmpty()): ?>
                                     <span data-row-price>PKR <?php echo e(number_format($prices->min())); ?><?php if($prices->min() != $prices->max()): ?> &ndash; <?php echo e(number_format($prices->max())); ?><?php endif; ?></span>
                                     <?php if($product->usesPackPricing()): ?><div class="text-muted small">Mystery Balls &middot; <?php echo e($product->pricing_mode); ?> pricing</div><?php endif; ?>
                                 <?php else: ?>
                                     <span class="text-muted">&mdash;</span>
                                 <?php endif; ?>
+                                </div>
                             </td>
-                            <td class="text-nowrap">
+                            <td class="text-nowrap" data-label="Discount">
                                 <span data-row-discount>
                                     <?php if($discount): ?>
                                         <span class="badge rounded-pill me-1" style="background:#e11d48;"><?php echo e($discount); ?></span>
@@ -84,7 +88,7 @@
                                     </button>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-end text-nowrap">
+                            <td class="text-end text-nowrap stack-actions">
                                 <a href="<?php echo e(route('admin.products.edit', $product)); ?>" class="btn btn-sm btn-outline-secondary"><i class="ri-edit-line"></i></a>
                                 <form action="<?php echo e(route('admin.products.destroy', $product)); ?>" method="POST" class="d-inline" onsubmit="return confirmAction(this, 'Delete this product and all its variants/images?');">
                                     <?php echo csrf_field(); ?> <?php echo method_field('DELETE'); ?>

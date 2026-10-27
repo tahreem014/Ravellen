@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
+use App\Support\CheckoutResume;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -65,6 +66,11 @@ class LoginController extends Controller
 
         if ($user->isAdmin()) {
             return redirect()->route('admin.dashboard');
+        }
+
+        // A guest who pressed "Place Order" carries on to payment instead of landing on the home page
+        if (CheckoutResume::pending()) {
+            return redirect()->route('checkout');
         }
 
         return redirect($this->redirectPath());
@@ -150,6 +156,10 @@ class LoginController extends Controller
 
             if ($user->isAdmin()) {
                 return redirect()->route('admin.dashboard');
+            }
+
+            if (CheckoutResume::pending()) {
+                return redirect()->route('checkout');
             }
 
             return redirect('/');

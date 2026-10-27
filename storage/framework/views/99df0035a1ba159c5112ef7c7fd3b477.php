@@ -1,4 +1,3 @@
-
 <?php $__env->startSection('title', 'My Profile'); ?>
 
 <?php $__env->startSection('css'); ?>
@@ -63,10 +62,42 @@
         background: #fff; border-radius: .75rem;
         box-shadow: 0 2px 10px rgba(0,0,0,.06);
         padding: 1.25rem 1.5rem;
+        height: 100%;   /* cards in a row stay the same height */
     }
     .stat-label { font-size: .8rem; color: #6b7280; margin-bottom: .4rem; }
-    .stat-value { font-size: 1.6rem; font-weight: 800; color: #1f2937; }
+    .stat-value { font-size: 1.4rem; font-weight: 800; line-height: 1.2; color: #1f2937; overflow-wrap: anywhere; }
     .stat-value.pink { color: #ec4899; }
+    @media (min-width: 1200px) { .stat-value { font-size: 1.6rem; } }
+
+    /* ── Phones ── */
+    @media (max-width: 575.98px) {
+        .profile-sidebar { padding: 1.5rem 1.25rem; }
+
+        /* tabs as one pill bar that always fits */
+        .profile-tabs {
+            background: #fff; border-radius: 2rem; padding: .25rem; gap: .1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,.05);
+        }
+        .profile-tab { min-width: 0; padding: .55rem .15rem; font-size: .8rem; white-space: nowrap; }
+
+        .stat-card { padding: 1rem 1.1rem; }
+        .content-card { padding: 1.1rem; }
+        .order-row { padding: .9rem; }
+        .order-row .gap-4 { gap: 1rem 1.5rem !important; }
+
+        /* an item's action buttons (Request Refund, Write Review, Complete Remaining Payment…)
+           sit under it, side by side, instead of squeezing the name */
+        .order-item-line { flex-wrap: wrap; }
+        .order-item-actions { flex-direction: row !important; flex-wrap: wrap; align-items: stretch !important; width: 100%; gap: .5rem !important; }
+        .order-item-actions > * { flex: 1 1 auto; text-align: center; justify-content: center; }
+        .content-card .pay-remaining-item-btn { white-space: normal; padding: .5rem .9rem; }
+
+        /* refund card: full width, each line a small label over its value */
+        .content-card .refund-card { margin-left: 0; }
+        .content-card .refund-card-row { flex-direction: column; align-items: flex-start; gap: .1rem; padding: .3rem 0; }
+        .content-card .refund-card-val { text-align: left; overflow-wrap: anywhere; }
+        .content-card .refund-actions > * { flex: 1 1 auto; }
+    }
 
     /* ── Content card ── */
     .content-card {
@@ -244,8 +275,8 @@
     ];
 ?>
 
-<div class="profile-wrapper py-5">
-<div class="container px-4">
+<div class="profile-wrapper py-4 py-md-5">
+<div class="container px-3 px-sm-4">
 <div class="row g-4 align-items-start">
 
     
@@ -302,27 +333,28 @@ unset($__errorArgs, $__bag); ?>
         
         <div class="profile-tabs mb-4">
             <button class="profile-tab active" onclick="switchTab('overview',this)">Overview</button>
-            <button class="profile-tab" onclick="switchTab('orders',this)">Order History</button>
+            <button class="profile-tab" onclick="switchTab('orders',this)"><span class="d-none d-sm-inline">Order History</span><span class="d-sm-none">Orders</span></button>
             <button class="profile-tab" onclick="switchTab('addresses',this)">Addresses</button>
             <button class="profile-tab" onclick="switchTab('settings',this)">Settings</button>
         </div>
 
         
         <div id="tab-overview" class="tab-panel active" data-live-region="profile-overview">
+            
             <div class="row g-3 mb-4">
-                <div class="col-4">
+                <div class="col-6 col-lg-4 order-1">
                     <div class="stat-card">
                         <div class="stat-label">Total Orders</div>
                         <div class="stat-value"><?php echo e(count($orders)); ?></div>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-12 col-lg-4 order-3 order-lg-2">
                     <div class="stat-card">
                         <div class="stat-label">Total Spent</div>
                         <div class="stat-value pink">PKR <?php echo e(number_format($totalSpent)); ?></div>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-6 col-lg-4 order-2 order-lg-3">
                     <div class="stat-card">
                         <div class="stat-label">Wishlist Items</div>
                         <div class="stat-value"><?php echo e($wishlistCount); ?></div>
@@ -399,14 +431,14 @@ unset($__errorArgs, $__bag); ?>
                     <?php $itemPaymentDue    = $order->order_type === 'pre_order' && $order->order_status === 'payment_due'; ?>
                     <?php $__currentLoopData = $order->items; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <?php $refund = $item->refundRequest; $rst = $refund ? ($refundStatusMap[$refund->status] ?? $refundStatusMap['pending']) : null; ?>
-                    <div class="d-flex align-items-center gap-3 mb-2">
+                    <div class="order-item-line d-flex align-items-center gap-3 mb-2">
                         <img src="<?php echo e($item->product?->images?->first()?->image ?? 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=100&q=80'); ?>" alt="<?php echo e($item->product?->name); ?>" class="order-item-img">
                         <div class="flex-grow-1">
                             <div class="order-item-name"><?php echo e($item->product?->name); ?></div>
                             <div class="order-item-sub">Qty: <?php echo e($item->qty); ?><?php echo e($item->productVariant ? ' · '.$item->productVariant->variant_name : ''); ?></div>
                             <div class="order-item-price">PKR <?php echo e(number_format($item->price * $item->qty)); ?></div>
                         </div>
-                        <div class="d-flex flex-column align-items-end gap-2">
+                        <div class="order-item-actions d-flex flex-column align-items-end gap-2">
                             <?php if($itemAwaitingStock): ?>
                             <span class="status-badge status-awaiting_stock"><i class="ri-hourglass-line"></i> Awaiting Stock</span>
                             <?php elseif($itemPaymentDue): ?>
@@ -510,7 +542,7 @@ unset($__errorArgs, $__bag); ?>
                     <?php echo csrf_field(); ?>
                     <?php echo method_field('PUT'); ?>
                     <div class="row g-3 mb-3">
-                        <div class="col-6">
+                        <div class="col-12 col-sm-6">
                             <label class="form-label" style="font-size:.8rem;font-weight:600;">Full Name</label>
                             <input type="text" name="name" id="profileNameInput" class="form-input" value="<?php echo e(old('name', $profile->name)); ?>">
                             <div id="profileNameError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;">
@@ -527,7 +559,7 @@ endif;
 unset($__errorArgs, $__bag); ?>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-12 col-sm-6">
                             <label class="form-label" style="font-size:.8rem;font-weight:600;">Email Address</label>
                             <input type="email" name="email" id="profileEmailInput" class="form-input" value="<?php echo e(old('email', $profile->email)); ?>">
                             <div id="profileEmailError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;">
@@ -546,7 +578,7 @@ unset($__errorArgs, $__bag); ?>
                         </div>
                     </div>
                     <div class="row g-3 mb-2">
-                        <div class="col-6">
+                        <div class="col-12 col-sm-6">
                             <label class="form-label"  style="font-size:.8rem;font-weight:600;">Phone Number</label>
                             <input type="tel" name="phone_number" id="profilePhoneInput" class="form-input" placeholder="+923001234567" value="<?php echo e(old('phone_number', $profile->phoneNumber)); ?>">
                             <div id="profilePhoneError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;">
@@ -593,7 +625,7 @@ unset($__errorArgs, $__bag); ?>
                         </div>
                     </div>
                     <div class="row g-3 mb-2" style="max-width:36rem;">
-                        <div class="col-6">
+                        <div class="col-12 col-sm-6">
                             <label class="form-label" style="font-size:.8rem;font-weight:600;">New Password</label>
                             <input type="password" name="password" id="newPasswordInput" class="form-input" placeholder="Enter new password">
                             <div id="newPasswordError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;">
@@ -610,7 +642,7 @@ endif;
 unset($__errorArgs, $__bag); ?>
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-12 col-sm-6">
                             <label class="form-label" style="font-size:.8rem;font-weight:600;">Confirm New Password</label>
                             <input type="password" name="password_confirmation" id="confirmPasswordInput" class="form-input" placeholder="Confirm new password">
                         </div>

@@ -5,7 +5,7 @@
 <?php $__env->startSection('content'); ?>
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <h5 class="mb-0"><?php echo e($title); ?></h5>
-        <form method="GET" class="d-flex gap-2">
+        <form method="GET" class="admin-toolbar-form">
             <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">All statuses</option>
                 <?php $__currentLoopData = $statuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $status): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
@@ -18,7 +18,7 @@
     
     <div class="admin-card card" data-admin-region="refunds">
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table class="table table-stack align-middle mb-0">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -35,14 +35,14 @@
                 <tbody>
                     <?php $__empty_1 = true; $__currentLoopData = $refundRequests; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $refund): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <tr>
-                            <td><?php echo e($refund->id); ?></td>
-                            <td><?php echo e($refund->orderItem?->order?->user?->name ?? '—'); ?></td>
-                            <td><?php echo e($refund->orderItem?->product?->name ?? '—'); ?></td>
-                            <td><?php echo e(number_format($refund->amount)); ?></td>
-                            <td><?php echo e($refund->bank_details); ?></td>
-                            <td><?php echo e($refund->reason); ?></td>
-                            <td><?php echo e($refund->requested_at?->format('M j, Y')); ?></td>
-                            <td>
+                            <td data-label="ID"><?php echo e($refund->id); ?></td>
+                            <td data-label="Customer"><?php echo e($refund->orderItem?->order?->user?->name ?? '—'); ?></td>
+                            <td data-label="Item"><?php echo e($refund->orderItem?->product?->name ?? '—'); ?></td>
+                            <td data-label="Amount (PKR)"><?php echo e(number_format($refund->amount)); ?></td>
+                            <td class="stack-block" data-label="Bank Details"><?php echo e($refund->bank_details); ?></td>
+                            <td class="stack-block" data-label="Reason"><?php echo e($refund->reason); ?></td>
+                            <td data-label="Requested"><?php echo e($refund->requested_at?->format('M j, Y')); ?></td>
+                            <td data-label="Status">
                                 <span class="badge bg-<?php echo e(match($refund->status) {
                                     'approved' => 'success',
                                     'rejected' => 'danger',
@@ -50,7 +50,8 @@
                                     default => 'warning',
                                 }); ?>"><?php echo e(ucfirst($refund->status)); ?></span>
                             </td>
-                            <td class="text-end">
+                            
+                            <td class="text-end stack-actions <?php echo e($refund->status === 'pending' ? '' : 'd-none d-md-table-cell'); ?>">
                                 <?php if($refund->status === 'pending'): ?>
                                     <form action="<?php echo e(route('admin.refund-requests.update', $refund)); ?>" method="POST" class="d-inline" data-ajax>
                                         <?php echo csrf_field(); ?>

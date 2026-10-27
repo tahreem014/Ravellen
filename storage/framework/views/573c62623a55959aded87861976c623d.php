@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'Edit Product'); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -115,7 +113,7 @@
             <?php endif; ?>
 
             <div class="table-responsive mb-3">
-                <table class="table align-middle">
+                <table class="table table-stack align-middle">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -135,9 +133,9 @@
                             <?php $formId = 'variant-form-' . $variant->id; ?>
                             <tr>
                                 <?php if($isPackProduct): ?>
-                                    <td class="fw-semibold"><?php echo e($variant->variant_name); ?></td>
-                                    <td><?php echo e(number_format($variant->price)); ?></td>
-                                    <td>
+                                    <td class="fw-semibold stack-title"><?php echo e($variant->variant_name); ?></td>
+                                    <td data-label="Price (PKR)"><?php echo e(number_format($variant->price)); ?></td>
+                                    <td data-label="Sale Price">
                                         <?php if($variant->hasDiscount()): ?>
                                             <span class="text-danger fw-semibold"><?php echo e(number_format($variant->sale_price)); ?></span>
                                         <?php else: ?>
@@ -145,21 +143,21 @@
                                         <?php endif; ?>
                                     </td>
                                 <?php else: ?>
-                                    <td><input form="<?php echo e($formId); ?>" type="text" name="variant_name" value="<?php echo e($variant->variant_name); ?>" class="form-control form-control-sm" required></td>
-                                    <td><input form="<?php echo e($formId); ?>" type="number" step="0.01" name="price" value="<?php echo e($variant->price); ?>" class="form-control form-control-sm" style="width:110px;" required></td>
-                                    <td><input form="<?php echo e($formId); ?>" type="number" step="0.01" name="sale_price" value="<?php echo e($variant->sale_price); ?>" class="form-control form-control-sm" style="width:110px;" placeholder="No sale"></td>
-                                    <td><input form="<?php echo e($formId); ?>" type="number" name="min_qty" value="<?php echo e($variant->min_qty); ?>" class="form-control form-control-sm" style="width:70px;" required></td>
-                                    <td><input form="<?php echo e($formId); ?>" type="number" name="max_qty" value="<?php echo e($variant->max_qty); ?>" class="form-control form-control-sm" style="width:70px;" required></td>
+                                    <td data-label="Name"><input form="<?php echo e($formId); ?>" type="text" name="variant_name" value="<?php echo e($variant->variant_name); ?>" class="form-control form-control-sm" required></td>
+                                    <td data-label="Price (PKR)"><input form="<?php echo e($formId); ?>" type="number" step="0.01" name="price" value="<?php echo e($variant->price); ?>" class="form-control form-control-sm" style="width:110px;" required></td>
+                                    <td data-label="Sale Price"><input form="<?php echo e($formId); ?>" type="number" step="0.01" name="sale_price" value="<?php echo e($variant->sale_price); ?>" class="form-control form-control-sm" style="width:110px;" placeholder="No sale"></td>
+                                    <td data-label="Min"><input form="<?php echo e($formId); ?>" type="number" name="min_qty" value="<?php echo e($variant->min_qty); ?>" class="form-control form-control-sm" style="width:70px;" required></td>
+                                    <td data-label="Max"><input form="<?php echo e($formId); ?>" type="number" name="max_qty" value="<?php echo e($variant->max_qty); ?>" class="form-control form-control-sm" style="width:70px;" required></td>
                                 <?php endif; ?>
-                                <td><input form="<?php echo e($formId); ?>" type="number" name="stock" value="<?php echo e($variant->stock); ?>" class="form-control form-control-sm" style="width:80px;" required></td>
-                                <td>
+                                <td data-label="Stock"><input form="<?php echo e($formId); ?>" type="number" name="stock" value="<?php echo e($variant->stock); ?>" class="form-control form-control-sm" style="width:80px;" required></td>
+                                <td data-label="Status">
                                     <select form="<?php echo e($formId); ?>" name="status" class="form-select form-select-sm">
                                         <?php $__currentLoopData = ['active','out_of_stock','pre_order','restocking','discontinued']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $status): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                             <option value="<?php echo e($status); ?>" <?php if($variant->status === $status): echo 'selected'; endif; ?>><?php echo e(ucfirst(str_replace('_',' ', $status))); ?></option>
                                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </select>
                                 </td>
-                                <td class="text-end text-nowrap">
+                                <td class="text-end text-nowrap stack-actions">
                                     <form id="<?php echo e($formId); ?>" action="<?php echo e(route('admin.products.variants.update', [$product, $variant])); ?>" method="POST" class="d-none" data-ajax>
                                         <?php echo csrf_field(); ?> <?php echo method_field('PUT'); ?>
                                     </form>

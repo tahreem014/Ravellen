@@ -129,6 +129,8 @@
             <p style="color:#6b7280;font-size:.875rem;margin:0;">Join Ravellen and start your mystery adventure</p>
         </div>
 
+        <x-checkout-login-notice />
+
         <form action="{{ route('register') }}" method="POST" enctype="multipart/form-data">
             @csrf
 
