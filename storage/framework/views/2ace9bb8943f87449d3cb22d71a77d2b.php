@@ -346,13 +346,18 @@
                     $cheapest  = \App\Models\ProductVariant::cheapestOf($allProds->flatMap(fn($p) => $p->variants));
                     $pDesc     = $cat->subCategories->count() . ' sub-categories, ' . $allProds->count() . ' products';
                     $catLabel  = isset($cfg) ? ($cfg['label'] ?? $cat->name) : $cat->name;
+                    $soon      = $cat->isComingSoon();   // nothing on sale yet: no product photo, price or count
+                    if ($soon && isset($cfg)) { $firstImg = $cfg['fallback']; }
                 ?>
                 <?php if($cfg): ?>
-                <div class="col-md-6 col-lg-4 fade-up" data-live-category="<?php echo e($cat->id); ?>">
+                <div class="col-md-6 col-lg-4 fade-up" <?php if (! ($soon)): ?> data-live-category="<?php echo e($cat->id); ?>" <?php endif; ?>>
                     <a href="<?php echo e(url($cfg['link'])); ?>" class="text-decoration-none">
                         <div class="cat-card card">
                             <div class="cat-card-img-wrap">
                                 <img src="<?php echo e($firstImg); ?>" alt="<?php echo e($catLabel); ?>">
+                                <?php if($soon): ?>
+                                    <span style="position:absolute;top:.75rem;left:.75rem;z-index:2;background:#fff;color:#8B5E3C;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .8rem;border-radius:2rem;box-shadow:0 2px 8px rgba(0,0,0,.15);">Coming Soon</span>
+                                <?php endif; ?>
                                 <div class="cat-card-overlay" style="background:<?php echo e($cfg['overlay']); ?>;"></div>
                                 <div class="cat-card-icon-wrap" style="background:<?php echo e($cfg['iconBg']); ?>;">
                                     <i class="<?php echo e($cfg['icon']); ?>"></i>
@@ -360,6 +365,9 @@
                             </div>
                             <div class="card-body p-4">
                                 <h5 class="fw-bold mb-1"><?php echo e($catLabel); ?></h5>
+                                <?php if($soon): ?>
+                                    <p class="text-muted small mb-3">New pieces are on the way — check back soon!</p>
+                                <?php else: ?>
                                 <p class="text-muted small mb-3" data-live-price data-live-prefix="From "><?php if($cheapest): ?><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['variant' => $cheapest,'prefix' => 'From ']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
@@ -380,10 +388,10 @@
 <?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
 <?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
 <?php endif; ?><?php else: ?><?php echo e($pDesc); ?><?php endif; ?></p>
+                                <?php endif; ?>
                                 <button class="btn cat-explore-btn w-100 py-2 text-white"
                                         style="background:<?php echo e($cfg['btnBg']); ?>;">
-                                    Explore <?php echo e($catLabel); ?>
-
+                                    <?php if($soon): ?> Coming Soon <?php else: ?> Explore <?php echo e($catLabel); ?> <?php endif; ?>
                                     <i class="ri-arrow-right-line ms-1"></i>
                                 </button>
                             </div>

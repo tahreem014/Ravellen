@@ -440,6 +440,30 @@
         </p>
     </div>
 
+    <?php if(\App\Models\Category::nameIsComingSoon('Ceramic Items')): ?>
+        
+        <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => 'Our ceramic pieces are on the way','message' => 'We\'re putting the finishing touches on our mugs, bowls and spoons. Check back soon!']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('coming-soon'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Our ceramic pieces are on the way','message' => 'We\'re putting the finishing touches on our mugs, bowls and spoons. Check back soon!']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $attributes = $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $component = $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+    <?php else: ?>
+
     
     <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
         <button class="cer-filter-btn active" onclick="filterCeramics('all',this)"
@@ -544,6 +568,8 @@
         <i class="ri-search-line" style="font-size:2.5rem;color:#d1d5db;"></i>
         <p class="text-muted mt-2">No ceramic items found for this filter.</p>
     </div>
+
+    <?php endif; ?>
 
 </div>
 </div>

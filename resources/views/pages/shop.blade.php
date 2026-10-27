@@ -199,6 +199,10 @@
             // each with its parent category & sub-category for filtering.
             $allProducts = collect();
             foreach ($categories as $category) {
+                if ($category->isComingSoon()) {
+                    continue;   // nothing on sale yet — its pill shows "Coming soon" instead
+                }
+
                 foreach ($category->products->whereNull('sub_category_id') as $p) {
                     $p->_cat = $category;
                     $p->_sub = null;
@@ -218,7 +222,7 @@
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-3" id="shop-cat-pills">
             <button type="button" class="shop-pill active" data-cat="all" onclick="selectShopCategory('all', this)">All Categories</button>
             @foreach($categories as $category)
-                <button type="button" class="shop-pill" data-cat="{{ $category->id }}" onclick="selectShopCategory('{{ $category->id }}', this)">{{ $category->name }}</button>
+                <button type="button" class="shop-pill" data-cat="{{ $category->id }}" data-name="{{ $category->name }}" @if($category->isComingSoon()) data-coming-soon="1" @endif onclick="selectShopCategory('{{ $category->id }}', this)">{{ $category->name }}</button>
             @endforeach
         </div>
 
@@ -226,6 +230,7 @@
         <div class="flex-wrap gap-2 justify-content-center mb-4" id="shop-sub-pills" style="display:none;">
             <button type="button" class="shop-pill sub active" data-sub="all" data-parent="all" onclick="selectShopSub('all', this)">All</button>
             @foreach($categories as $category)
+                @continue($category->isComingSoon())
                 @foreach($category->subCategories as $sub)
                     <button type="button" class="shop-pill sub" data-sub="{{ $sub->id }}" data-parent="{{ $category->id }}" style="display:none;" onclick="selectShopSub('{{ $sub->id }}', this)">{{ $sub->name }}</button>
                 @endforeach
@@ -287,6 +292,11 @@
             <p class="text-muted mt-2">No products found. Try a different search or filter.</p>
         </div>
 
+        {{-- Shown in place of the grid while a "coming soon" category's pill is selected --}}
+        <div id="shop-coming-soon" style="display:none;">
+            <x-coming-soon title="Coming soon" message="We're getting everything ready. Check back soon!" :actions="false" />
+        </div>
+
         {{-- ── Pagination ── --}}
         <div id="shop-pagination" class="d-flex flex-wrap gap-2 justify-content-center mt-4"></div>
 
@@ -316,11 +326,17 @@ let shopActiveCat = 'all';
 let shopActiveSub = 'all';
 let shopSearchQuery = '';
 let shopCurrentPage = 1;
+let shopComingSoon = false;   // the selected category has nothing on sale yet
 
 // ── Category selection ──────────────────────────────────────────────────────
 function selectShopCategory(catId, btn) {
     shopActiveCat = catId;
     shopActiveSub = 'all';
+
+    shopComingSoon = btn.dataset.comingSoon === '1';
+    if (shopComingSoon) {
+        document.querySelector('#shop-coming-soon .coming-soon-title').textContent = btn.dataset.name + ' are on their way';
+    }
 
     document.querySelectorAll('#shop-cat-pills .shop-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -388,7 +404,8 @@ function renderShopPage() {
         if (idx >= start && idx < end) item.style.display = '';
     });
 
-    document.getElementById('no-results').style.display = matched.length === 0 ? 'block' : 'none';
+    document.getElementById('shop-coming-soon').style.display = shopComingSoon ? 'block' : 'none';
+    document.getElementById('no-results').style.display = (!shopComingSoon && matched.length === 0) ? 'block' : 'none';
     renderShopPagination(matched.length, totalPages);
 }
 

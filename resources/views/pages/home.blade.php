@@ -352,13 +352,18 @@
                     $cheapest  = \App\Models\ProductVariant::cheapestOf($allProds->flatMap(fn($p) => $p->variants));
                     $pDesc     = $cat->subCategories->count() . ' sub-categories, ' . $allProds->count() . ' products';
                     $catLabel  = isset($cfg) ? ($cfg['label'] ?? $cat->name) : $cat->name;
+                    $soon      = $cat->isComingSoon();   // nothing on sale yet: no product photo, price or count
+                    if ($soon && isset($cfg)) { $firstImg = $cfg['fallback']; }
                 @endphp
                 @if($cfg)
-                <div class="col-md-6 col-lg-4 fade-up" data-live-category="{{ $cat->id }}">
+                <div class="col-md-6 col-lg-4 fade-up" @unless($soon) data-live-category="{{ $cat->id }}" @endunless>
                     <a href="{{ url($cfg['link']) }}" class="text-decoration-none">
                         <div class="cat-card card">
                             <div class="cat-card-img-wrap">
                                 <img src="{{ $firstImg }}" alt="{{ $catLabel }}">
+                                @if($soon)
+                                    <span style="position:absolute;top:.75rem;left:.75rem;z-index:2;background:#fff;color:#8B5E3C;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .8rem;border-radius:2rem;box-shadow:0 2px 8px rgba(0,0,0,.15);">Coming Soon</span>
+                                @endif
                                 <div class="cat-card-overlay" style="background:{{ $cfg['overlay'] }};"></div>
                                 <div class="cat-card-icon-wrap" style="background:{{ $cfg['iconBg'] }};">
                                     <i class="{{ $cfg['icon'] }}"></i>
@@ -366,10 +371,14 @@
                             </div>
                             <div class="card-body p-4">
                                 <h5 class="fw-bold mb-1">{{ $catLabel }}</h5>
+                                @if($soon)
+                                    <p class="text-muted small mb-3">New pieces are on the way — check back soon!</p>
+                                @else
                                 <p class="text-muted small mb-3" data-live-price data-live-prefix="From ">@if($cheapest)<x-price :variant="$cheapest" prefix="From " />@else{{ $pDesc }}@endif</p>
+                                @endif
                                 <button class="btn cat-explore-btn w-100 py-2 text-white"
                                         style="background:{{ $cfg['btnBg'] }};">
-                                    Explore {{ $catLabel }}
+                                    @if($soon) Coming Soon @else Explore {{ $catLabel }} @endif
                                     <i class="ri-arrow-right-line ms-1"></i>
                                 </button>
                             </div>

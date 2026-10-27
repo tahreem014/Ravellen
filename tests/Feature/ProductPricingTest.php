@@ -243,21 +243,21 @@ class ProductPricingTest extends TestCase
 
     public function test_discounted_products_show_a_percentage_badge_on_their_images(): void
     {
-        $ceramics = Category::firstOrCreate(['name' => 'Ceramic Items']);
+        $boxes = Category::firstOrCreate(['name' => 'Gift Boxes']);
         $mug = $this->standardProduct(['Small' => 1500, 'Large' => 2000]);
-        $mug->update(['category_id' => $ceramics->id]);
+        $mug->update(['category_id' => $boxes->id]);
         [$small, $large] = $mug->variants->sortBy('price')->values()->all();
         $small->update(['sale_price' => 1200]);   // 20% off
         $large->update(['sale_price' => 1600]);   // 20% off
         $plain = $this->standardProduct(['Plain' => 900]);
-        $plain->update(['category_id' => $ceramics->id]);
+        $plain->update(['category_id' => $boxes->id]);
 
         $this->assertSame('-20%', $mug->fresh('variants')->discountLabel());
         $this->assertNull($plain->fresh('variants')->discountLabel());
 
         $badge = '>-20%</span>';
         $this->get(route('shop'))->assertOk()->assertSee($badge, false);
-        $this->get(route('ceramic-items'))->assertOk()->assertSee($badge, false);
+        $this->get(route('gift-boxes'))->assertOk()->assertSee($badge, false);
         $this->get(route('product-item', $mug))->assertOk()->assertSee('id="discount-badge"', false)->assertSee($badge, false);
         // the plain product's own badge is hidden, but its related-products row shows the mug's
         $this->get(route('product-item', $plain))->assertOk()

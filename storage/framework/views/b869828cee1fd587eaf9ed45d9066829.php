@@ -199,6 +199,10 @@
             // each with its parent category & sub-category for filtering.
             $allProducts = collect();
             foreach ($categories as $category) {
+                if ($category->isComingSoon()) {
+                    continue;   // nothing on sale yet — its pill shows "Coming soon" instead
+                }
+
                 foreach ($category->products->whereNull('sub_category_id') as $p) {
                     $p->_cat = $category;
                     $p->_sub = null;
@@ -218,7 +222,7 @@
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-3" id="shop-cat-pills">
             <button type="button" class="shop-pill active" data-cat="all" onclick="selectShopCategory('all', this)">All Categories</button>
             <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <button type="button" class="shop-pill" data-cat="<?php echo e($category->id); ?>" onclick="selectShopCategory('<?php echo e($category->id); ?>', this)"><?php echo e($category->name); ?></button>
+                <button type="button" class="shop-pill" data-cat="<?php echo e($category->id); ?>" data-name="<?php echo e($category->name); ?>" <?php if($category->isComingSoon()): ?> data-coming-soon="1" <?php endif; ?> onclick="selectShopCategory('<?php echo e($category->id); ?>', this)"><?php echo e($category->name); ?></button>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
 
@@ -226,6 +230,7 @@
         <div class="flex-wrap gap-2 justify-content-center mb-4" id="shop-sub-pills" style="display:none;">
             <button type="button" class="shop-pill sub active" data-sub="all" data-parent="all" onclick="selectShopSub('all', this)">All</button>
             <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <?php if($category->isComingSoon()) continue; ?>
                 <?php $__currentLoopData = $category->subCategories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <button type="button" class="shop-pill sub" data-sub="<?php echo e($sub->id); ?>" data-parent="<?php echo e($category->id); ?>" style="display:none;" onclick="selectShopSub('<?php echo e($sub->id); ?>', this)"><?php echo e($sub->name); ?></button>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -326,6 +331,30 @@
         </div>
 
         
+        <div id="shop-coming-soon" style="display:none;">
+            <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => 'Coming soon','message' => 'We\'re getting everything ready. Check back soon!','actions' => false]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('coming-soon'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Coming soon','message' => 'We\'re getting everything ready. Check back soon!','actions' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(false)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $attributes = $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $component = $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+        </div>
+
+        
         <div id="shop-pagination" class="d-flex flex-wrap gap-2 justify-content-center mt-4"></div>
 
         
@@ -354,11 +383,17 @@ let shopActiveCat = 'all';
 let shopActiveSub = 'all';
 let shopSearchQuery = '';
 let shopCurrentPage = 1;
+let shopComingSoon = false;   // the selected category has nothing on sale yet
 
 // ── Category selection ──────────────────────────────────────────────────────
 function selectShopCategory(catId, btn) {
     shopActiveCat = catId;
     shopActiveSub = 'all';
+
+    shopComingSoon = btn.dataset.comingSoon === '1';
+    if (shopComingSoon) {
+        document.querySelector('#shop-coming-soon .coming-soon-title').textContent = btn.dataset.name + ' are on their way';
+    }
 
     document.querySelectorAll('#shop-cat-pills .shop-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -426,7 +461,8 @@ function renderShopPage() {
         if (idx >= start && idx < end) item.style.display = '';
     });
 
-    document.getElementById('no-results').style.display = matched.length === 0 ? 'block' : 'none';
+    document.getElementById('shop-coming-soon').style.display = shopComingSoon ? 'block' : 'none';
+    document.getElementById('no-results').style.display = (!shopComingSoon && matched.length === 0) ? 'block' : 'none';
     renderShopPagination(matched.length, totalPages);
 }
 

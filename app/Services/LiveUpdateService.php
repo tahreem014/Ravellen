@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\Cache;
@@ -116,7 +117,10 @@ class LiveUpdateService
         if (str_starts_with($listing, 'category:')) {
             $names = explode('|', substr($listing, strlen('category:')));
             $query->whereHas('category', fn ($q) => $q->whereIn('name', $names));
-        } elseif ($listing !== 'shop') {
+        } elseif ($listing === 'shop') {
+            // Products of a "coming soon" category aren't listed, so they don't count as the shop changing.
+            $query->whereDoesntHave('category', fn ($q) => $q->whereIn('name', array_keys(Category::COMING_SOON)));
+        } else {
             return null;
         }
 

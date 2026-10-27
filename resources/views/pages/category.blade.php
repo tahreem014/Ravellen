@@ -368,6 +368,12 @@
         </p>
     </div>
 
+    @if(\App\Models\Category::nameIsComingSoon('Ceramic Items'))
+        {{-- Nothing on sale yet: no filters, no products (see Category::COMING_SOON) --}}
+        <x-coming-soon title="Our ceramic pieces are on the way"
+                       message="We're putting the finishing touches on our mugs, bowls and spoons. Check back soon!" />
+    @else
+
     {{-- Ceramic Filters --}}
     <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
         <button class="cer-filter-btn active" onclick="filterCeramics('all',this)"
@@ -434,6 +440,8 @@
         <i class="ri-search-line" style="font-size:2.5rem;color:#d1d5db;"></i>
         <p class="text-muted mt-2">No ceramic items found for this filter.</p>
     </div>
+
+    @endif
 
 </div>
 </div>
