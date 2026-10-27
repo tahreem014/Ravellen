@@ -21,7 +21,7 @@
                 <div class="row g-4">
 
                     {{-- Quick Links --}}
-                    <div class="col-4">
+                    <div class="col-6 col-md-4">
                         <h6 class="fw-bold fs-6 mb-3 text-white">Quick Links</h6>
                         <ul class="list-unstyled mb-0" style="color:rgba(255,255,255,.8);font-size:.875rem;">
                             <li class="mb-2"><a href="{{ url('/about') }}"          class="text-white-50 text-decoration-none footer-link">About Us</a></li>
@@ -33,7 +33,7 @@
                     </div>
 
                     {{-- Policies --}}
-                    <div class="col-4">
+                    <div class="col-6 col-md-4">
                         <h6 class="fw-bold fs-6 mb-3 text-white">Policies</h6>
                         <ul class="list-unstyled mb-0" style="color:rgba(255,255,255,.8);font-size:.875rem;">
                             <li class="mb-2"><a href="{{ url('/privacy') }}"  class="text-white-50 text-decoration-none footer-link">Privacy Policy</a></li>
@@ -43,7 +43,7 @@
                     </div>
 
                     {{-- Contact & Social --}}
-                    <div class="col-4">
+                    <div class="col-12 col-md-4">
                         <h6 class="fw-bold fs-6 mb-3 text-white">Contact Us</h6>
                         <ul class="list-unstyled mb-0" style="color:rgba(255,255,255,.8);font-size:.875rem;">
                             <li class="mb-2 d-flex align-items-center gap-2">
@@ -89,6 +89,7 @@
 </footer>
 
 <style>
+    .footer-link { overflow-wrap: anywhere; }   /* a long email or number wraps instead of running off the screen */
     .footer-link:hover { color: #fff !important; }
     .footer-social-btn:hover { background: rgba(255,255,255,.35) !important; }
     .footer-social-btn { color: #fff; transition: background .2s; }

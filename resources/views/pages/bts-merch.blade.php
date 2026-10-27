@@ -34,7 +34,8 @@
 
     .bts-explore-btn {
         border: 0; color: #fff; font-weight: 600; font-size: .85rem;
-        border-radius: .5rem; padding: .5rem 7.5rem;
+        border-radius: .5rem; padding: .65rem 1.25rem;
+        white-space: nowrap;   /* "Order Mystery Scoop" stays on one line */
         background: linear-gradient(135deg, #7c3aed, #a855f7);
         transition: opacity .2s; display: inline-flex; align-items: center; gap: .4rem;
     }
@@ -51,6 +52,13 @@
         gap: .45rem; padding: 1.1rem .75rem; min-height: 120px; flex: 1; max-width: 190px;
         border: 2px solid white; border-radius: .75rem;
         cursor: pointer; transition: all .22s; user-select: none; position: relative;
+    }
+    /* Phones: all nine members in one 3 × 3 grid instead of two rows that run off the screen */
+    @media (max-width: 575.98px) {
+        .bias-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+        .bias-grid-row { display: contents; }
+        .bias-btn { max-width: none; min-height: 6rem; padding: .9rem .4rem; }
+        .bias-btn .bias-name { font-size: .75rem; }
     }
     .bias-btn:hover  { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(168,85,247,.22); }
     .bias-btn.active { border-color: #7c3aed !important; box-shadow: 0 6px 20px rgba(124,58,237,.28); }
@@ -150,6 +158,7 @@
                 ['id'=>'bt21', 'name'=>'BT21',  'emoji'=>'✨'],
             ];
             @endphp
+            <div class="bias-grid">
             {{-- Row 1: 5 members --}}
             <div class="bias-grid-row mb-3">
                 @foreach($row1 as $m)
@@ -169,6 +178,7 @@
                     <span class="bias-name">{{ $m['name'] }}</span>
                 </div>
                 @endforeach
+            </div>
             </div>
         </div>
 

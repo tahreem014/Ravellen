@@ -95,15 +95,19 @@
     }
     .navbar-rv .notif-dropdown-footer:hover { background: #fdf2f8; }
 
-    .navbar-rv .rv-login-btn {
-        background: #111827; color: #fff;
-        border: 0; border-radius: .5rem;
+    /* Login / Register buttons: in the top bar and in the mobile menu (which sits outside .navbar-rv) */
+    .rv-login-btn, .rv-register-btn {
+        border-radius: .5rem;
         padding: .45rem 1.25rem;
         font-size: .875rem; font-weight: 600;
-        text-decoration: none; cursor: pointer;
-        transition: background .2s;
+        text-decoration: none !important; cursor: pointer;
+        transition: background .2s, color .2s;
     }
-    .navbar-rv .rv-login-btn:hover { background: #374151; color: #fff; }
+    .rv-login-btn { background: #111827; color: #fff; border: 1.5px solid #111827; }
+    .rv-login-btn:hover { background: #374151; border-color: #374151; color: #fff; }
+    .rv-register-btn { background: #fff; color: #111827; border: 1.5px solid #111827; }
+    .rv-register-btn:hover { background: #f3f4f6; color: #111827; }
+    .offcanvas-rv .rv-login-btn, .offcanvas-rv .rv-register-btn { padding: .7rem 1.25rem; font-size: .95rem; }
 
     /* Avatar link */
     .navbar-rv .rv-avatar-btn {
@@ -114,6 +118,14 @@
     }
     .navbar-rv .rv-avatar-btn:hover { border-color: #a855f7; }
     .navbar-rv .rv-avatar-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* Phones: heart, cart, bell, avatar and menu button share one row, and the bell's
+       dropdown spans the screen (at 320px wide it would run off the left edge) */
+    @media (max-width: 575.98px) {
+        .navbar-rv .rv-actions { gap: .1rem; }
+        .navbar-rv .rv-avatar-btn { margin: 0 .25rem; }
+        .navbar-rv .notif-dropdown { position: fixed; left: .5rem; right: .5rem; top: 4.25rem; width: auto; }
+    }
 
     /* Mobile offcanvas — above the sticky navbar (1050), or it covers the menu's header and close button */
     .offcanvas-rv { z-index: 1100; }
@@ -153,9 +165,8 @@
             <div class="rv-actions">
 
                 
-                {{-- Profile / Auth --}}
-                @auth
-                @php $wishlistCount = auth()->user()->wishLists()->count(); @endphp
+                {{-- Wishlist and cart for everyone: guests keep theirs in the session / this browser --}}
+                @php $wishlistCount = auth()->check() ? auth()->user()->wishLists()->count() : count(session('wishlist', [])); @endphp
                
                 <a href="{{ route('wish-list') }}" class="rv-icon-btn ">
                     <i class="ri-heart-line fs-5"></i>
@@ -166,6 +177,8 @@
                     <i class="ri-shopping-cart-line fs-5"></i>
                     <span class="cart-badge" id="cart-badge" style="display:none;"></span>
                 </a>
+                {{-- Notifications and profile: signed-in only --}}
+                @auth
                  <div class="position-relative">
                     <button type="button" class="rv-icon-btn" id="notif-bell-btn" onclick="toggleNotifDropdown()">
                         <i class="ri-notification-3-line fs-5"></i>
@@ -245,7 +258,7 @@
             </a>
             <a href="{{ route('login') }}"
                class="rv-login-btn text-center w-100 d-block">Login</a>
-            <a href="{{ route('register') }}" class="btn btn-outline-secondary w-100 mt-2">Register</a>
+            <a href="{{ route('register') }}" class="rv-register-btn text-center w-100 d-block">Register</a>
         @endauth
 
     </div>

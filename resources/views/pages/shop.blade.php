@@ -14,7 +14,8 @@
     .shop-search-wrap input {
         border-radius: 2rem;
         border: 1px solid #e9d5ff;
-        padding: .6rem 1.25rem .6rem 1.25rem;
+        padding: .6rem 2.75rem .6rem 1.25rem;   /* right side clear of the search icon */
+        text-overflow: ellipsis;
         width: 100%;
         font-size: .9rem;
         outline: none;
@@ -175,7 +176,7 @@
             <p class="text-muted mb-4">Explore our full collection of mystery items, BTS merch, and unique gifts</p>
 
             <div class="shop-search-wrap">
-                <input type="text" id="shop-search" placeholder="Search by category, sub-category, or product name" oninput="filterShop(this.value)">
+                <input type="text" id="shop-search" placeholder="Search products or categories" oninput="filterShop(this.value)">
                 <i class="ri-search-line search-icon"></i>
             </div>
         </div>
