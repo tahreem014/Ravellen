@@ -16,5 +16,6 @@
 
     @include('layouts.vendor-scripts')
     @include('layouts.toastify')
+    @include('layouts.track-clicks')
     </body>
 </html>

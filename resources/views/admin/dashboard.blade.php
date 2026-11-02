@@ -85,6 +85,11 @@
             stroke: { curve: 'smooth', width: 2 },
             dataLabels: { enabled: false },
             xaxis: { categories: d.categories },
+            // Sales (PKR) and visits are on different scales, so each gets its own axis.
+            yaxis: [
+                { seriesName: 'Sales (PKR)', min: 0, labels: { formatter: (v) => Math.round(v).toLocaleString() } },
+                { seriesName: 'Visits', opposite: true, min: 0, labels: { formatter: (v) => Math.round(v).toLocaleString() } },
+            ],
             legend: { position: 'bottom' },
         };
     }

@@ -38,6 +38,7 @@
 
     <?php echo $__env->make('layouts.toastify', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <?php echo $__env->make('layouts.live-updates', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <?php echo $__env->make('layouts.track-clicks', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
     
   

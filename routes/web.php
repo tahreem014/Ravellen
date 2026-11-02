@@ -33,6 +33,9 @@ Route::get('/product-item/{product:slug}', [App\Http\Controllers\HomeController:
 // ── Live storefront updates (polled by layouts/live-updates.blade.php) ──────────
 Route::get('/live', App\Http\Controllers\LiveController::class)->name('live')->middleware('throttle:120,1');
 
+// ── Click counting for the admin dashboard (beaconed by layouts/track-clicks.blade.php) ──
+Route::post('/track/click', App\Http\Controllers\ClickTrackingController::class)->name('track.click')->middleware('throttle:120,1');
+
 // ── Internal catalog data browser ──────────────────────────────────────────────
 Route::get('/catalog-browser', [App\Http\Controllers\CatalogController::class, 'index'])->name('catalog.browser');
 

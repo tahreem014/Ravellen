@@ -38,6 +38,7 @@
 
     @include('layouts.toastify')
     @include('layouts.live-updates')
+    @include('layouts.track-clicks')
 
     {{-- </div> --}}
   {{-- </div> --}}

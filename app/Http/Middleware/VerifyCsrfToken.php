@@ -14,5 +14,7 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         // Authenticated by the X-SFPY-SIGNATURE HMAC instead of a session/CSRF token.
         'payments/safepay/webhook',
+        // A navigator.sendBeacon() click count: no token to send, nothing to forge.
+        'track/click',
     ];
 }

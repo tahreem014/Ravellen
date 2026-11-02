@@ -16,6 +16,7 @@
 
     <?php echo $__env->make('layouts.vendor-scripts', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <?php echo $__env->make('layouts.toastify', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <?php echo $__env->make('layouts.track-clicks', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     </body>
 </html>
 <?php /**PATH C:\Users\zubai\Herd\Ravellen\resources\views/layouts/master-without-nav.blade.php ENDPATH**/ ?>

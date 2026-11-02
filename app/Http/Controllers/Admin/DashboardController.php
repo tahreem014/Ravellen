@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\SiteEvent;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -13,10 +14,8 @@ class DashboardController extends Controller
         $totalOrders = Order::count();
         $revenue = Order::where('payment_status', 'paid')->sum('total_amount');
 
-        // No analytics/pageview tracking exists in this app yet — these two
-        // are clearly-labeled placeholder numbers, not real data.
-        $websiteVisits = 12543;
-        $totalClicks = 8932;
+        $websiteVisits = SiteEvent::visits()->count();
+        $totalClicks = SiteEvent::clicks()->count();
 
         $chartData = [
             'daily' => $this->dailySeries(),
@@ -37,7 +36,7 @@ class DashboardController extends Controller
             $day = Carbon::today()->subDays($i);
             $categories[] = $day->format('D');
             $sales[] = (float) Order::whereDate('order_date', $day)->sum('total_amount');
-            $visits[] = 1800 + (($i * 937) % 3200);
+            $visits[] = SiteEvent::visits()->within($day->copy()->startOfDay(), $day->copy()->endOfDay())->count();
         }
 
         return compact('categories', 'sales', 'visits');
@@ -54,7 +53,7 @@ class DashboardController extends Controller
             $weekEnd = (clone $weekStart)->endOfWeek();
             $categories[] = 'Wk ' . $weekStart->format('M j');
             $sales[] = (float) Order::whereBetween('order_date', [$weekStart, $weekEnd])->sum('total_amount');
-            $visits[] = 9000 + (($i * 1543) % 12000);
+            $visits[] = SiteEvent::visits()->within($weekStart, $weekEnd)->count();
         }
 
         return compact('categories', 'sales', 'visits');
@@ -72,7 +71,7 @@ class DashboardController extends Controller
             $sales[] = (float) Order::whereYear('order_date', $month->year)
                 ->whereMonth('order_date', $month->month)
                 ->sum('total_amount');
-            $visits[] = 32000 + (($i * 3271) % 40000);
+            $visits[] = SiteEvent::visits()->within($month, $month->copy()->endOfMonth())->count();
         }
 
         return compact('categories', 'sales', 'visits');
