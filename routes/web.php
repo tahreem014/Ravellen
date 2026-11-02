@@ -135,6 +135,7 @@ Route::post('/update-password/{id}', [App\Http\Controllers\HomeController::class
 // ── Admin ─────────────────────────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', App\Http\Middleware\RespondToBackgroundForms::class])->group(function () {
     Route::get('/', [Admin\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('overview/stats', [Admin\DashboardController::class, 'stats'])->name('overview.stats')->middleware('throttle:120,1');
 
     Route::resource('products', Admin\ProductController::class)->except(['show']);
     Route::post('products/{product}/variants', [Admin\ProductVariantController::class, 'store'])->name('products.variants.store');

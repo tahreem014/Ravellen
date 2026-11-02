@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\RecordVisit;
+use App\Models\Order;
 use App\Models\SiteEvent;
 use App\Models\User;
 use Carbon\Carbon;
@@ -112,6 +113,53 @@ class SiteAnalyticsTest extends TestCase
         $this->assertSame($today + 2, $daily[6], 'today is the last daily slot');
         $this->assertSame($twoDaysAgo + 1, $daily[4]);
         $this->assertSame($visits + 3, SiteEvent::visits()->count(), 'the dashboard visit itself is not counted');
+    }
+
+    public function test_the_overview_polls_a_stats_endpoint_that_follows_visits_clicks_and_orders(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $customer = User::factory()->create();
+
+        $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()
+            ->assertSee('const STATS_URL = ' . json_encode(route('admin.overview.stats', [], false)), false)
+            ->assertSee('id="stat-visits"', false)
+            ->assertSee('id="stat-revenue"', false);
+
+        $before = $this->actingAs($admin)->getJson(route('admin.overview.stats', ['period' => 'daily']))->assertOk();
+
+        $this->record(SiteEvent::VISIT, now());
+        $this->record(SiteEvent::CLICK, now());
+        $this->record(SiteEvent::CLICK, now());
+        Order::create([
+            'user_id' => $customer->id, 'order_type' => 'normal', 'shipping_name' => 'T', 'shipping_address' => 'T', 'total_amount' => 2500,
+            'order_date' => now(), 'order_status' => 'confirmed', 'payment_method' => 'credit_card', 'payment_status' => 'paid',
+            'tracking_number' => 'RVL-STATS-' . uniqid(),
+        ]);
+
+        $after = $this->actingAs($admin)->getJson(route('admin.overview.stats', ['period' => 'daily']))
+            ->assertOk()
+            ->assertJsonPath('period', 'daily');
+
+        $this->assertSame($before->json('websiteVisits') + 1, $after->json('websiteVisits'));
+        $this->assertSame($before->json('totalClicks') + 2, $after->json('totalClicks'));
+        $this->assertSame($before->json('totalOrders') + 1, $after->json('totalOrders'));
+        $this->assertEquals($before->json('revenue') + 2500, $after->json('revenue'));
+        $this->assertCount(7, $after->json('series.visits'));
+        $this->assertSame($before->json('series.visits.6') + 1, $after->json('series.visits.6'), 'today is the last slot');
+        $this->assertEquals($before->json('series.sales.6') + 2500, $after->json('series.sales.6'));
+
+        $this->getJson(route('admin.overview.stats', ['period' => 'weekly']))->assertOk()->assertJsonCount(8, 'series.visits');
+        $this->getJson(route('admin.overview.stats', ['period' => 'monthly']))->assertOk()->assertJsonCount(12, 'series.visits');
+        $this->getJson(route('admin.overview.stats', ['period' => 'bogus']))->assertOk()->assertJsonPath('series', null);
+    }
+
+    public function test_only_admins_reach_the_stats_endpoint_and_polling_leaves_the_session_cookie_alone(): void
+    {
+        $this->getJson(route('admin.overview.stats'))->assertUnauthorized();
+        $this->actingAs(User::factory()->create())->getJson(route('admin.overview.stats'))->assertForbidden();
+
+        $response = $this->actingAs(User::factory()->create(['is_admin' => true]))->getJson(route('admin.overview.stats'))->assertOk();
+        $this->assertSame([], $response->headers->getCookies(), 'a background poll must not overwrite the admin\'s session cookie');
     }
 
     private function record(string $type, Carbon $at): void

@@ -8,8 +8,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The storefront's background requests (GET /live every few seconds, the
- * order-section refreshes marked X-Live-Refresh, and the POST /track/click
- * beacons) change nothing the shopper depends on, so they must not hand back
+ * order-section refreshes marked X-Live-Refresh, the POST /track/click
+ * beacons and the admin overview's /admin/overview/stats poll) change nothing
+ * the person depends on, so they must not hand back
  * session cookies. Sessions here live in a cookie: a check
  * that started just before a login, logout or form submit and finished just
  * after would otherwise put the older session back in the browser — logging
@@ -23,7 +24,7 @@ class KeepLiveRequestsStateless
     {
         $response = $next($request);
 
-        if ($request->is('live', 'track/click') || $request->headers->has('X-Live-Refresh')) {
+        if ($request->is('live', 'track/click', 'admin/overview/stats') || $request->headers->has('X-Live-Refresh')) {
             foreach ($response->headers->getCookies() as $cookie) {
                 $response->headers->removeCookie($cookie->getName(), $cookie->getPath(), $cookie->getDomain());
             }

@@ -10,7 +10,7 @@
                     <div class="admin-stat-icon" style="background:#DBEAFE;color:#3B82F6;"><i class="ri-eye-line"></i></div>
                     <div>
                         <div class="text-muted small">Website Visits</div>
-                        <div class="fw-bold fs-4">{{ number_format($websiteVisits) }}</div>
+                        <div class="fw-bold fs-4" id="stat-visits">{{ number_format($websiteVisits) }}</div>
                     </div>
                 </div>
             </div>
@@ -21,7 +21,7 @@
                     <div class="admin-stat-icon" style="background:#EDE9FE;color:#A855F7;"><i class="ri-cursor-line"></i></div>
                     <div>
                         <div class="text-muted small">Total Clicks</div>
-                        <div class="fw-bold fs-4">{{ number_format($totalClicks) }}</div>
+                        <div class="fw-bold fs-4" id="stat-clicks">{{ number_format($totalClicks) }}</div>
                     </div>
                 </div>
             </div>
@@ -32,7 +32,7 @@
                     <div class="admin-stat-icon" style="background:#FCE7F3;color:#EC4899;"><i class="ri-shopping-bag-line"></i></div>
                     <div>
                         <div class="text-muted small">Total Orders</div>
-                        <div class="fw-bold fs-4">{{ number_format($totalOrders) }}</div>
+                        <div class="fw-bold fs-4" id="stat-orders">{{ number_format($totalOrders) }}</div>
                     </div>
                 </div>
             </div>
@@ -43,7 +43,7 @@
                     <div class="admin-stat-icon" style="background:#D1FAE5;color:#10B981;"><i class="ri-money-dollar-circle-line"></i></div>
                     <div>
                         <div class="text-muted small">Revenue</div>
-                        <div class="fw-bold fs-4">PKR {{ number_format($revenue) }}</div>
+                        <div class="fw-bold fs-4" id="stat-revenue">PKR {{ number_format($revenue) }}</div>
                     </div>
                 </div>
             </div>
@@ -69,17 +69,27 @@
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.0/dist/apexcharts.min.js"></script>
 <script>
     const chartData = @json($chartData);
+    const STATS_URL = @json(route('admin.overview.stats', [], false));
+    const POLL_MS = 5000;
 
     let performanceChart = null;
+    let currentPeriod = 'daily';
+    let polling = false;
+
+    const fmt = (n) => Math.round(Number(n)).toLocaleString('en-US');
+
+    function seriesFor(d) {
+        return [
+            { name: 'Sales (PKR)', data: d.sales },
+            { name: 'Visits', data: d.visits },
+        ];
+    }
 
     function buildOptions(period) {
         const d = chartData[period];
         return {
             chart: { type: 'area', height: 380, toolbar: { show: false } },
-            series: [
-                { name: 'Sales (PKR)', data: d.sales },
-                { name: 'Visits', data: d.visits },
-            ],
+            series: seriesFor(d),
             colors: ['#A855F7', '#34D399'],
             fill: { type: 'gradient', gradient: { opacityFrom: .45, opacityTo: .05 } },
             stroke: { curve: 'smooth', width: 2 },
@@ -106,9 +116,46 @@
         btn.addEventListener('click', () => {
             document.querySelectorAll('#periodToggle button').forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
-            renderChart(btn.dataset.period);
+            currentPeriod = btn.dataset.period;
+            renderChart(currentPeriod);
+            poll();
         });
     });
+
+    /**
+     * Live updates: every few seconds (while the tab is visible) asks the server
+     * for the four totals and the shown period's chart, and patches them in place.
+     */
+    async function poll() {
+        if (polling || document.visibilityState !== 'visible') return;
+        polling = true;
+
+        try {
+            const period = currentPeriod;
+            const res = await fetch(STATS_URL + '?period=' + period, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            document.getElementById('stat-visits').textContent = fmt(data.websiteVisits);
+            document.getElementById('stat-clicks').textContent = fmt(data.totalClicks);
+            document.getElementById('stat-orders').textContent = fmt(data.totalOrders);
+            document.getElementById('stat-revenue').textContent = 'PKR ' + fmt(data.revenue);
+
+            if (data.series && JSON.stringify(data.series) !== JSON.stringify(chartData[period])) {
+                chartData[period] = data.series;
+                if (period === currentPeriod) {
+                    performanceChart.updateOptions({ series: seriesFor(data.series), xaxis: { categories: data.series.categories } });
+                }
+            }
+        } catch (e) {
+            // offline, signed out or server busy — try again on the next tick
+        } finally {
+            polling = false;
+        }
+    }
+
+    setInterval(poll, POLL_MS);
+    document.addEventListener('visibilitychange', poll);
 
     renderChart('daily');
 </script>
