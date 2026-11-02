@@ -76,7 +76,10 @@ class HomeController extends Controller
             ];
         }
 
-        return view('pages.bts-merch', compact('biasPrices'));
+        // No BTS Merch products yet: the page says "Coming soon" instead of offering a bias to pick
+        $comingSoon = $products->isEmpty();
+
+        return view('pages.bts-merch', compact('biasPrices', 'comingSoon'));
     }
 
     public function categoryPage(string $section = 'gift-box')
@@ -102,12 +105,6 @@ class HomeController extends Controller
 
     public function productDetail(\App\Models\Product $product)
     {
-        // A "coming soon" category sells nothing yet, so its product pages go to its landing page.
-        $comingSoonRoute = Category::COMING_SOON[$product->category?->name] ?? null;
-        if ($comingSoonRoute) {
-            return redirect()->route($comingSoonRoute);
-        }
-
         $product->load([
             'variants',
             'images',
@@ -157,13 +154,8 @@ class HomeController extends Controller
      * member's product — so prices, discounts and the variant ids sent to the
      * cart API all come from the database.
      */
-    public function genericProductPage(string $type): \Illuminate\View\View|\Illuminate\Http\RedirectResponse
+    public function genericProductPage(string $type): \Illuminate\View\View
     {
-        // The static "Cute Ceramic Mug" page: ceramic is coming soon, nothing to sell yet.
-        if ($type === 'ceramic' && Category::nameIsComingSoon('Ceramic Items')) {
-            return redirect()->route(Category::COMING_SOON['Ceramic Items']);
-        }
-
         $categoryMap = [
             'mystery-balls'  => ['category' => 'Mystery Balls',  'name' => 'Original Mystery Balls'],
             'mystery-scoops' => ['category' => 'Mystery Scoops', 'name' => 'Original Mystery Scoop'],
@@ -176,6 +168,17 @@ class HomeController extends Controller
         $map     = $categoryMap[$type] ?? null;
         $bias    = request('bias');
         $product = null;
+
+        // Whichever category the page sells from: with no products in it there is nothing to show but "Coming soon".
+        $categoryName = match (true) {
+            $map !== null        => $bias ? 'BTS Merch' : $map['category'],
+            $type === 'ceramic'  => 'Ceramic Items',
+            $type === 'gift-box' => 'Gift Boxes',
+            default              => null,
+        };
+        if ($categoryName && ! \App\Models\Product::whereHas('category', fn ($q) => $q->where('name', $categoryName))->exists()) {
+            return view('pages.coming-soon', ['name' => $categoryName]);
+        }
 
         if ($map) {
             $isBalls = str_contains($type, 'balls');

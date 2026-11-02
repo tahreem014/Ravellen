@@ -24,7 +24,11 @@ class MergeGiftBoxCategories extends Migration
             $giftBoxesId = $giftBoxes->id;
         } else {
             $giftBoxesId = DB::table('categories')->where('name', 'Gift Boxes')->value('id');
-            if (!$giftBoxesId) {
+            $hasOldCategories = DB::table('categories')->whereIn('name', ['Sanrio Gift Boxes', 'Cartoon Special'])->exists();
+
+            // Only create the merged category when there is something to merge into it;
+            // a fresh database stays empty and the admin creates its categories.
+            if (!$giftBoxesId && $hasOldCategories) {
                 $giftBoxesId = DB::table('categories')->insertGetId([
                     'name'       => 'Gift Boxes',
                     'created_at' => now(),

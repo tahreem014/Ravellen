@@ -6,27 +6,49 @@ use App\Models\ShippingRate;
 
 class ShippingRateService
 {
+    public function __construct(private readonly LocationService $locations)
+    {
+    }
+
     /**
-     * Find the active shipping rate for a destination. A city-specific rate
-     * takes priority over a country-wide rate (one with a null city).
+     * Find the active shipping rate for a destination. A city-specific rate takes
+     * priority over the country's default rate (the one with no city); null means
+     * nothing is set up for that place, i.e. we don't deliver there.
+     *
+     * Places are compared by meaning, not spelling: "pakistan", "PK" and "Pakistan" are one
+     * country, and "Zürich" and "zurich" are one city.
      */
     public function findActiveRate(?string $country, ?string $city): ?ShippingRate
     {
-        if (! $country) {
+        $countryName = $this->locations->canonicalCountryName($country);
+
+        if ($countryName === '') {
             return null;
         }
 
-        return ShippingRate::query()
+        $rates = ShippingRate::query()
             ->where('is_active', true)
-            ->whereRaw('LOWER(country) = ?', [mb_strtolower(trim($country))])
-            ->where(function ($query) use ($city) {
-                $query->whereNull('city');
+            ->whereRaw('LOWER(country) = ?', [mb_strtolower($countryName)])
+            ->get();
 
-                if ($city) {
-                    $query->orWhereRaw('LOWER(city) = ?', [mb_strtolower(trim($city))]);
-                }
-            })
-            ->orderByRaw('city IS NULL')
-            ->first();
+        $cityKey = LocationService::key($city);
+
+        $cityRate = $cityKey === ''
+            ? null
+            : $rates->first(fn (ShippingRate $rate) => ! $rate->isCountryWide() && LocationService::key($rate->city) === $cityKey);
+
+        return $cityRate ?? $rates->first(fn (ShippingRate $rate) => $rate->isCountryWide());
+    }
+
+    /** What to tell a customer when {@see findActiveRate()} found nothing, naming where they asked for. */
+    public function unavailableMessage(?string $country, ?string $city): string
+    {
+        $place = collect([LocationService::clean($city), $this->locations->canonicalCountryName($country)])
+            ->filter()
+            ->implode(', ');
+
+        return $place === ''
+            ? 'Delivery is not available for this location.'
+            : "Delivery is not available to {$place} yet.";
     }
 }

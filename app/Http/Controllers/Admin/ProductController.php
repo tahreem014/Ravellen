@@ -99,7 +99,7 @@ class ProductController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'category_id' => ['required', 'exists:categories,id'],
-            'sub_category_id' => ['nullable', 'exists:sub_categories,id'],
+            'sub_category_id' => ['nullable', Rule::exists('sub_categories', 'id')->where('category_id', $request->input('category_id'))],
             'pricing_mode' => ['nullable', Rule::in([Product::PRICING_AUTOMATIC, Product::PRICING_CUSTOM])],
 
             // Automatic: one price for 5 balls; every bigger pack is a multiple of it.
@@ -113,6 +113,7 @@ class ProductController extends Controller
             'packs.*.price' => ['exclude_unless:pricing_mode,custom', 'required', 'numeric', 'gt:0'],
             'packs.*.sale_price' => ['exclude_unless:pricing_mode,custom', 'nullable', 'numeric', 'gt:0', 'lt:packs.*.price'],
         ], $this->mediaService->messages() + [
+            'sub_category_id.exists' => 'That sub-category does not belong to the chosen category.',
             'base_price.required' => 'Enter the price for 5 balls.',
             'base_sale_price.lt' => 'The sale price must be lower than the regular price.',
             'packs.required' => 'Add at least one quantity with its price.',

@@ -138,7 +138,14 @@
     </div>
 
     {{-- ── Bias + Era + Dynamic Cards ── --}}
-    <div class="container px-4 pt-5">
+    {{-- data-live-listing: reload when BTS Merch products are added or removed --}}
+    <div class="container px-4 pt-5" data-live-listing="category:BTS Merch" data-live-signature="{{ app(\App\Services\LiveUpdateService::class)->listingSignature('category:BTS Merch') }}">
+
+        @if($comingSoon ?? false)
+            <x-coming-soon title="Our BTS merch is on the way"
+                           message="We're putting the finishing touches on the mystery scoops and balls for ARMY. Check back soon!"
+                           icon="ri-star-line" accent="#7c3aed" accent2="#a855f7" />
+        @else
 
         {{-- Choose Your Bias --}}
         <div class="bias-section mb-4">
@@ -226,6 +233,8 @@
             </div>
 
         </div>
+
+        @endif
     </div>
 
     {{-- ── Borahae Banner ── --}}

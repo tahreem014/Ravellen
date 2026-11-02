@@ -200,10 +200,6 @@
             // each with its parent category & sub-category for filtering.
             $allProducts = collect();
             foreach ($categories as $category) {
-                if ($category->isComingSoon()) {
-                    continue;   // nothing on sale yet — its pill shows "Coming soon" instead
-                }
-
                 foreach ($category->products->whereNull('sub_category_id') as $p) {
                     $p->_cat = $category;
                     $p->_sub = null;

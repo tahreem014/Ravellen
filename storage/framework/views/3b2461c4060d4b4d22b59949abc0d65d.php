@@ -117,6 +117,8 @@
             <nav class="admin-tabs mt-4">
                 <a class="nav-link <?php echo e(request()->routeIs('admin.dashboard') ? 'active' : ''); ?>" href="<?php echo e(route('admin.dashboard')); ?>">Overview</a>
                 <a class="nav-link <?php echo e(request()->routeIs('admin.products.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.products.index')); ?>">Products</a>
+                <a class="nav-link <?php echo e(request()->routeIs('admin.categories.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.categories.index')); ?>">Categories</a>
+                <a class="nav-link <?php echo e(request()->routeIs('admin.sub-categories.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.sub-categories.index')); ?>">Sub-categories</a>
                 <a class="nav-link <?php echo e(request()->routeIs('admin.orders.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.orders.index')); ?>">Orders</a>
                 <a class="nav-link <?php echo e(request()->routeIs('admin.pre-orders.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.pre-orders.index')); ?>">Pre-Orders</a>
                 <a class="nav-link <?php echo e(request()->routeIs('admin.refund-requests.*') ? 'active' : ''); ?>" href="<?php echo e(route('admin.refund-requests.index')); ?>">Refund Requests</a>

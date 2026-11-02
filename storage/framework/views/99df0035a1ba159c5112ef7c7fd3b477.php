@@ -432,7 +432,7 @@ unset($__errorArgs, $__bag); ?>
                     <?php $__currentLoopData = $order->items; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <?php $refund = $item->refundRequest; $rst = $refund ? ($refundStatusMap[$refund->status] ?? $refundStatusMap['pending']) : null; ?>
                     <div class="order-item-line d-flex align-items-center gap-3 mb-2">
-                        <img src="<?php echo e($item->product?->images?->first()?->image ?? 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=100&q=80'); ?>" alt="<?php echo e($item->product?->name); ?>" class="order-item-img">
+                        <img src="<?php echo e($item->product?->images?->first()?->image ??'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=100&q=80'); ?>" alt="<?php echo e($item->product?->name); ?>" class="order-item-img">
                         <div class="flex-grow-1">
                             <div class="order-item-name"><?php echo e($item->product?->name); ?></div>
                             <div class="order-item-sub">Qty: <?php echo e($item->qty); ?><?php echo e($item->productVariant ? ' · '.$item->productVariant->variant_name : ''); ?></div>
@@ -715,14 +715,38 @@ unset($__errorArgs, $__bag); ?>
             </div>
             <div class="row g-3 mb-3">
                 <div class="col-6">
-                    <label class="form-label" style="font-size:.8rem;font-weight:600;">City</label>
-                    <input type="text" name="city" id="addressCity" class="form-input" required>
-                    <div id="addressCityError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;"></div>
+                    <label class="form-label" style="font-size:.8rem;font-weight:600;">Country</label>
+                    <select name="country" id="addressCountry" class="form-input" required>
+                        <?php if (isset($component)) { $__componentOriginala5780a67c2c14224fd8654f6923eb903 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala5780a67c2c14224fd8654f6923eb903 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.country-options','data' => ['selected' => 'Pakistan']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('country-options'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['selected' => 'Pakistan']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala5780a67c2c14224fd8654f6923eb903)): ?>
+<?php $attributes = $__attributesOriginala5780a67c2c14224fd8654f6923eb903; ?>
+<?php unset($__attributesOriginala5780a67c2c14224fd8654f6923eb903); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala5780a67c2c14224fd8654f6923eb903)): ?>
+<?php $component = $__componentOriginala5780a67c2c14224fd8654f6923eb903; ?>
+<?php unset($__componentOriginala5780a67c2c14224fd8654f6923eb903); ?>
+<?php endif; ?>
+                    </select>
+                    <div id="addressCountryError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;"></div>
                 </div>
                 <div class="col-6">
-                    <label class="form-label" style="font-size:.8rem;font-weight:600;">Country</label>
-                    <input type="text" name="country" id="addressCountry" class="form-input" required>
-                    <div id="addressCountryError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;"></div>
+                    <label class="form-label" style="font-size:.8rem;font-weight:600;">City</label>
+                    <select name="city" id="addressCity" class="form-input" required>
+                        <option value="">Select a city</option>
+                    </select>
+                    <input type="text" id="addressCityOther" class="form-input" autocomplete="off" placeholder="Type your city" style="display:none;margin-top:.5rem;">
+                    <div id="addressCityError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;"></div>
                 </div>
             </div>
             <div class="mb-3">
@@ -832,6 +856,26 @@ unset($__errorArgs, $__bag); ?>
 <?php $__env->stopSection(); ?>
 
 <?php $__env->startSection('script'); ?>
+<?php if (isset($component)) { $__componentOriginalc51112e1d1a9b8149b3efe3798a57b42 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalc51112e1d1a9b8149b3efe3798a57b42 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.location-picker-js','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('location-picker-js'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalc51112e1d1a9b8149b3efe3798a57b42)): ?>
+<?php $attributes = $__attributesOriginalc51112e1d1a9b8149b3efe3798a57b42; ?>
+<?php unset($__attributesOriginalc51112e1d1a9b8149b3efe3798a57b42); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalc51112e1d1a9b8149b3efe3798a57b42)): ?>
+<?php $component = $__componentOriginalc51112e1d1a9b8149b3efe3798a57b42; ?>
+<?php unset($__componentOriginalc51112e1d1a9b8149b3efe3798a57b42); ?>
+<?php endif; ?>
 <script>
 function switchTab(tab, btn) {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -851,6 +895,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const addressStoreUrl = "<?php echo e(route('addresses.store')); ?>";
 
+// Choosing a country loads that country's cities into the city field's suggestions
+const addressLocation = LocationPicker.bind(
+    document.getElementById('addressCountry'),
+    document.getElementById('addressCity'),
+    document.getElementById('addressCityOther'),
+);
+
 function openAddressModal(address) {
     const form = document.getElementById('addressForm');
 
@@ -866,8 +917,7 @@ function openAddressModal(address) {
         form.action = addressStoreUrl + '/' + address.id;
         document.getElementById('addressName').value = address.name || '';
         document.getElementById('addressLine').value = address.address || '';
-        document.getElementById('addressCity').value = address.city || '';
-        document.getElementById('addressCountry').value = address.country || '';
+        addressLocation.setLocation(address.country, address.city);
         document.getElementById('addressPhone').value = address.phone || '';
         document.getElementById('addressIsDefault').checked = !!address.is_default;
     } else {
@@ -875,6 +925,7 @@ function openAddressModal(address) {
         document.getElementById('addressFormMethod').value = 'POST';
         form.action = addressStoreUrl;
         form.reset();
+        addressLocation.refresh();   // back to the default country, so back to its cities
     }
 
     document.getElementById('addressModalOverlay').classList.add('open');

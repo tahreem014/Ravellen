@@ -1,6 +1,6 @@
 @props(['title' => 'Coming Soon', 'message' => null, 'icon' => 'ri-cup-line', 'accent' => '#8B5E3C', 'accent2' => '#C8A98A', 'actions' => true])
 {{--
-    "Coming soon" panel for a category with nothing on sale yet (Category::COMING_SOON).
+    "Coming soon" panel for a category with no products yet (Category::isComingSoon()).
     The heading carries .coming-soon-title so a page can retitle it from script.
 --}}
 <div {{ $attributes->merge(['class' => 'coming-soon text-center mx-auto']) }} style="max-width:34rem;padding:2.5rem 1.25rem;">

@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         // \App\Models\User::factory(10)->create();
 
-        $this->call(CatalogSeeder::class);
-        $this->call(MysteryCatalogSeeder::class);
+        // Categories, sub-categories, products, variants and images are not seeded:
+        // the admin creates and manages them from the admin panel.
     }
 }

@@ -36,6 +36,12 @@ Route::get('/live', App\Http\Controllers\LiveController::class)->name('live')->m
 // ── Internal catalog data browser ──────────────────────────────────────────────
 Route::get('/catalog-browser', [App\Http\Controllers\CatalogController::class, 'index'])->name('catalog.browser');
 
+// ── Locations & shipping quotes (open to guests: checkout asks before anyone signs in) ──
+Route::get('/locations/{code}/cities', [App\Http\Controllers\LocationController::class, 'cities'])
+    ->where('code', '[A-Za-z]{2}')->name('locations.cities')->middleware('throttle:120,1');
+Route::get('/shipping/quote', [App\Http\Controllers\CheckoutController::class, 'quote'])
+    ->name('shipping.quote')->middleware('throttle:60,1');
+
 // ── Orders ────────────────────────────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
     Route::post('/orders', [App\Http\Controllers\OrderController::class, 'store'])->name('orders.store');
@@ -135,9 +141,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', App\Http\Mi
     Route::post('products/{product}/images', [Admin\ProductImageController::class, 'store'])->name('products.images.store');
     Route::delete('products/{product}/images/{image}', [Admin\ProductImageController::class, 'destroy'])->name('products.images.destroy');
 
+    Route::get('categories', [Admin\CategoryController::class, 'index'])->name('categories.index');
     Route::post('categories', [Admin\CategoryController::class, 'store'])->name('categories.store');
+    Route::put('categories/{category}', [Admin\CategoryController::class, 'update'])->name('categories.update');
     Route::delete('categories/{category}', [Admin\CategoryController::class, 'destroy'])->name('categories.destroy');
+    Route::get('sub-categories', [Admin\SubCategoryController::class, 'index'])->name('sub-categories.index');
     Route::post('sub-categories', [Admin\SubCategoryController::class, 'store'])->name('sub-categories.store');
+    Route::put('sub-categories/{subCategory}', [Admin\SubCategoryController::class, 'update'])->name('sub-categories.update');
     Route::delete('sub-categories/{subCategory}', [Admin\SubCategoryController::class, 'destroy'])->name('sub-categories.destroy');
 
     Route::get('orders', [Admin\OrderController::class, 'index'])->name('orders.index');

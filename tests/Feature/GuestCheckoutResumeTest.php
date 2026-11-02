@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ShippingRate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -13,6 +14,14 @@ use Tests\TestCase;
 class GuestCheckoutResumeTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // A guest is only sent on to sign in when we deliver to where they asked
+        ShippingRate::create(['country' => 'Pakistan', 'city' => null, 'amount' => 200, 'is_active' => true]);
+    }
 
     private function details(array $override = []): array
     {

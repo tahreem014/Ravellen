@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Rules\KnownCountry;
+use App\Services\LocationService;
 use App\Services\ShippingRateService;
 use App\Support\CheckoutResume;
 use Illuminate\Http\JsonResponse;
@@ -12,8 +14,10 @@ use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
-    public function __construct(private readonly ShippingRateService $shippingRateService)
-    {
+    public function __construct(
+        private readonly ShippingRateService $shippingRateService,
+        private readonly LocationService $locations,
+    ) {
     }
 
     /**
@@ -65,17 +69,28 @@ class CheckoutController extends Controller
             'phone'          => ['required', 'string', 'regex:/^\+[1-9]\d{7,14}$/'],
             'address'        => 'required|string|max:500',
             'city'           => 'required|string|max:255',
-            'country'        => 'required|string|max:255',
+            'country'        => ['required', 'string', 'max:255', new KnownCountry],
             'payment_method' => ['required', 'string', Rule::in(array_keys(Order::PAYMENT_METHODS))],
         ], [
             'phone.regex' => 'Phone number must start with + and country code (e.g. +923001234567).',
         ]);
+
+        $details['country'] = $this->locations->canonicalCountryName($details['country']);
+        $details['city']    = LocationService::clean($details['city']);
+
+        // Nobody should be sent off to sign up for an order we can't deliver
+        if (! $this->shippingRateService->findActiveRate($details['country'], $details['city'])) {
+            return response()->json([
+                'message' => $this->shippingRateService->unavailableMessage($details['country'], $details['city']),
+            ], 422);
+        }
 
         CheckoutResume::store($details);
 
         return response()->json(['redirect' => route('login')]);
     }
 
+    /** GET /checkout/shipping-fee — the charge for one of the signed-in customer's saved addresses. */
     public function shippingFee(Request $request): JsonResponse
     {
         $address = $request->user()->addresses()->find($request->integer('address_id'));
@@ -84,18 +99,36 @@ class CheckoutController extends Controller
             return response()->json(['available' => false, 'message' => 'Address not found.'], 404);
         }
 
-        $rate = $this->shippingRateService->findActiveRate($address->country, $address->city);
+        return $this->quoteFor($address->country, $address->city);
+    }
+
+    /** GET /shipping/quote — the charge for a country/city picked on the page, before anyone has signed in. */
+    public function quote(Request $request): JsonResponse
+    {
+        $place = $request->validate([
+            'country' => 'required|string|max:255',
+            'city'    => 'nullable|string|max:255',
+        ]);
+
+        return $this->quoteFor($place['country'], $place['city'] ?? null);
+    }
+
+    private function quoteFor(?string $country, ?string $city): JsonResponse
+    {
+        $rate = $this->shippingRateService->findActiveRate($country, $city);
 
         if (! $rate) {
             return response()->json([
                 'available' => false,
-                'message'   => 'Delivery is not available for this location.',
+                'message'   => $this->shippingRateService->unavailableMessage($country, $city),
             ], 422);
         }
 
         return response()->json([
             'available'    => true,
             'shipping_fee' => (float) $rate->amount,
+            // whether a city-specific rate applied, or the country's default
+            'scope'        => $rate->isCountryWide() ? 'country' : 'city',
         ]);
     }
 }

@@ -424,7 +424,7 @@
                     @foreach($order->items as $item)
                     @php $refund = $item->refundRequest; $rst = $refund ? ($refundStatusMap[$refund->status] ?? $refundStatusMap['pending']) : null; @endphp
                     <div class="order-item-line d-flex align-items-center gap-3 mb-2">
-                        <img src="{{ $item->product?->images?->first()?->image ?? 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=100&q=80' }}" alt="{{ $item->product?->name }}" class="order-item-img">
+                        <img src="{{ $item->product?->images?->first()?->image ??'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=100&q=80' }}" alt="{{ $item->product?->name }}" class="order-item-img">
                         <div class="flex-grow-1">
                             <div class="order-item-name">{{ $item->product?->name }}</div>
                             <div class="order-item-sub">Qty: {{ $item->qty }}{{ $item->productVariant ? ' · '.$item->productVariant->variant_name : '' }}</div>
@@ -659,14 +659,19 @@
             </div>
             <div class="row g-3 mb-3">
                 <div class="col-6">
-                    <label class="form-label" style="font-size:.8rem;font-weight:600;">City</label>
-                    <input type="text" name="city" id="addressCity" class="form-input" required>
-                    <div id="addressCityError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;"></div>
+                    <label class="form-label" style="font-size:.8rem;font-weight:600;">Country</label>
+                    <select name="country" id="addressCountry" class="form-input" required>
+                        <x-country-options selected="Pakistan" />
+                    </select>
+                    <div id="addressCountryError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;"></div>
                 </div>
                 <div class="col-6">
-                    <label class="form-label" style="font-size:.8rem;font-weight:600;">Country</label>
-                    <input type="text" name="country" id="addressCountry" class="form-input" required>
-                    <div id="addressCountryError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;"></div>
+                    <label class="form-label" style="font-size:.8rem;font-weight:600;">City</label>
+                    <select name="city" id="addressCity" class="form-input" required>
+                        <option value="">Select a city</option>
+                    </select>
+                    <input type="text" id="addressCityOther" class="form-input" autocomplete="off" placeholder="Type your city" style="display:none;margin-top:.5rem;">
+                    <div id="addressCityError" class="text-danger" style="font-size:.75rem;margin-top:.3rem;"></div>
                 </div>
             </div>
             <div class="mb-3">
@@ -776,6 +781,7 @@
 @endsection
 
 @section('script')
+<x-location-picker-js />
 <script>
 function switchTab(tab, btn) {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -795,6 +801,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const addressStoreUrl = "{{ route('addresses.store') }}";
 
+// Choosing a country loads that country's cities into the city field's suggestions
+const addressLocation = LocationPicker.bind(
+    document.getElementById('addressCountry'),
+    document.getElementById('addressCity'),
+    document.getElementById('addressCityOther'),
+);
+
 function openAddressModal(address) {
     const form = document.getElementById('addressForm');
 
@@ -810,8 +823,7 @@ function openAddressModal(address) {
         form.action = addressStoreUrl + '/' + address.id;
         document.getElementById('addressName').value = address.name || '';
         document.getElementById('addressLine').value = address.address || '';
-        document.getElementById('addressCity').value = address.city || '';
-        document.getElementById('addressCountry').value = address.country || '';
+        addressLocation.setLocation(address.country, address.city);
         document.getElementById('addressPhone').value = address.phone || '';
         document.getElementById('addressIsDefault').checked = !!address.is_default;
     } else {
@@ -819,6 +831,7 @@ function openAddressModal(address) {
         document.getElementById('addressFormMethod').value = 'POST';
         form.action = addressStoreUrl;
         form.reset();
+        addressLocation.refresh();   // back to the default country, so back to its cities
     }
 
     document.getElementById('addressModalOverlay').classList.add('open');

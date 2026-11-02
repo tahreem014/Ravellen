@@ -216,6 +216,14 @@
         </p>
     </div>
 
+    @if($allDbProducts->isEmpty())
+        {{-- No products in the category yet; the live attributes reload the page once one is added --}}
+        <x-coming-soon title="Our gift boxes are on the way"
+                       message="We're putting the finishing touches on our mystery gift boxes. Check back soon!"
+                       icon="ri-gift-line" accent="#ec4899" accent2="#f472b6"
+                       data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}" />
+    @else
+
     {{-- ── Filter bar ── --}}
     <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
         <button class="filter-btn active" onclick="filterBoxes('all', this)">All</button>
@@ -277,6 +285,8 @@
         <p class="text-muted mt-2">No gift boxes found for this filter.</p>
     </div>
 
+    @endif
+
 </div>
 </div>
 @endif
@@ -309,6 +319,14 @@
     </div>
 
     <div class="container px-3 px-sm-4 pb-5">
+
+        @if($allDbProducts->isEmpty())
+            {{-- No products in the category yet; the live attributes reload the page once one is added --}}
+            <x-coming-soon title="Our BTS gift boxes are on the way"
+                           message="We're putting the finishing touches on our BTS gift boxes. Check back soon!"
+                           icon="ri-gift-2-line" accent="#7c3aed" accent2="#a855f7"
+                           data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}" />
+        @else
 
         {{-- ── Filter bar ── --}}
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
@@ -372,6 +390,8 @@
             <p class="text-muted mt-2">No BTS gift boxes found for this filter.</p>
         </div>
 
+        @endif
+
     </div>
 </div>
 @endif
@@ -394,10 +414,11 @@
         </p>
     </div>
 
-    @if(\App\Models\Category::nameIsComingSoon('Ceramic Items'))
-        {{-- Nothing on sale yet: no filters, no products (see Category::COMING_SOON) --}}
+    @if($allDbProducts->isEmpty())
+        {{-- No products in the category yet; the live attributes reload the page once one is added --}}
         <x-coming-soon title="Our ceramic pieces are on the way"
-                       message="We're putting the finishing touches on our mugs, bowls and spoons. Check back soon!" />
+                       message="We're putting the finishing touches on our mugs, bowls and spoons. Check back soon!"
+                       data-live-listing="{{ $liveListing }}" data-live-signature="{{ $liveSignature }}" />
     @else
 
     {{-- Ceramic Filters --}}

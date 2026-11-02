@@ -64,7 +64,7 @@ class OrderService
             $rate = $this->shippingRateService->findActiveRate($address->country, $address->city);
 
             if (! $rate) {
-                throw new \RuntimeException('Delivery is not available for this location.');
+                throw new \RuntimeException($this->shippingRateService->unavailableMessage($address->country, $address->city));
             }
 
             $shippingFee   = (float) $rate->amount;

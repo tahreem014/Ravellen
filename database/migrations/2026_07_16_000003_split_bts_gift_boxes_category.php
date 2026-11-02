@@ -17,7 +17,14 @@ class SplitBtsGiftBoxesCategory extends Migration
 
         $btsGiftBoxesId = DB::table('categories')->where('name', 'BTS Gift Boxes')->value('id');
 
-        if (!$btsGiftBoxesId) {
+        $subIds = DB::table('sub_categories')
+            ->where('category_id', $giftBoxesId)
+            ->whereIn('name', $this->btsSubNames)
+            ->pluck('id');
+
+        // Only create the category when there are BTS sub-categories to move into it;
+        // otherwise the admin creates it when needed.
+        if (!$btsGiftBoxesId && $subIds->isNotEmpty()) {
             $btsGiftBoxesId = DB::table('categories')->insertGetId([
                 'name'       => 'BTS Gift Boxes',
                 'created_at' => now(),
@@ -25,10 +32,9 @@ class SplitBtsGiftBoxesCategory extends Migration
             ]);
         }
 
-        $subIds = DB::table('sub_categories')
-            ->where('category_id', $giftBoxesId)
-            ->whereIn('name', $this->btsSubNames)
-            ->pluck('id');
+        if (!$btsGiftBoxesId) {
+            return;
+        }
 
         DB::table('sub_categories')->whereIn('id', $subIds)->update(['category_id' => $btsGiftBoxesId]);
         DB::table('products')->whereIn('sub_category_id', $subIds)->update(['category_id' => $btsGiftBoxesId]);

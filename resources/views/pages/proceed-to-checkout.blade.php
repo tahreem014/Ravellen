@@ -240,15 +240,20 @@
                 </div>
 
                 @guest
-                {{-- Guests have no saved address yet: city and country are kept with the rest (and become their saved address once they sign in) so shipping can be quoted --}}
+                {{-- Guests have no saved address yet: country and city are kept with the rest (and become their saved address once they sign in), and shipping is quoted from them as soon as they are chosen --}}
                 <div class="row g-3 mt-0">
-                    <div class="col-6">
-                        <div class="form-label-sm">City *</div>
-                        <input type="text" class="form-control-custom" id="city" placeholder="Karachi">
-                    </div>
-                    <div class="col-6">
+                    <div class="col-12 col-sm-6">
                         <div class="form-label-sm">Country *</div>
-                        <input type="text" class="form-control-custom" id="country" value="Pakistan">
+                        <select class="form-control-custom" id="country">
+                            <x-country-options selected="Pakistan" />
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="form-label-sm">City *</div>
+                        <select class="form-control-custom" id="city">
+                            <option value="">Select a city</option>
+                        </select>
+                        <input type="text" class="form-control-custom mt-2" id="city-other" autocomplete="off" placeholder="Type your city" style="display:none;">
                     </div>
                 </div>
                 @endguest
@@ -337,12 +342,14 @@
 </div>
 
 @section('script')
+<x-location-picker-js />
 <script>
 const CART_KEY       = 'rv_cart';
 const DESELECTED_KEY = 'rv_cart_deselected';   // written by the cart page
 const IS_AUTH    = {{ auth()->check() ? 'true' : 'false' }};
 const CSRF_TOKEN = '{{ csrf_token() }}';
-const SHIPPING_FEE_URL = '{{ route('checkout.shipping-fee') }}';
+const SHIPPING_FEE_URL   = '{{ route('checkout.shipping-fee') }}';   // a saved address (signed in)
+const SHIPPING_QUOTE_URL = '{{ route('shipping.quote') }}';          // a country + city picked on this page (guests)
 
 let SHIPPING = 0;
 let SHIPPING_AVAILABLE = false;
@@ -469,12 +476,25 @@ function fillFromAddress(addressId) {
     fetchShippingFee();
 }
 
+/* What the destination costs: a signed-in customer's chosen address, or a guest's country + city. */
+let shippingRequest = 0;
+
 async function fetchShippingFee() {
     const errorEl = document.getElementById('co-shipping-error');
     const shipEl  = document.getElementById('co-shipping');
+    const request = ++shippingRequest;   // only the latest answer counts if the customer keeps changing it
     errorEl.textContent = '';
 
-    if (!SELECTED_ADDRESS_ID) {
+    let url = null;
+    if (IS_AUTH) {
+        if (SELECTED_ADDRESS_ID) url = `${SHIPPING_FEE_URL}?address_id=${SELECTED_ADDRESS_ID}`;
+    } else {
+        const country = document.getElementById('country')?.value.trim();
+        const city    = document.getElementById('city')?.value.trim();
+        if (country && city) url = `${SHIPPING_QUOTE_URL}?${new URLSearchParams({ country, city })}`;
+    }
+
+    if (!url) {
         SHIPPING_AVAILABLE = false;
         SHIPPING = 0;
         shipEl.textContent = '—';
@@ -485,10 +505,9 @@ async function fetchShippingFee() {
     shipEl.textContent = 'Calculating…';
 
     try {
-        const res  = await fetch(`${SHIPPING_FEE_URL}?address_id=${SELECTED_ADDRESS_ID}`, {
-            headers: { 'Accept': 'application/json' },
-        });
+        const res  = await fetch(url, { headers: { 'Accept': 'application/json' } });
         const data = await res.json();
+        if (request !== shippingRequest) return;
 
         if (res.ok && data.available) {
             SHIPPING_AVAILABLE = true;
@@ -500,6 +519,7 @@ async function fetchShippingFee() {
             errorEl.textContent = data.message || 'Delivery is not available for this location.';
         }
     } catch (e) {
+        if (request !== shippingRequest) return;
         SHIPPING_AVAILABLE = false;
         SHIPPING = 0;
         shipEl.textContent = '—';
@@ -690,14 +710,21 @@ async function placeOrder() {
         const phoneIntl = normalizePhone(phone, country);
 
         if (!city || !country) {
-            showToast('Please enter your city and country.', 'error');
+            showToast('Please choose your country and enter your city.', 'error');
             return;
         }
         if (!phoneIntl) {
             showToast('Phone number must start with + and country code (e.g. +923001234567).', 'error');
             return;
         }
-        guestDetails = { name, phone: phoneIntl, address, city, country, payment_method: method };
+
+        // The quote follows the fields a moment after typing stops; make sure it is for what is there now
+        await fetchShippingFee();
+        if (!SHIPPING_AVAILABLE) {
+            showToast(document.getElementById('co-shipping-error').textContent || 'Delivery is not available for this location.', 'error');
+            return;
+        }
+        guestDetails ={ name, phone: phoneIntl, address, city, country, payment_method: method };
     }
 
     const selectedItems = getSelectedCart();
@@ -796,7 +823,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     await mergeGuestCart();
     await syncPricesFromDb();
     loadSummary();
-    if (IS_AUTH && SELECTED_ADDRESS_ID) {
+
+    // Guests pick a country and city right here: loading the city suggestions and re-quoting shipping follow them
+    if (!IS_AUTH) {
+        LocationPicker.bind(
+            document.getElementById('country'),
+            document.getElementById('city'),
+            document.getElementById('city-other'),
+            fetchShippingFee,
+        );
+    }
+    if (IS_AUTH ? SELECTED_ADDRESS_ID : document.getElementById('city').value.trim()) {
         await fetchShippingFee();
     }
     if (RESUME) continueAfterSignIn();

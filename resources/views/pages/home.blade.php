@@ -336,7 +336,8 @@
                 ];
             @endphp
 
-            <div class="row g-4">
+            {{-- data-live-listing: reload when a product is added or removed, so a category's Coming Soon card follows --}}
+            <div class="row g-4" data-live-listing="shop" data-live-signature="{{ app(\App\Services\LiveUpdateService::class)->listingSignature('shop') }}">
                 @forelse($categories as $cat)
                 @php
                     $cfg = $homeCatConfig[$cat->name] ?? null;
@@ -352,8 +353,7 @@
                     $cheapest  = \App\Models\ProductVariant::cheapestOf($allProds->flatMap(fn($p) => $p->variants));
                     $pDesc     = $cat->subCategories->count() . ' sub-categories, ' . $allProds->count() . ' products';
                     $catLabel  = isset($cfg) ? ($cfg['label'] ?? $cat->name) : $cat->name;
-                    $soon      = $cat->isComingSoon();   // nothing on sale yet: no product photo, price or count
-                    if ($soon && isset($cfg)) { $firstImg = $cfg['fallback']; }
+                    $soon      = $cat->isComingSoon();   // no products yet: no price or count
                 @endphp
                 @if($cfg)
                 <div class="col-md-6 col-lg-4 fade-up" @unless($soon) data-live-category="{{ $cat->id }}" @endunless>

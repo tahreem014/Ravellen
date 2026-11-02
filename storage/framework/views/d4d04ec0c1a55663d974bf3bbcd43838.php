@@ -215,6 +215,30 @@
         </p>
     </div>
 
+    <?php if($allDbProducts->isEmpty()): ?>
+        
+        <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => 'Our gift boxes are on the way','message' => 'We\'re putting the finishing touches on our mystery gift boxes. Check back soon!','icon' => 'ri-gift-line','accent' => '#ec4899','accent2' => '#f472b6','dataLiveListing' => ''.e($liveListing).'','dataLiveSignature' => ''.e($liveSignature).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('coming-soon'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Our gift boxes are on the way','message' => 'We\'re putting the finishing touches on our mystery gift boxes. Check back soon!','icon' => 'ri-gift-line','accent' => '#ec4899','accent2' => '#f472b6','data-live-listing' => ''.e($liveListing).'','data-live-signature' => ''.e($liveSignature).'']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $attributes = $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $component = $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+    <?php else: ?>
+
     
     <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
         <button class="filter-btn active" onclick="filterBoxes('all', this)">All</button>
@@ -314,6 +338,8 @@
         <p class="text-muted mt-2">No gift boxes found for this filter.</p>
     </div>
 
+    <?php endif; ?>
+
 </div>
 </div>
 <?php endif; ?>
@@ -344,6 +370,30 @@
     </div>
 
     <div class="container px-3 px-sm-4 pb-5">
+
+        <?php if($allDbProducts->isEmpty()): ?>
+            
+            <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => 'Our BTS gift boxes are on the way','message' => 'We\'re putting the finishing touches on our BTS gift boxes. Check back soon!','icon' => 'ri-gift-2-line','accent' => '#7c3aed','accent2' => '#a855f7','dataLiveListing' => ''.e($liveListing).'','dataLiveSignature' => ''.e($liveSignature).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('coming-soon'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Our BTS gift boxes are on the way','message' => 'We\'re putting the finishing touches on our BTS gift boxes. Check back soon!','icon' => 'ri-gift-2-line','accent' => '#7c3aed','accent2' => '#a855f7','data-live-listing' => ''.e($liveListing).'','data-live-signature' => ''.e($liveSignature).'']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $attributes = $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $component = $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+        <?php else: ?>
 
         
         <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
@@ -445,6 +495,8 @@
             <p class="text-muted mt-2">No BTS gift boxes found for this filter.</p>
         </div>
 
+        <?php endif; ?>
+
     </div>
 </div>
 <?php endif; ?>
@@ -465,18 +517,18 @@
         </p>
     </div>
 
-    <?php if(\App\Models\Category::nameIsComingSoon('Ceramic Items')): ?>
+    <?php if($allDbProducts->isEmpty()): ?>
         
         <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => 'Our ceramic pieces are on the way','message' => 'We\'re putting the finishing touches on our mugs, bowls and spoons. Check back soon!']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => 'Our ceramic pieces are on the way','message' => 'We\'re putting the finishing touches on our mugs, bowls and spoons. Check back soon!','dataLiveListing' => ''.e($liveListing).'','dataLiveSignature' => ''.e($liveSignature).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('coming-soon'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['title' => 'Our ceramic pieces are on the way','message' => 'We\'re putting the finishing touches on our mugs, bowls and spoons. Check back soon!']); ?>
+<?php $component->withAttributes(['title' => 'Our ceramic pieces are on the way','message' => 'We\'re putting the finishing touches on our mugs, bowls and spoons. Check back soon!','data-live-listing' => ''.e($liveListing).'','data-live-signature' => ''.e($liveSignature).'']); ?>
 <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
 <?php if (isset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>

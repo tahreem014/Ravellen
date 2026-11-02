@@ -11,6 +11,10 @@ use Illuminate\Support\Collection;
 
 class AddressService
 {
+    public function __construct(private readonly LocationService $locations)
+    {
+    }
+
     public function listAddresses(User $user): Collection
     {
         return $user->addresses()
@@ -35,8 +39,8 @@ class AddressService
         $address = $user->addresses()->create([
             'name'       => $data->name,
             'address'    => $data->address,
-            'country'    => $data->country,
-            'city'       => $data->city,
+            'country'    => $this->locations->canonicalCountryName($data->country),
+            'city'       => LocationService::clean($data->city),
             'phone'      => $data->phone,
             'is_default' => $data->isDefault,
         ]);
@@ -55,8 +59,8 @@ class AddressService
         $address->update([
             'name'       => $data->name,
             'address'    => $data->address,
-            'country'    => $data->country,
-            'city'       => $data->city,
+            'country'    => $this->locations->canonicalCountryName($data->country),
+            'city'       => LocationService::clean($data->city),
             'phone'      => $data->phone,
             'is_default' => $data->isDefault,
         ]);

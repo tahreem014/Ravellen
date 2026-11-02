@@ -21,6 +21,12 @@ class ShippingRate extends Model
         'is_active' => 'boolean',
     ];
 
+    /** The country's default rate, used for every city that has no rate of its own. */
+    public function isCountryWide(): bool
+    {
+        return trim((string) $this->city) === '';
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class);

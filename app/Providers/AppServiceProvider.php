@@ -16,6 +16,7 @@ use App\Observers\OrderObserver;
 use App\Observers\ProductObserver;
 use App\Observers\ProductVariantObserver;
 use App\Services\LiveUpdateService;
+use App\Services\LocationService;
 use App\Services\Safepay\SafepayService;
 
 
@@ -28,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        // Holds the parsed country list, so it is read from disk once per request
+        $this->app->singleton(LocationService::class);
+
         $this->app->singleton(SafepayService::class, function () {
             return new SafepayService(config('services.safepay'));
         });

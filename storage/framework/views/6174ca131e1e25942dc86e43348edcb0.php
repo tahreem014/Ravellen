@@ -138,7 +138,31 @@
     </div>
 
     
-    <div class="container px-4 pt-5">
+    
+    <div class="container px-4 pt-5" data-live-listing="category:BTS Merch" data-live-signature="<?php echo e(app(\App\Services\LiveUpdateService::class)->listingSignature('category:BTS Merch')); ?>">
+
+        <?php if($comingSoon ?? false): ?>
+            <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => 'Our BTS merch is on the way','message' => 'We\'re putting the finishing touches on the mystery scoops and balls for ARMY. Check back soon!','icon' => 'ri-star-line','accent' => '#7c3aed','accent2' => '#a855f7']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('coming-soon'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Our BTS merch is on the way','message' => 'We\'re putting the finishing touches on the mystery scoops and balls for ARMY. Check back soon!','icon' => 'ri-star-line','accent' => '#7c3aed','accent2' => '#a855f7']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $attributes = $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $component = $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+        <?php else: ?>
 
         
         <div class="bias-section mb-4">
@@ -226,6 +250,8 @@
             </div>
 
         </div>
+
+        <?php endif; ?>
     </div>
 
     

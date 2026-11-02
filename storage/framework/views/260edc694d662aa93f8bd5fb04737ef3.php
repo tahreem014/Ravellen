@@ -242,13 +242,37 @@
                 <?php if(auth()->guard()->guest()): ?>
                 
                 <div class="row g-3 mt-0">
-                    <div class="col-6">
-                        <div class="form-label-sm">City *</div>
-                        <input type="text" class="form-control-custom" id="city" placeholder="Karachi">
-                    </div>
-                    <div class="col-6">
+                    <div class="col-12 col-sm-6">
                         <div class="form-label-sm">Country *</div>
-                        <input type="text" class="form-control-custom" id="country" value="Pakistan">
+                        <select class="form-control-custom" id="country">
+                            <?php if (isset($component)) { $__componentOriginala5780a67c2c14224fd8654f6923eb903 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala5780a67c2c14224fd8654f6923eb903 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.country-options','data' => ['selected' => 'Pakistan']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('country-options'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['selected' => 'Pakistan']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala5780a67c2c14224fd8654f6923eb903)): ?>
+<?php $attributes = $__attributesOriginala5780a67c2c14224fd8654f6923eb903; ?>
+<?php unset($__attributesOriginala5780a67c2c14224fd8654f6923eb903); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala5780a67c2c14224fd8654f6923eb903)): ?>
+<?php $component = $__componentOriginala5780a67c2c14224fd8654f6923eb903; ?>
+<?php unset($__componentOriginala5780a67c2c14224fd8654f6923eb903); ?>
+<?php endif; ?>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="form-label-sm">City *</div>
+                        <select class="form-control-custom" id="city">
+                            <option value="">Select a city</option>
+                        </select>
+                        <input type="text" class="form-control-custom mt-2" id="city-other" autocomplete="off" placeholder="Type your city" style="display:none;">
                     </div>
                 </div>
                 <?php endif; ?>
@@ -337,12 +361,33 @@
 </div>
 
 <?php $__env->startSection('script'); ?>
+<?php if (isset($component)) { $__componentOriginalc51112e1d1a9b8149b3efe3798a57b42 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalc51112e1d1a9b8149b3efe3798a57b42 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.location-picker-js','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('location-picker-js'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalc51112e1d1a9b8149b3efe3798a57b42)): ?>
+<?php $attributes = $__attributesOriginalc51112e1d1a9b8149b3efe3798a57b42; ?>
+<?php unset($__attributesOriginalc51112e1d1a9b8149b3efe3798a57b42); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalc51112e1d1a9b8149b3efe3798a57b42)): ?>
+<?php $component = $__componentOriginalc51112e1d1a9b8149b3efe3798a57b42; ?>
+<?php unset($__componentOriginalc51112e1d1a9b8149b3efe3798a57b42); ?>
+<?php endif; ?>
 <script>
 const CART_KEY       = 'rv_cart';
 const DESELECTED_KEY = 'rv_cart_deselected';   // written by the cart page
 const IS_AUTH    = <?php echo e(auth()->check() ? 'true' : 'false'); ?>;
 const CSRF_TOKEN = '<?php echo e(csrf_token()); ?>';
-const SHIPPING_FEE_URL = '<?php echo e(route('checkout.shipping-fee')); ?>';
+const SHIPPING_FEE_URL   = '<?php echo e(route('checkout.shipping-fee')); ?>';   // a saved address (signed in)
+const SHIPPING_QUOTE_URL = '<?php echo e(route('shipping.quote')); ?>';          // a country + city picked on this page (guests)
 
 let SHIPPING = 0;
 let SHIPPING_AVAILABLE = false;
@@ -469,12 +514,25 @@ function fillFromAddress(addressId) {
     fetchShippingFee();
 }
 
+/* What the destination costs: a signed-in customer's chosen address, or a guest's country + city. */
+let shippingRequest = 0;
+
 async function fetchShippingFee() {
     const errorEl = document.getElementById('co-shipping-error');
     const shipEl  = document.getElementById('co-shipping');
+    const request = ++shippingRequest;   // only the latest answer counts if the customer keeps changing it
     errorEl.textContent = '';
 
-    if (!SELECTED_ADDRESS_ID) {
+    let url = null;
+    if (IS_AUTH) {
+        if (SELECTED_ADDRESS_ID) url = `${SHIPPING_FEE_URL}?address_id=${SELECTED_ADDRESS_ID}`;
+    } else {
+        const country = document.getElementById('country')?.value.trim();
+        const city    = document.getElementById('city')?.value.trim();
+        if (country && city) url = `${SHIPPING_QUOTE_URL}?${new URLSearchParams({ country, city })}`;
+    }
+
+    if (!url) {
         SHIPPING_AVAILABLE = false;
         SHIPPING = 0;
         shipEl.textContent = '—';
@@ -485,10 +543,9 @@ async function fetchShippingFee() {
     shipEl.textContent = 'Calculating…';
 
     try {
-        const res  = await fetch(`${SHIPPING_FEE_URL}?address_id=${SELECTED_ADDRESS_ID}`, {
-            headers: { 'Accept': 'application/json' },
-        });
+        const res  = await fetch(url, { headers: { 'Accept': 'application/json' } });
         const data = await res.json();
+        if (request !== shippingRequest) return;
 
         if (res.ok && data.available) {
             SHIPPING_AVAILABLE = true;
@@ -500,6 +557,7 @@ async function fetchShippingFee() {
             errorEl.textContent = data.message || 'Delivery is not available for this location.';
         }
     } catch (e) {
+        if (request !== shippingRequest) return;
         SHIPPING_AVAILABLE = false;
         SHIPPING = 0;
         shipEl.textContent = '—';
@@ -690,14 +748,21 @@ async function placeOrder() {
         const phoneIntl = normalizePhone(phone, country);
 
         if (!city || !country) {
-            showToast('Please enter your city and country.', 'error');
+            showToast('Please choose your country and enter your city.', 'error');
             return;
         }
         if (!phoneIntl) {
             showToast('Phone number must start with + and country code (e.g. +923001234567).', 'error');
             return;
         }
-        guestDetails = { name, phone: phoneIntl, address, city, country, payment_method: method };
+
+        // The quote follows the fields a moment after typing stops; make sure it is for what is there now
+        await fetchShippingFee();
+        if (!SHIPPING_AVAILABLE) {
+            showToast(document.getElementById('co-shipping-error').textContent || 'Delivery is not available for this location.', 'error');
+            return;
+        }
+        guestDetails ={ name, phone: phoneIntl, address, city, country, payment_method: method };
     }
 
     const selectedItems = getSelectedCart();
@@ -796,7 +861,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     await mergeGuestCart();
     await syncPricesFromDb();
     loadSummary();
-    if (IS_AUTH && SELECTED_ADDRESS_ID) {
+
+    // Guests pick a country and city right here: loading the city suggestions and re-quoting shipping follow them
+    if (!IS_AUTH) {
+        LocationPicker.bind(
+            document.getElementById('country'),
+            document.getElementById('city'),
+            document.getElementById('city-other'),
+            fetchShippingFee,
+        );
+    }
+    if (IS_AUTH ? SELECTED_ADDRESS_ID : document.getElementById('city').value.trim()) {
         await fetchShippingFee();
     }
     if (RESUME) continueAfterSignIn();

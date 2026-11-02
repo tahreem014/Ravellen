@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Address;
 
+use App\Rules\KnownCountry;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateAddressRequest extends FormRequest
@@ -22,7 +23,7 @@ class UpdateAddressRequest extends FormRequest
         return [
             'name'       => 'sometimes|required|string|max:255',
             'address'    => 'sometimes|required|string|max:500',
-            'country'    => 'sometimes|required|string|max:255',
+            'country'    => ['sometimes', 'required', 'string', 'max:255', new KnownCountry],
             'city'       => 'sometimes|required|string|max:255',
             'phone'      => ['nullable', 'regex:/^\+[1-9]\d{7,14}$/'],
             'is_default' => 'nullable|boolean',

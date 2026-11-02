@@ -330,7 +330,8 @@
                 ];
             ?>
 
-            <div class="row g-4">
+            
+            <div class="row g-4" data-live-listing="shop" data-live-signature="<?php echo e(app(\App\Services\LiveUpdateService::class)->listingSignature('shop')); ?>">
                 <?php $__empty_1 = true; $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                 <?php
                     $cfg = $homeCatConfig[$cat->name] ?? null;
@@ -346,8 +347,7 @@
                     $cheapest  = \App\Models\ProductVariant::cheapestOf($allProds->flatMap(fn($p) => $p->variants));
                     $pDesc     = $cat->subCategories->count() . ' sub-categories, ' . $allProds->count() . ' products';
                     $catLabel  = isset($cfg) ? ($cfg['label'] ?? $cat->name) : $cat->name;
-                    $soon      = $cat->isComingSoon();   // nothing on sale yet: no product photo, price or count
-                    if ($soon && isset($cfg)) { $firstImg = $cfg['fallback']; }
+                    $soon      = $cat->isComingSoon();   // no products yet: no price or count
                 ?>
                 <?php if($cfg): ?>
                 <div class="col-md-6 col-lg-4 fade-up" <?php if (! ($soon)): ?> data-live-category="<?php echo e($cat->id); ?>" <?php endif; ?>>

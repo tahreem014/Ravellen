@@ -117,6 +117,8 @@
             <nav class="admin-tabs mt-4">
                 <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">Overview</a>
                 <a class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}">Products</a>
+                <a class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}" href="{{ route('admin.categories.index') }}">Categories</a>
+                <a class="nav-link {{ request()->routeIs('admin.sub-categories.*') ? 'active' : '' }}" href="{{ route('admin.sub-categories.index') }}">Sub-categories</a>
                 <a class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}" href="{{ route('admin.orders.index') }}">Orders</a>
                 <a class="nav-link {{ request()->routeIs('admin.pre-orders.*') ? 'active' : '' }}" href="{{ route('admin.pre-orders.index') }}">Pre-Orders</a>
                 <a class="nav-link {{ request()->routeIs('admin.refund-requests.*') ? 'active' : '' }}" href="{{ route('admin.refund-requests.index') }}">Refund Requests</a>
