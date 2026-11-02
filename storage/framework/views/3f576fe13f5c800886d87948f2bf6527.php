@@ -1135,12 +1135,6 @@
                                 <?php if($isCeramic): ?>
                                 <div class="col-6">
                                     <div class="spec-box">
-                                        <div class="spec-label">Material</div>
-                                        <div class="spec-value">High-grade Ceramic</div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="spec-box">
                                         <div class="spec-label">Capacity</div>
                                         <div class="spec-value">350ml – 400ml</div>
                                     </div>
@@ -1355,12 +1349,6 @@
                             <?php if($isCeramicItem && $firstVariant): ?>
                             
                             <div class="row g-2 mb-3">
-                                <div class="col-6">
-                                    <div class="spec-box">
-                                        <div class="spec-label">Material</div>
-                                        <div class="spec-value">High-grade Ceramic</div>
-                                    </div>
-                                </div>
                                 <div class="col-6">
                                     <div class="spec-box">
                                         <div class="spec-label">Size</div>
