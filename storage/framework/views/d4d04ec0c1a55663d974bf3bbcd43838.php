@@ -131,6 +131,7 @@
         .gb-badge { top: .5rem; left: .5rem; font-size: .6rem; padding: .15rem .45rem; max-width: calc(100% - 3rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .gb-heart-btn { top: .5rem; right: .5rem; width: 1.9rem; height: 1.9rem; }
         .gb-card-img-wrap .discount-badge { left: .5rem !important; bottom: .5rem !important; font-size: .65rem !important; padding: .3rem .5rem !important; }
+        .gb-card-img-wrap .stock-badge { right: .5rem !important; bottom: .5rem !important; font-size: .65rem !important; padding: .3rem .5rem !important; }
         .gb-card-body { padding: .7rem .7rem .8rem; }
         .gb-name { font-size: .85rem; }
         .gb-desc { font-size: .72rem; }
@@ -279,6 +280,26 @@
 <?php if (isset($__componentOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
 <?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
 <?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
+                    <?php if (isset($component)) { $__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.stock-badge','data' => ['label' => $product->stockLabel(),'live' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('stock-badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->stockLabel()),'live' => true]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4)): ?>
+<?php $attributes = $__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4; ?>
+<?php unset($__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4)): ?>
+<?php $component = $__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4; ?>
+<?php unset($__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4); ?>
 <?php endif; ?>
                     <?php if($subName): ?>
                         <span class="gb-badge" style="background:#ec4899;"><?php echo e($subName); ?></span>
@@ -437,6 +458,26 @@
 <?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
 <?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
 <?php endif; ?>
+                    <?php if (isset($component)) { $__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.stock-badge','data' => ['label' => $product->stockLabel(),'live' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('stock-badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->stockLabel()),'live' => true]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4)): ?>
+<?php $attributes = $__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4; ?>
+<?php unset($__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4)): ?>
+<?php $component = $__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4; ?>
+<?php unset($__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4); ?>
+<?php endif; ?>
                         <?php if($subName): ?>
                             <span class="gb-badge" style="background:#7c3aed;"><?php echo e($subName); ?></span>
                         <?php endif; ?>
@@ -587,6 +628,26 @@
 <?php if (isset($__componentOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
 <?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
 <?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
+                    <?php if (isset($component)) { $__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.stock-badge','data' => ['label' => $product->stockLabel(),'live' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('stock-badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->stockLabel()),'live' => true]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4)): ?>
+<?php $attributes = $__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4; ?>
+<?php unset($__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4)): ?>
+<?php $component = $__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4; ?>
+<?php unset($__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4); ?>
 <?php endif; ?>
                     <?php if($subName): ?>
                         <span class="gb-badge" style="background:#C8A98A;"><?php echo e($subName); ?></span>

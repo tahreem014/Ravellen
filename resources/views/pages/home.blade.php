@@ -200,17 +200,23 @@
                     <div class="hero-grid-wrap">
                         <div class="row g-3">
                             @php
+                                // Mystery Scoops / Mystery Balls open the product page the shop lists for that
+                                // category (the category cards below reuse this); no product yet → the legacy URL's "Coming soon"
+                                $categoryProductUrl = fn (string $category, string $fallback) => ($landing = $categories->firstWhere('name', $category)?->firstProduct())
+                                    ? route('product-item', $landing->slug)
+                                    : url($fallback);
+
                                 $heroCategories = [
-                                    ['name'=>'Mystery Scoops','link'=>'mystery-scoops','icon'=>'ri-gift-line',      'bg'=>'linear-gradient(135deg,#f472b6,#fb7185)'],
-                                    ['name'=>'Mystery Balls', 'link'=>'mystery-balls', 'icon'=>'ri-sparkling-line', 'bg'=>'linear-gradient(135deg,#f472b6,#fb7185)'],
-                                    ['name'=>'BTS Merch',     'link'=>'bts-merch',     'icon'=>'ri-star-line',      'bg'=>'linear-gradient(135deg,#C084FC,#9333EA)'],
-                                    ['name'=>'Gift Box',      'link'=>'gift-boxes',     'icon'=>'ri-shopping-bag-line','bg'=>'linear-gradient(135deg,#fb7185,#f472b6)'],
+                                    ['name'=>'Mystery Scoops','url'=>$categoryProductUrl('Mystery Scoops', 'mystery-scoops'),'icon'=>'ri-gift-line',      'bg'=>'linear-gradient(135deg,#f472b6,#fb7185)'],
+                                    ['name'=>'Mystery Balls', 'url'=>$categoryProductUrl('Mystery Balls', 'mystery-balls'),  'icon'=>'ri-sparkling-line', 'bg'=>'linear-gradient(135deg,#f472b6,#fb7185)'],
+                                    ['name'=>'BTS Merch',     'url'=>url('bts-merch'),                                       'icon'=>'ri-star-line',      'bg'=>'linear-gradient(135deg,#C084FC,#9333EA)'],
+                                    ['name'=>'Gift Box',      'url'=>url('gift-boxes'),                                      'icon'=>'ri-shopping-bag-line','bg'=>'linear-gradient(135deg,#fb7185,#f472b6)'],
                                 ];
                             @endphp
 
                             @foreach($heroCategories as $cat)
                                 <div class="col-6">
-                                    <a href="{{ url($cat['link']) }}" class="hero-cat-card">
+                                    <a href="{{ $cat['url'] }}" class="hero-cat-card">
                                         <div class="hero-cat-icon w-100" style="background:{{ $cat['bg'] }};">
                                             <i class="{{ $cat['icon'] }}"></i>
                                         </div>
@@ -287,6 +293,7 @@
                 $homeCatConfig = [
                     'Mystery Scoops' => [
                         'link'    => 'mystery-scoops',
+                        'product' => true,   // opens the category's product page, like the hero card
                         'icon'    => 'ri-gift-line',
                         'overlay' => 'linear-gradient(to top,rgba(236,72,153,.7),rgba(251,113,133,.4))',
                         'iconBg'  => 'linear-gradient(135deg,#f472b6,#fb7185)',
@@ -295,6 +302,7 @@
                     ],
                     'Mystery Balls' => [
                         'link'    => 'mystery-balls',
+                        'product' => true,
                         'icon'    => 'ri-sparkling-line',
                         'overlay' => 'linear-gradient(to top,rgba(168,85,247,.7),rgba(236,72,153,.4))',
                         'iconBg'  => 'linear-gradient(135deg,#c084fc,#f472b6)',
@@ -354,10 +362,11 @@
                     $pDesc     = $cat->subCategories->count() . ' sub-categories, ' . $allProds->count() . ' products';
                     $catLabel  = isset($cfg) ? ($cfg['label'] ?? $cat->name) : $cat->name;
                     $soon      = $cat->isComingSoon();   // no products yet: no price or count
+                    $catUrl    = isset($cfg) ? (($cfg['product'] ?? false) ? $categoryProductUrl($cat->name, $cfg['link']) : url($cfg['link'])) : null;
                 @endphp
                 @if($cfg)
                 <div class="col-md-6 col-lg-4 fade-up" @unless($soon) data-live-category="{{ $cat->id }}" @endunless>
-                    <a href="{{ url($cfg['link']) }}" class="text-decoration-none">
+                    <a href="{{ $catUrl }}" class="text-decoration-none">
                         <div class="cat-card card">
                             <div class="cat-card-img-wrap">
                                 <img src="{{ $firstImg }}" alt="{{ $catLabel }}">

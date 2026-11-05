@@ -100,6 +100,7 @@
         .shop-prod-badge { top: .5rem; left: .5rem; font-size: .6rem; padding: .15rem .45rem; max-width: calc(100% - 3rem); }
         .shop-prod-img-wrap .wl-heart-btn { top: .5rem; right: .5rem; width: 1.9rem; height: 1.9rem; }
         .shop-prod-img-wrap .discount-badge { left: .5rem !important; bottom: .5rem !important; font-size: .65rem !important; padding: .3rem .5rem !important; }
+        .shop-prod-img-wrap .stock-badge { right: .5rem !important; bottom: .5rem !important; font-size: .65rem !important; padding: .3rem .5rem !important; }
         .shop-prod-body { padding: .7rem .7rem .8rem; }
         .shop-prod-cat-label { font-size: .62rem; }
         .shop-prod-name { font-size: .85rem; }
@@ -273,6 +274,26 @@
 <?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
 <?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
 <?php endif; ?>
+                            <?php if (isset($component)) { $__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.stock-badge','data' => ['label' => $product->stockLabel(),'live' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('stock-badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->stockLabel()),'live' => true]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4)): ?>
+<?php $attributes = $__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4; ?>
+<?php unset($__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4)): ?>
+<?php $component = $__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4; ?>
+<?php unset($__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4); ?>
+<?php endif; ?>
                             <?php if($sub): ?>
                                 <span class="shop-prod-badge" style="background:<?php echo e($theme['accent']); ?>;"><?php echo e($sub->name); ?></span>
                             <?php endif; ?>
@@ -360,7 +381,8 @@
             <p class="mb-4 mx-auto" style="max-width:32rem;color:rgba(255,255,255,.9);">
                 Try our Mystery Scoops! Each scoop is a surprise adventure with curated items perfect for you or as gifts.
             </p>
-            <a href="<?php echo e(url('/mystery-scoops')); ?>"
+            <?php $scoopProduct = $categories->firstWhere('name', 'Mystery Scoops')?->firstProduct(); ?>
+            <a href="<?php echo e($scoopProduct ? route('product-item', $scoopProduct->slug) : url('/mystery-scoops')); ?>"
                class="btn btn-light fw-semibold px-5 py-2"
                style="color:#7c3aed;border-radius:.5rem;">
                 Get Mystery Scoop

@@ -78,6 +78,7 @@
 <?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
 <?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
 <?php endif; ?></div>
+                <?php if($pack['unavailable'] ?? null): ?><div class="size-status"><?php echo e($pack['unavailable']); ?></div><?php endif; ?>
             </button>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>

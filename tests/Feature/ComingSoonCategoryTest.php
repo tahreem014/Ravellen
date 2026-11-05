@@ -88,10 +88,10 @@ class ComingSoonCategoryTest extends TestCase
     {
         $bts = $this->emptyCategory('BTS Merch');
 
+        // the bias cards stay on the page, above the "coming soon" panel
         $this->get(route('bts-merch'))->assertOk()
-            ->assertSee('Our BTS merch is on the way')
+            ->assertSeeInOrder(['Choose Your Bias', 'data-bias="jungkook"', 'Our BTS merch is on the way'], false)
             ->assertSee('data-live-listing="category:BTS Merch"', false)
-            ->assertDontSee('Choose Your Bias')
             ->assertDontSee('id="dynamicCards"', false);
         $this->assertTrue($this->shopPillIsFlagged('BTS Merch'));
 

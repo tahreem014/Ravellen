@@ -7,6 +7,7 @@ use App\Models\ShippingRate;
 use App\Rules\KnownCountry;
 use App\Services\LocationService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ShippingRateController extends Controller
 {
@@ -73,11 +74,15 @@ class ShippingRateController extends Controller
 
     private function validateData(Request $request): array
     {
+        $free = $request->boolean('free_shipping');
+
         $data = $request->validate([
-            'country'    => ['required', 'string', 'max:255', new KnownCountry],
-            'city'       => ['nullable', 'string', 'max:255'],
-            'amount'     => ['required', 'numeric', 'min:0', 'max:99999999.99'],
-            'is_active'  => ['sometimes', 'boolean'],
+            'country'       => ['required', 'string', 'max:255', new KnownCountry],
+            'city'          => ['nullable', 'string', 'max:255'],
+            // free shipping needs no charge typed in; it is stored as a charge of 0
+            'amount'        => [Rule::requiredIf(! $free), 'nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'free_shipping' => ['sometimes', 'boolean'],
+            'is_active'     => ['sometimes', 'boolean'],
         ]);
 
         // Stored the way the location list spells them, so the admin page and the customer's
@@ -88,7 +93,7 @@ class ShippingRateController extends Controller
         return [
             'country'   => $country,
             'city'      => $city === '' ? null : $city,
-            'amount'    => $data['amount'],
+            'amount'    => $free ? 0 : $data['amount'],
             'is_active' => $request->boolean('is_active'),
         ];
     }

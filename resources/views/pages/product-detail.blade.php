@@ -106,12 +106,13 @@
 
     // Mystery Scoop sizes, cheapest first ("Classic Scoop" → "Classic")
     $scoopOptions = $genericProduct && ! $genericProduct->usesPackPricing()
-        ? $genericProduct->variants->sortBy('price')->values()->map(fn ($v) => [
+        ? $genericProduct->offeredVariants()->sortBy('price')->values()->map(fn ($v) => [
             'id'       => $v->id,
             'name'     => trim(preg_replace('/\bscoop\b/i', '', $v->variant_name)) ?: $v->variant_name,
             'price'    => $v->effectivePrice(),
             'original' => $v->hasDiscount() ? (float) $v->price : null,
             'percent'  => $v->discountPercent(),
+            'unavailable' => $v->unavailableLabel(),   // "Out of stock" / "Restocking" …, null while it can be ordered
         ])->all()
         : [];
     $firstScoop = $scoopOptions[0] ?? null;
@@ -154,6 +155,9 @@
     .size-btn.active .size-name { color: {{ $theme['accent'] }}; }
     .size-btn .size-price { font-size: .75rem; color: #6b7280; }
     .size-btn.balls-pack-btn { min-width: 4.75rem; padding: .35rem .6rem; }
+    /* a size / pack that can't be ordered right now: still selectable, so its status can be read */
+    .size-btn.unavailable { opacity: .65; }
+    .size-btn .size-status { font-size: .7rem; font-weight: 600; color: #b45309; }
 
     /* Quantity */
     .qty-btn {
@@ -243,250 +247,9 @@
 <div class="container px-4">
 
 {{-- ══════════════════════════════════════════════════════════════════════
-     MYSTERY BALLS
-══════════════════════════════════════════════════════════════════════ --}}
-@if($productType === 'mystery-balls')
-@section('title', 'Mystery Balls')
-
-    <div class="text-center mb-5">
-        <h1 class="fw-bold mb-3" style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,{{ $theme['accent'] }},{{ $theme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-            Mystery Balls
-        </h1>
-        <p class="text-muted mx-auto" style="max-width:36rem;font-size:1.05rem;">
-            Unwrap the fun! Each mystery ball contains a surprise item identical to our famous scoops.
-        </p>
-    </div>
-
-    <div class="info-alert mb-4 d-flex gap-2 align-items-start">
-        <i class="ri-information-line mt-1" style="color:#3b82f6;flex-shrink:0;"></i>
-        <div><strong>Quantity Rules:</strong> Minimum order is {{ $ballsMin }} balls. You can order up to {{ $ballsMax }} balls per batch. Orders must be in multiples of 5 (e.g., 5, 10, 15...).</div>
-    </div>
-
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="product-card card mb-4">
-                <div class="row g-0">
-                    <div class="col-md-5 position-relative">
-                        <img src="https://images.unsplash.com/photo-1615485925694-a031e97d8964?w=600&q=80" alt="Mystery Balls" class="product-img h-100">
-                        <x-discount-badge id="discount-badge" :label="isset($ballPacks[0]['percent']) ? '-' . $ballPacks[0]['percent'] . '%' : null" />
-                        <span class="position-absolute top-0 start-0 m-3 badge" style="background:{{ $theme['badgeBg'] }};font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">Best Seller</span>
-                    </div>
-                    <div class="col-md-7">
-                        <div class="card-body p-4 d-flex flex-column justify-content-center h-100">
-                            <h3 class="fw-bold mb-3">Standard Mystery Balls</h3>
-                            <p class="text-muted mb-4">Get the thrill of the unknown! Our mystery balls are packed with the same high-quality stationery, accessories, and cute items found in our scoops.</p>
-                            <div class="mb-4">
-                                @include('pages.partials.balls-pricing', ['packs' => $ballPacks, 'mode' => $ballsMode, 'accent' => $theme['accent']])
-                            </div>
-                            <div class="bg-light rounded-3 p-4 text-center">
-                                <div class="fw-medium text-muted small mb-3">Select Quantity (Multiples of 5)</div>
-                                <div class="d-flex align-items-center justify-content-center gap-4">
-                                    <button class="qty-btn" id="qty-minus" onclick="updateQtyBalls(-5)"><i class="ri-subtract-line"></i></button>
-                                    <div>
-                                        <div class="fw-bold" id="qty-display" style="font-size:2.5rem;line-height:1;">{{ $ballsMin }}</div>
-                                        <div class="text-muted" style="font-size:.75rem;">Balls</div>
-                                    </div>
-                                    <button class="qty-btn" id="qty-plus" onclick="updateQtyBalls(5)"><i class="ri-add-line"></i></button>
-                                </div>
-                                <div class="text-muted mt-2" style="font-size:.8rem;">Range: {{ $ballsMin }} - {{ $ballsMax }} balls</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- How Mystery Balls Work --}}
-            <div class="card border-0 shadow-sm rounded-3 p-4 mb-4">
-                <h5 class="fw-bold mb-4">🎁 How Mystery Balls Work</h5>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🛒 Step 1: Choose Your Pack Size</div>
-                    <p class="text-muted small mb-0">Select how many Mystery Balls you'd like. You can choose any quantity from 5 to 50 balls in increments of 5.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🔢 Step 2: Select Quantity</div>
-                    <p class="text-muted small mb-0">Choose the number of packs you'd like to order. You can mix different Mystery Ball collections in the same order.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">✍️ Step 3: Add Special Requests (Optional)</div>
-                    <p class="text-muted small mb-1">Use the comment box before adding to cart to let us know:</p>
-                    <ul class="text-muted small mb-1 ps-3">
-                        <li>Preferred themes or characters</li>
-                        <li>Items you'd love to receive</li>
-                        <li>Items you'd like to avoid</li>
-                        <li>Any replacement suggestions</li>
-                    </ul>
-                    <p class="text-muted small mb-0">We'll do our best to personalize your mystery experience.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🎲 Step 4: We Curate Your Mystery</div>
-                    <p class="text-muted small mb-1">Every Mystery Ball is packed with care to keep every order exciting and unique.</p>
-                    <p class="text-muted small mb-0">👉 <strong>Note:</strong> If your order contains too many identical items, we'll replace some with similar items to keep your mystery fun and varied.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">📦 Step 5: Enjoy the Surprise</div>
-                    <p class="text-muted small mb-0">Your Mystery Balls arrive beautifully packed and ready to open. Enjoy discovering what's inside and share the excitement! 🎉</p>
-                </div>
-            </div>
-
-            @include('pages.partials.product-reviews')
-        </div>
-
-        <div class="col-lg-4">
-            <div class="summary-card card p-4">
-                <h5 class="fw-bold mb-4">Order Summary</h5>
-                <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Quantity</span>
-                    <span class="fw-semibold" id="summary-qty">{{ $ballsMin }} Balls</span>
-                </div>
-                @if($ballsMode === \App\Models\Product::PRICING_AUTOMATIC && $ballPacks)
-                <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Price per 5</span>
-                    <span class="fw-semibold balls-base-price"><x-price :amount="$ballPacks[0]['price'] * 5 / $ballsMin" :original="$ballPacks[0]['original'] !== null ? $ballPacks[0]['original'] * 5 / $ballsMin : null" /></span>
-                </div>
-                @endif
-                <div class="mb-4 d-flex justify-content-between fw-bold fs-5">
-                    <span>Total</span>
-                    <span id="summary-total" style="color:{{ $theme['accent'] }};"><x-price :amount="$ballPacks[0]['price'] ?? null" :original="$ballPacks[0]['original'] ?? null" /></span>
-                </div>
-                <div class="mb-4">
-                    <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
-                    <textarea class="form-control" rows="4" id="mb-special-requests" placeholder="E.g., color preferences, specific themes..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
-                </div>
-                <button onclick="addToCart('mystery-balls')" id="balls-add-btn" @disabled(! $ballPacks || ! $ballPacks[0]['available']) class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR {{ number_format($ballPacks[0]['price'] ?? 0) }}</span>
-                </button>
-                <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
-            </div>
-        </div>
-    </div>
-
-{{-- ══════════════════════════════════════════════════════════════════════
-     MYSTERY SCOOPS
-══════════════════════════════════════════════════════════════════════ --}}
-@elseif($productType === 'mystery-scoops')
-@section('title', 'Mystery Scoops')
-
-    <div class="text-center mb-5">
-        <h1 class="fw-bold mb-3" style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,{{ $theme['accent'] }},{{ $theme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-            Mystery Scoops
-        </h1>
-        <p class="text-muted mx-auto" style="max-width:36rem;font-size:1.05rem;">
-            Choose your scoop size and let the mystery begin! Each scoop is carefully curated with amazing items.
-        </p>
-    </div>
-
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="product-card card mb-4">
-                <div class="row g-0">
-                    <div class="col-md-5 position-relative">
-                        <img src="https://images.unsplash.com/photo-1765516833058-c322c800fee1?w=600&q=80" alt="Mystery Scoop" class="product-img h-100">
-                        <x-discount-badge id="discount-badge" :label="isset($firstScoop['percent']) ? '-' . $firstScoop['percent'] . '%' : null" />
-                        <span class="position-absolute top-0 start-0 m-3 badge" style="background:{{ $theme['badgeBg'] }};font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">Best Seller</span>
-                    </div>
-                    <div class="col-md-7">
-                        <div class="card-body p-4 d-flex flex-column justify-content-start h-100">
-                            <h3 class="fw-bold mb-2">Classic Mystery Scoop</h3>
-                            <p class="text-muted small mb-3">A delightful surprise of curated items in our Classic size. Each scoop contains a variety of beads, charms, and accessories.</p>
-                            <div class="info-note mb-3">⚠️ Note: More than 4 same beads will be upgraded to prevent same items. If you don't want upgrades, please specify in the comments.</div>
-                            <div class="mb-3">
-                                <span class="fw-bold" id="display-price" style="font-size:1.5rem;color:{{ $theme['accent'] }};"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
-                                <span class="text-muted small ms-1" id="display-size-label">per {{ strtolower($firstScoop['name'] ?? 'scoop') }}</span>
-                            </div>
-                            <div class="mb-3">
-                                <div class="fw-medium small mb-2">Select size</div>
-                                <div class="d-flex gap-2 flex-wrap">
-                                    @forelse($scoopOptions as $i => $scoop)
-                                    <button class="size-btn {{ $i === 0 ? 'active' : '' }}" onclick="selectSize(this, {{ $i }})">
-                                        <div class="size-name">{{ $scoop['name'] }}</div><div class="size-price" data-scoop-idx="{{ $i }}"><x-price :amount="$scoop['price']" :original="$scoop['original']" /></div>
-                                    </button>
-                                    @empty
-                                    <span class="text-muted small">This product is currently unavailable.</span>
-                                    @endforelse
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: 1, Max: 20)</span></div>
-                                <div class="d-flex align-items-center gap-3">
-                                    <button class="qty-btn" id="scoop-minus" onclick="updateQtyScoop(-1)" disabled><i class="ri-subtract-line"></i></button>
-                                    <span class="fw-bold fs-5" id="scoop-qty-display">1</span>
-                                    <button class="qty-btn" id="scoop-plus" onclick="updateQtyScoop(1)"><i class="ri-add-line"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- How Mystery Scoops Work --}}
-            <div class="card border-0 shadow-sm rounded-3 p-4 mb-4">
-                <h5 class="fw-bold mb-4">🎁 How Mystery Scoops Work</h5>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🛒 Step 1: Choose Your Scoop Size</div>
-                    <p class="text-muted small mb-1">Select your Mystery Scoop size:</p>
-                    <ul class="text-muted small mb-1 ps-3"><li>Classic Scoop</li><li>Standard Scoop</li><li>Premium Scoop</li></ul>
-                    <p class="text-muted small mb-0">Each size comes with a different value and surprise level.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🔢 Step 2: Select Quantity</div>
-                    <p class="text-muted small mb-0">Choose how many scoops you want (minimum 1, maximum 20 per size). You can also mix different sizes with different quantities in one order.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">✍️ Step 3: Add Special Requests (Optional)</div>
-                    <p class="text-muted small mb-1">Before adding to cart, use the comment box to tell us:</p>
-                    <ul class="text-muted small mb-1 ps-3"><li>Preferred themes</li><li>Items you'd love to receive</li><li>Items you'd like to avoid</li><li>Replacement suggestions</li></ul>
-                    <p class="text-muted small mb-0">We'll try our best to personalize your mystery.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🎲 Step 4: We Curate the Surprise</div>
-                    <p class="text-muted small mb-1">Our team handpicks each scoop with care. No two Mystery Scoops are the same — that's the magic!</p>
-                    <p class="text-muted small mb-0">👉 <strong>Note:</strong> If more than 4 identical items are selected, they'll be upgraded automatically to keep your mystery exciting.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">📦 Step 5: Unbox the Fun</div>
-                    <p class="text-muted small mb-0">Receive your Mystery Scoops beautifully packed and ready to surprise you. Open, explore, and enjoy the thrill of the unknown 🎉</p>
-                </div>
-            </div>
-
-            @include('pages.partials.product-reviews')
-        </div>
-
-        <div class="col-lg-4">
-            <div class="summary-card card p-4">
-                <h5 class="fw-bold mb-4">Order Summary</h5>
-                <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Size</span>
-                    <span class="fw-semibold" id="summary-size">{{ $firstScoop['name'] ?? '—' }}</span>
-                </div>
-                <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Quantity</span>
-                    <span class="fw-semibold" id="summary-qty">1</span>
-                </div>
-                <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Price per scoop</span>
-                    <span class="fw-semibold" id="summary-unit-price"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
-                </div>
-                <div class="mb-4 d-flex justify-content-between fw-bold fs-5">
-                    <span>Total</span>
-                    <span id="summary-total" style="color:{{ $theme['accent'] }};"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
-                </div>
-                <div class="mb-4">
-                    <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
-                    <textarea class="form-control" rows="4" id="ms-special-requests" placeholder="E.g., preferred themes, items to avoid..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
-                </div>
-                <button onclick="addToCart('mystery-scoops')" @disabled(! $scoopOptions) class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR {{ number_format($firstScoop['price'] ?? 0) }}</span>
-                </button>
-                <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
-            </div>
-        </div>
-    </div>
-
-
-{{-- ══════════════════════════════════════════════════════════════════════
      BTS MYSTERY SCOOP
 ══════════════════════════════════════════════════════════════════════ --}}
-@elseif($productType === 'bts-scoop')
+@if($productType === 'bts-scoop')
 {{-- a chosen bias shows that member's product, e.g. "Jungkook Mystery Scoop" --}}
 @section('title', $bias && ($genericProduct ?? null) ? $genericProduct->name : 'BTS Mystery Scoop')
 
@@ -524,8 +287,9 @@
                                 <div class="fw-medium small mb-2">Select size</div>
                                 <div class="d-flex gap-2 flex-wrap">
                                     @forelse($scoopOptions as $i => $scoop)
-                                    <button class="size-btn {{ $i === 0 ? 'active' : '' }}" onclick="selectSize(this, {{ $i }})">
+                                    <button class="size-btn {{ $i === 0 ? 'active' : '' }} {{ $scoop['unavailable'] ? 'unavailable' : '' }}" onclick="selectSize(this, {{ $i }})">
                                         <div class="size-name">{{ $scoop['name'] }}</div><div class="size-price" data-scoop-idx="{{ $i }}"><x-price :amount="$scoop['price']" :original="$scoop['original']" /></div>
+                                        @if($scoop['unavailable'])<div class="size-status">{{ $scoop['unavailable'] }}</div>@endif
                                     </button>
                                     @empty
                                     <span class="text-muted small">This product is currently unavailable.</span>
@@ -611,8 +375,8 @@
                     <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
                     <textarea class="form-control" rows="4" id="bs-special-requests" placeholder="E.g., preferred member items, era themes..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
                 </div>
-                <button onclick="addToCart('bts-scoop')" @disabled(! $scoopOptions) class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR {{ number_format($firstScoop['price'] ?? 0) }}</span>
+                <button onclick="addToCart('bts-scoop')" id="scoop-add-btn" @disabled(! $scoopOptions || $firstScoop['unavailable']) class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
+                    <i class="ri-shopping-cart-line me-2"></i><span id="scoop-btn-label">{{ $firstScoop['unavailable'] ?? 'Add to Cart' }}</span><span id="scoop-btn-price" @if($firstScoop['unavailable'] ?? null) style="display:none;" @endif> — <span id="btn-total">PKR {{ number_format($firstScoop['price'] ?? 0) }}</span></span>
                 </button>
                 <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
             </div>
@@ -903,7 +667,8 @@
     $productImg     = $product->images->first()?->image_url
                         ?? 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80';
 
-    $variants       = $product->variants->sortBy('price')->values();
+    // discontinued variants are no longer offered; an out-of-stock / restocking one stays visible, labelled
+    $variants       = $product->offeredVariants()->sortBy('price')->values();
     $hasMultiVariants = $variants->count() > 1;
 
     // Balls: the stepper walks the pack options and each pack is a single
@@ -913,7 +678,11 @@
     $ballsMin  = $ballPacks[0]['qty'] ?? 5;
     $ballsMax  = $ballPacks ? $ballPacks[count($ballPacks) - 1]['qty'] : 50;
 
-    $firstVariant   = $isBalls ? $variants->firstWhere('id', $ballPacks[0]['id'] ?? null) : $variants->first();
+    // the page opens on a variant that can be bought, if there is one
+    $firstVariant   = $isBalls
+        ? $variants->firstWhere('id', $ballPacks[0]['id'] ?? null)
+        : ($variants->first(fn ($v) => $v->isPurchasable()) ?? $variants->first());
+    $piUnavailable  = $firstVariant ? $firstVariant->unavailableLabel() : 'Unavailable';   // why the opening selection can't be ordered
     $minPrice       = $firstVariant?->effectivePrice() ?? 0;
     $minOriginal    = $firstVariant?->hasDiscount() ? (float) $firstVariant->price : null;
     $isPreorderItem = $firstVariant?->status === \App\Models\ProductVariant::STATUS_PRE_ORDER;
@@ -924,6 +693,8 @@
         'original' => $v->hasDiscount() ? (float) $v->price : null,
         'percent'  => $v->discountPercent(),
         'preorder' => $v->isPreOrder(),
+        'unavailable' => $v->unavailableLabel(),
+        'max_qty'  => $v->max_qty,
     ]])->all();
 
     // Breadcrumb label
@@ -1015,11 +786,12 @@
                             <div class="mb-3">
                                 <div class="fw-medium small mb-2">Select Variant</div>
                                 <div class="d-flex gap-2 flex-wrap">
-                                    @foreach($variants as $i => $variant)
-                                    <button class="size-btn {{ $i === 0 ? 'active' : '' }}" data-variant-id="{{ $variant->id }}"
+                                    @foreach($variants as $variant)
+                                    <button class="size-btn {{ $variant->id === $firstVariant?->id ? 'active' : '' }} {{ $variant->unavailableLabel() ? 'unavailable' : '' }}" data-variant-id="{{ $variant->id }}"
                                             onclick="piSelectVariant(this, {{ $variant->id }})">
                                         <div class="size-name">{{ $variant->variant_name }}</div>
                                         <div class="size-price"><x-price :variant="$variant" /></div>
+                                        @if($variant->unavailableLabel())<div class="size-status">{{ $variant->unavailableLabel() }}</div>@endif
                                     </button>
                                     @endforeach
                                 </div>
@@ -1037,6 +809,11 @@
                             </div>
                             @endif
 
+                            {{-- Shown while the picked variant / pack can't be ordered (script keeps it in step) --}}
+                            <div class="info-note mb-3" id="pi-stock-note" @if(! $piUnavailable) style="display:none;" @endif>
+                                <strong data-pi-stock-label>{{ $piUnavailable }}</strong> — this can't be ordered right now.
+                            </div>
+
                             {{-- Quantity selector --}}
                             <div class="mb-3 mt-auto">
                                 @if($isBalls)
@@ -1047,7 +824,7 @@
                                         <button class="qty-btn" id="pi-qty-plus"  onclick="updateQtyBalls(5)" @disabled(count($ballPacks) <= 1)><i class="ri-add-line"></i></button>
                                     </div>
                                 @else
-                                    <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: 1, Max: {{ $firstVariant?->max_qty ?? 10 }})</span></div>
+                                    <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: 1, Max: <span id="pi-max-qty">{{ $firstVariant?->max_qty ?? 10 }}</span>)</span></div>
                                     <div class="d-flex align-items-center gap-3">
                                         <button class="qty-btn" id="pi-qty-minus" onclick="piUpdateQty(-1)" disabled><i class="ri-subtract-line"></i></button>
                                         <span class="fw-bold fs-5" id="pi-qty-display">1</span>
@@ -1229,12 +1006,12 @@
                               placeholder="E.g., preferred themes, items to avoid..."
                               style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
                 </div>
-                <button onclick="piAddToCart()" id="pi-add-btn" @disabled($isBalls && ! ($ballPacks[0]['available'] ?? false))
+                <button onclick="piAddToCart()" id="pi-add-btn" @disabled($piUnavailable !== null)
                         class="btn text-white w-100 py-2 fw-semibold"
                         style="background:{{ $piTheme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
                     <i class="ri-shopping-cart-line me-2"></i>
-                    <span id="pi-btn-label">{{ $isPreorderItem ? 'Pre-order Now' : 'Add to Cart' }}</span> —
-                    <span id="pi-btn-total">PKR {{ $isPreorderItem ? number_format(round($minPrice * 0.4)) : number_format($minPrice) }}</span>
+                    <span id="pi-btn-label">{{ $piUnavailable ?? ($isPreorderItem ? 'Pre-order Now' : 'Add to Cart') }}</span><span id="pi-btn-price" @if($piUnavailable) style="display:none;" @endif> —
+                    <span id="pi-btn-total">PKR {{ $isPreorderItem ? number_format(round($minPrice * 0.4)) : number_format($minPrice) }}</span></span>
                 </button>
                 <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
             </div>
@@ -1256,6 +1033,7 @@
                         <div class="related-prod-img-wrap">
                             <img src="{{ $relatedImg }}" alt="{{ $related->name }}" data-live-image>
                             <x-discount-badge :label="$related->discountLabel()" live />
+                            <x-stock-badge :label="$related->stockLabel()" live />
                         </div>
                         <div class="p-3">
                             <h6 class="related-prod-name" data-live-name>{{ $related->name }}</h6>
@@ -1393,9 +1171,7 @@ async function persistToCart(payload, localItem) {
 }
 
 const PRODUCT_META = {
-    'mystery-balls':  { name: 'Mystery Balls',        image: 'https://images.unsplash.com/photo-1615485925694-a031e97d8964?w=200&q=80', preorder: false },
-    'mystery-scoops': { name: 'Mystery Scoop',         image: 'https://images.unsplash.com/photo-1765516833058-c322c800fee1?w=200&q=80', preorder: false },
-    'bts-scoop':      { name: 'BTS Mystery Scoop',     image: 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=200&q=80', preorder: false },
+    'bts-scoop':     { name: 'BTS Mystery Scoop',     image: 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=200&q=80', preorder: false },
     'bts-balls':      { name: 'BTS Mystery Balls',     image: 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=200&q=80', preorder: false },
     'ceramic':        { name: 'Cute Ceramic Mug',      image: 'https://images.unsplash.com/photo-1515401857507-c897a8f64e42?w=200&q=80', preorder: false },
     'gift-box':       { name: '{{ addslashes($productName ?? "Tata's Space Gift Box") }}', image: '{{ $productImg ?? 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80' }}', preorder: false },
@@ -1408,9 +1184,7 @@ const DB_PRODUCT_MAP = @json($dbProductMap ?? ['product_id' => null]);
 
 // Maps each generic product type to its "Special Requests" textarea id
 const SPECIAL_REQUESTS_FIELD = {
-    'mystery-balls':  'mb-special-requests',
-    'mystery-scoops': 'ms-special-requests',
-    'bts-scoop':      'bs-special-requests',
+    'bts-scoop':     'bs-special-requests',
     'bts-balls':      'bb-special-requests',
 };
 
@@ -1418,7 +1192,7 @@ function addToCart(type) {
     const meta = PRODUCT_META[type] || {};
     let unitPrice, qty, subtitle, variantId = null, originalPrice = null;
 
-    if (type === 'mystery-balls' || type === 'bts-balls') {
+    if (type === 'bts-balls') {
         // The selected pack (e.g. "Pack of 10") is one cart line priced as a whole
         const pack = currentBallsPack();
         if (!pack || !pack.available) return;
@@ -1428,9 +1202,9 @@ function addToCart(type) {
         qty           = 1;
         subtitle      = 'Pack of ' + pack.qty;
 
-    } else if (type === 'mystery-scoops' || type === 'bts-scoop') {
+    } else if (type === 'bts-scoop') {
         const scoop = SCOOP_OPTIONS[scoopIdx];
-        if (!scoop) return;
+        if (!scoop || scoop.unavailable) return;
         variantId     = scoop.id;
         unitPrice     = scoop.price;
         originalPrice = scoop.original;
@@ -1574,6 +1348,14 @@ function updateScoopSummary() {
     if (su) su.innerHTML = priceHtml(scoop.price, scoop.original);
     if (st) st.innerHTML = priceHtml(scoop.price * scoopQty, scoop.original ? scoop.original * scoopQty : null);
     if (bt) bt.textContent = fmtPkr(scoop.price * scoopQty);
+
+    // an out-of-stock / restocking size can't be ordered: the button says why
+    const addBtn   = document.getElementById('scoop-add-btn');
+    const btnLabel = document.getElementById('scoop-btn-label');
+    const btnPrice = document.getElementById('scoop-btn-price');
+    if (addBtn)   addBtn.disabled = !!scoop.unavailable;
+    if (btnLabel) btnLabel.textContent = scoop.unavailable || 'Add to Cart';
+    if (btnPrice) btnPrice.style.display = scoop.unavailable ? 'none' : '';
 }
 
 // ── Ceramic / Gift Box ─────────────────────────────────────────────────────
@@ -1678,7 +1460,6 @@ let piQty         = {{ ($isBalls ?? false) ? ($ballsMin ?? 5) : 1 }};
 let piIsPreorder  = {{ ($isPreorderItem ?? false) ? 'true' : 'false' }};
 const PI_IS_BALLS   = {{ ($isBalls ?? false) ? 'true' : 'false' }};
 const PI_BALLS_AUTOMATIC = {{ ($ballsMode ?? null) === \App\Models\Product::PRICING_AUTOMATIC ? 'true' : 'false' }};
-const PI_MAX_QTY    = {{ $firstVariant?->max_qty ?? 10 }};
 const PI_PRODUCT_ID = 'pi-{{ $product->id ?? 'x' }}';
 const PI_PRODUCT_NAME = '{{ addslashes($product->name ?? '') }}';
 const PI_PRODUCT_IMG  = '{{ $productImg ?? '' }}';
@@ -1706,9 +1487,7 @@ function piSelectVariant(btn, variantId) {
     piVariantName   = variant.name;
     piVariantId     = variantId;
     piQty = 1;
-    document.getElementById('pi-qty-display').textContent = piQty;
-    const minus = document.getElementById('pi-qty-minus');
-    if (minus) minus.disabled = true;
+    piRenderQty();
 
     piSetPreorder(variant.preorder);
     piRefreshSummary();
@@ -1728,7 +1507,7 @@ function piApplyLive(product) {
 
     Object.entries(product.variants).forEach(([id, fresh]) => {
         if (!PI_VARIANTS[id]) return;
-        Object.assign(PI_VARIANTS[id], { price: fresh.price, original: fresh.original, percent: fresh.percent, preorder: fresh.preorder });
+        Object.assign(PI_VARIANTS[id], { price: fresh.price, original: fresh.original, percent: fresh.percent, preorder: fresh.preorder, max_qty: fresh.max_qty });
         const price = document.querySelector(`.size-btn[data-variant-id="${id}"] .size-price`);
         if (price) price.innerHTML = livePriceHtml(fresh.price, fresh.original);
     });
@@ -1744,6 +1523,7 @@ function piApplyLive(product) {
         piOriginalPrice = picked.original;
         setDiscountBadge(picked.percent);
         piSetPreorder(picked.preorder);
+        piRenderQty();   // the admin may have changed this variant's maximum
         piRefreshSummary();
     }
 }
@@ -1765,11 +1545,25 @@ function piApplyBallsPack(pack) {
     piRefreshSummary();
 }
 
-function piUpdateQty(change) {
-    piQty = Math.min(PI_MAX_QTY, Math.max(1, piQty + change));
+// Each variant has its own maximum (Classic 5, Deluxe 10…), so the limit follows the picked one
+function piMaxQty() {
+    return Number(PI_VARIANTS[piVariantId]?.max_qty) || 10;
+}
+
+// Keep the stepper, its "Max" label and both buttons in step with the picked variant
+function piRenderQty() {
+    const max = piMaxQty();
+    piQty = Math.min(max, Math.max(1, piQty));
     document.getElementById('pi-qty-display').textContent = piQty;
     document.getElementById('pi-qty-minus').disabled = piQty <= 1;
-    document.getElementById('pi-qty-plus').disabled  = piQty >= PI_MAX_QTY;
+    document.getElementById('pi-qty-plus').disabled  = piQty >= max;
+    const label = document.getElementById('pi-max-qty');
+    if (label) label.textContent = max;
+}
+
+function piUpdateQty(change) {
+    piQty += change;
+    piRenderQty();
     piRefreshSummary();
 }
 
@@ -1813,9 +1607,33 @@ function piRefreshSummary() {
         if (elBtnLabel) elBtnLabel.textContent = 'Add to Cart';
         if (elBtn)   elBtn.textContent   = fmtPkr(total);
     }
+
+    // An out-of-stock / restocking / unavailable selection can't be ordered: say so instead of "Add to Cart"
+    const unavailable = piCurrentUnavailable();
+    const addBtn      = document.getElementById('pi-add-btn');
+    const btnPrice    = document.getElementById('pi-btn-price');
+    const stockNote   = document.getElementById('pi-stock-note');
+    if (addBtn)   addBtn.disabled = unavailable !== null;
+    if (btnPrice) btnPrice.style.display = unavailable ? 'none' : '';
+    if (elBtnLabel && unavailable) elBtnLabel.textContent = unavailable;
+    if (stockNote) {
+        stockNote.style.display = unavailable ? '' : 'none';
+        stockNote.querySelector('[data-pi-stock-label]').textContent = unavailable || '';
+    }
+}
+
+// Why the picked variant / pack can't be ordered ("Out of stock", "Restocking", …); null while it can
+function piCurrentUnavailable() {
+    if (PI_IS_BALLS) {
+        const pack = currentBallsPack();
+        return !pack ? 'Unavailable' : (pack.available ? null : (pack.unavailable || 'Unavailable'));
+    }
+    return piVariantId === null ? 'Unavailable' : (PI_VARIANTS[piVariantId]?.unavailable ?? null);
 }
 
 function piAddToCart() {
+    if (piCurrentUnavailable() !== null) return;
+
     const subtitle  = piVariantName ? 'Variant: ' + piVariantName : null;
     const specials  = document.getElementById('pi-special-requests')?.value?.trim() || null;
 
@@ -1850,6 +1668,7 @@ function piAddToCart() {
 document.addEventListener('DOMContentLoaded', () => {
     const minus = document.getElementById('pi-qty-minus');
     if (minus) minus.disabled = true;
+    if (!PI_IS_BALLS) piRenderQty();
     piRefreshSummary();
 });
 @endif

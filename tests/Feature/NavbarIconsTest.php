@@ -44,7 +44,7 @@ class NavbarIconsTest extends TestCase
 
         $product = Product::create(['name' => 'Back Test ' . uniqid(), 'category_id' => Category::firstOrCreate(['name' => 'Gift Boxes'])->id]);
 
-        foreach (['/shop', '/bts-merch', '/gift-boxes', '/about', '/mystery-balls'] as $url) {
+        foreach (['/shop', '/bts-merch', '/gift-boxes', '/about'] as $url) {
             $this->get($url)->assertOk()->assertSee('id="rv-back-btn"', false)->assertSee('onclick="return rvGoBack(event)"', false);
         }
 

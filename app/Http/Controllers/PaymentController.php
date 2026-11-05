@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\DataTransferObjects\Payment\RemainingPaymentDTO;
+use App\Exceptions\SafepayException;
 use App\Http\Requests\Payment\InitiatePaymentRequest;
 use App\Http\Requests\Payment\RemainingPaymentRequest;
 use App\Models\Order;
 use App\Services\Payment\PaymentService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,11 +31,28 @@ class PaymentController extends Controller
     {
         try {
             $redirect = $this->paymentService->initiateForOrder($request->user(), $order->id, $request->input('next_order_uuid') ?: null);
+        } catch (SafepayException|ConnectionException $e) {
+            return $this->gatewayUnavailable($order, $e);
         } catch (\RuntimeException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
         return response()->json(['success' => true, 'redirect' => $redirect]);
+    }
+
+    /**
+     * The order is saved; only the hand-off to Safepay failed (gateway down,
+     * misconfigured, unreachable). Say so plainly — without the internal
+     * detail — and let the customer try the payment again.
+     */
+    private function gatewayUnavailable(Order $order, \Throwable $e): JsonResponse
+    {
+        Log::error('Safepay payment could not be started.', ['order_id' => $order->id, 'message' => $e->getMessage()]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'We could not reach the payment provider just now. Your order is saved — please try the payment again in a moment.',
+        ], 503);
     }
 
     /**
@@ -45,6 +64,8 @@ class PaymentController extends Controller
     {
         try {
             $redirect = $this->paymentService->initiateRemaining($request->user(), $order->id);
+        } catch (SafepayException|ConnectionException $e) {
+            return $this->gatewayUnavailable($order, $e);
         } catch (\RuntimeException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }

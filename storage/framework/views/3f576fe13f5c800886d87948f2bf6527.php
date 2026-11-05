@@ -104,12 +104,13 @@
 
     // Mystery Scoop sizes, cheapest first ("Classic Scoop" → "Classic")
     $scoopOptions = $genericProduct && ! $genericProduct->usesPackPricing()
-        ? $genericProduct->variants->sortBy('price')->values()->map(fn ($v) => [
+        ? $genericProduct->offeredVariants()->sortBy('price')->values()->map(fn ($v) => [
             'id'       => $v->id,
             'name'     => trim(preg_replace('/\bscoop\b/i', '', $v->variant_name)) ?: $v->variant_name,
             'price'    => $v->effectivePrice(),
             'original' => $v->hasDiscount() ? (float) $v->price : null,
             'percent'  => $v->discountPercent(),
+            'unavailable' => $v->unavailableLabel(),   // "Out of stock" / "Restocking" …, null while it can be ordered
         ])->all()
         : [];
     $firstScoop = $scoopOptions[0] ?? null;
@@ -152,6 +153,9 @@
     .size-btn.active .size-name { color: <?php echo e($theme['accent']); ?>; }
     .size-btn .size-price { font-size: .75rem; color: #6b7280; }
     .size-btn.balls-pack-btn { min-width: 4.75rem; padding: .35rem .6rem; }
+    /* a size / pack that can't be ordered right now: still selectable, so its status can be read */
+    .size-btn.unavailable { opacity: .65; }
+    .size-btn .size-status { font-size: .7rem; font-weight: 600; color: #b45309; }
 
     /* Quantity */
     .qty-btn {
@@ -241,396 +245,7 @@
 <div class="container px-4">
 
 
-<?php if($productType === 'mystery-balls'): ?>
-<?php $__env->startSection('title', 'Mystery Balls'); ?>
-
-    <div class="text-center mb-5">
-        <h1 class="fw-bold mb-3" style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,<?php echo e($theme['accent']); ?>,<?php echo e($theme['accent2']); ?>);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-            Mystery Balls
-        </h1>
-        <p class="text-muted mx-auto" style="max-width:36rem;font-size:1.05rem;">
-            Unwrap the fun! Each mystery ball contains a surprise item identical to our famous scoops.
-        </p>
-    </div>
-
-    <div class="info-alert mb-4 d-flex gap-2 align-items-start">
-        <i class="ri-information-line mt-1" style="color:#3b82f6;flex-shrink:0;"></i>
-        <div><strong>Quantity Rules:</strong> Minimum order is <?php echo e($ballsMin); ?> balls. You can order up to <?php echo e($ballsMax); ?> balls per batch. Orders must be in multiples of 5 (e.g., 5, 10, 15...).</div>
-    </div>
-
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="product-card card mb-4">
-                <div class="row g-0">
-                    <div class="col-md-5 position-relative">
-                        <img src="https://images.unsplash.com/photo-1615485925694-a031e97d8964?w=600&q=80" alt="Mystery Balls" class="product-img h-100">
-                        <?php if (isset($component)) { $__componentOriginalc259565ab925afbe6d933017bcb8ab06 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginalc259565ab925afbe6d933017bcb8ab06 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.discount-badge','data' => ['id' => 'discount-badge','label' => isset($ballPacks[0]['percent']) ? '-' . $ballPacks[0]['percent'] . '%' : null]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('discount-badge'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['id' => 'discount-badge','label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(isset($ballPacks[0]['percent']) ? '-' . $ballPacks[0]['percent'] . '%' : null)]); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
-<?php $attributes = $__attributesOriginalc259565ab925afbe6d933017bcb8ab06; ?>
-<?php unset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
-<?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
-<?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
-<?php endif; ?>
-                        <span class="position-absolute top-0 start-0 m-3 badge" style="background:<?php echo e($theme['badgeBg']); ?>;font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">Best Seller</span>
-                    </div>
-                    <div class="col-md-7">
-                        <div class="card-body p-4 d-flex flex-column justify-content-center h-100">
-                            <h3 class="fw-bold mb-3">Standard Mystery Balls</h3>
-                            <p class="text-muted mb-4">Get the thrill of the unknown! Our mystery balls are packed with the same high-quality stationery, accessories, and cute items found in our scoops.</p>
-                            <div class="mb-4">
-                                <?php echo $__env->make('pages.partials.balls-pricing', ['packs' => $ballPacks, 'mode' => $ballsMode, 'accent' => $theme['accent']], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-                            </div>
-                            <div class="bg-light rounded-3 p-4 text-center">
-                                <div class="fw-medium text-muted small mb-3">Select Quantity (Multiples of 5)</div>
-                                <div class="d-flex align-items-center justify-content-center gap-4">
-                                    <button class="qty-btn" id="qty-minus" onclick="updateQtyBalls(-5)"><i class="ri-subtract-line"></i></button>
-                                    <div>
-                                        <div class="fw-bold" id="qty-display" style="font-size:2.5rem;line-height:1;"><?php echo e($ballsMin); ?></div>
-                                        <div class="text-muted" style="font-size:.75rem;">Balls</div>
-                                    </div>
-                                    <button class="qty-btn" id="qty-plus" onclick="updateQtyBalls(5)"><i class="ri-add-line"></i></button>
-                                </div>
-                                <div class="text-muted mt-2" style="font-size:.8rem;">Range: <?php echo e($ballsMin); ?> - <?php echo e($ballsMax); ?> balls</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            
-            <div class="card border-0 shadow-sm rounded-3 p-4 mb-4">
-                <h5 class="fw-bold mb-4">🎁 How Mystery Balls Work</h5>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🛒 Step 1: Choose Your Pack Size</div>
-                    <p class="text-muted small mb-0">Select how many Mystery Balls you'd like. You can choose any quantity from 5 to 50 balls in increments of 5.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🔢 Step 2: Select Quantity</div>
-                    <p class="text-muted small mb-0">Choose the number of packs you'd like to order. You can mix different Mystery Ball collections in the same order.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">✍️ Step 3: Add Special Requests (Optional)</div>
-                    <p class="text-muted small mb-1">Use the comment box before adding to cart to let us know:</p>
-                    <ul class="text-muted small mb-1 ps-3">
-                        <li>Preferred themes or characters</li>
-                        <li>Items you'd love to receive</li>
-                        <li>Items you'd like to avoid</li>
-                        <li>Any replacement suggestions</li>
-                    </ul>
-                    <p class="text-muted small mb-0">We'll do our best to personalize your mystery experience.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🎲 Step 4: We Curate Your Mystery</div>
-                    <p class="text-muted small mb-1">Every Mystery Ball is packed with care to keep every order exciting and unique.</p>
-                    <p class="text-muted small mb-0">👉 <strong>Note:</strong> If your order contains too many identical items, we'll replace some with similar items to keep your mystery fun and varied.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">📦 Step 5: Enjoy the Surprise</div>
-                    <p class="text-muted small mb-0">Your Mystery Balls arrive beautifully packed and ready to open. Enjoy discovering what's inside and share the excitement! 🎉</p>
-                </div>
-            </div>
-
-            <?php echo $__env->make('pages.partials.product-reviews', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="summary-card card p-4">
-                <h5 class="fw-bold mb-4">Order Summary</h5>
-                <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Quantity</span>
-                    <span class="fw-semibold" id="summary-qty"><?php echo e($ballsMin); ?> Balls</span>
-                </div>
-                <?php if($ballsMode === \App\Models\Product::PRICING_AUTOMATIC && $ballPacks): ?>
-                <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Price per 5</span>
-                    <span class="fw-semibold balls-base-price"><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['amount' => $ballPacks[0]['price'] * 5 / $ballsMin,'original' => $ballPacks[0]['original'] !== null ? $ballPacks[0]['original'] * 5 / $ballsMin : null]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('price'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['amount' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($ballPacks[0]['price'] * 5 / $ballsMin),'original' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($ballPacks[0]['original'] !== null ? $ballPacks[0]['original'] * 5 / $ballsMin : null)]); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?></span>
-                </div>
-                <?php endif; ?>
-                <div class="mb-4 d-flex justify-content-between fw-bold fs-5">
-                    <span>Total</span>
-                    <span id="summary-total" style="color:<?php echo e($theme['accent']); ?>;"><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['amount' => $ballPacks[0]['price'] ?? null,'original' => $ballPacks[0]['original'] ?? null]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('price'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['amount' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($ballPacks[0]['price'] ?? null),'original' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($ballPacks[0]['original'] ?? null)]); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?></span>
-                </div>
-                <div class="mb-4">
-                    <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
-                    <textarea class="form-control" rows="4" id="mb-special-requests" placeholder="E.g., color preferences, specific themes..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
-                </div>
-                <button onclick="addToCart('mystery-balls')" id="balls-add-btn" <?php if(! $ballPacks || ! $ballPacks[0]['available']): echo 'disabled'; endif; ?> class="btn text-white w-100 py-2 fw-semibold" style="background:<?php echo e($theme['btnGrad']); ?>;border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR <?php echo e(number_format($ballPacks[0]['price'] ?? 0)); ?></span>
-                </button>
-                <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
-            </div>
-        </div>
-    </div>
-
-
-<?php elseif($productType === 'mystery-scoops'): ?>
-<?php $__env->startSection('title', 'Mystery Scoops'); ?>
-
-    <div class="text-center mb-5">
-        <h1 class="fw-bold mb-3" style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,<?php echo e($theme['accent']); ?>,<?php echo e($theme['accent2']); ?>);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-            Mystery Scoops
-        </h1>
-        <p class="text-muted mx-auto" style="max-width:36rem;font-size:1.05rem;">
-            Choose your scoop size and let the mystery begin! Each scoop is carefully curated with amazing items.
-        </p>
-    </div>
-
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="product-card card mb-4">
-                <div class="row g-0">
-                    <div class="col-md-5 position-relative">
-                        <img src="https://images.unsplash.com/photo-1765516833058-c322c800fee1?w=600&q=80" alt="Mystery Scoop" class="product-img h-100">
-                        <?php if (isset($component)) { $__componentOriginalc259565ab925afbe6d933017bcb8ab06 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginalc259565ab925afbe6d933017bcb8ab06 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.discount-badge','data' => ['id' => 'discount-badge','label' => isset($firstScoop['percent']) ? '-' . $firstScoop['percent'] . '%' : null]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('discount-badge'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['id' => 'discount-badge','label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(isset($firstScoop['percent']) ? '-' . $firstScoop['percent'] . '%' : null)]); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
-<?php $attributes = $__attributesOriginalc259565ab925afbe6d933017bcb8ab06; ?>
-<?php unset($__attributesOriginalc259565ab925afbe6d933017bcb8ab06); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
-<?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
-<?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
-<?php endif; ?>
-                        <span class="position-absolute top-0 start-0 m-3 badge" style="background:<?php echo e($theme['badgeBg']); ?>;font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">Best Seller</span>
-                    </div>
-                    <div class="col-md-7">
-                        <div class="card-body p-4 d-flex flex-column justify-content-start h-100">
-                            <h3 class="fw-bold mb-2">Classic Mystery Scoop</h3>
-                            <p class="text-muted small mb-3">A delightful surprise of curated items in our Classic size. Each scoop contains a variety of beads, charms, and accessories.</p>
-                            <div class="info-note mb-3">⚠️ Note: More than 4 same beads will be upgraded to prevent same items. If you don't want upgrades, please specify in the comments.</div>
-                            <div class="mb-3">
-                                <span class="fw-bold" id="display-price" style="font-size:1.5rem;color:<?php echo e($theme['accent']); ?>;"><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['amount' => $firstScoop['price'] ?? null,'original' => $firstScoop['original'] ?? null]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('price'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['amount' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($firstScoop['price'] ?? null),'original' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($firstScoop['original'] ?? null)]); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?></span>
-                                <span class="text-muted small ms-1" id="display-size-label">per <?php echo e(strtolower($firstScoop['name'] ?? 'scoop')); ?></span>
-                            </div>
-                            <div class="mb-3">
-                                <div class="fw-medium small mb-2">Select size</div>
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <?php $__empty_1 = true; $__currentLoopData = $scoopOptions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $scoop): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                                    <button class="size-btn <?php echo e($i === 0 ? 'active' : ''); ?>" onclick="selectSize(this, <?php echo e($i); ?>)">
-                                        <div class="size-name"><?php echo e($scoop['name']); ?></div><div class="size-price" data-scoop-idx="<?php echo e($i); ?>"><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['amount' => $scoop['price'],'original' => $scoop['original']]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('price'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['amount' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($scoop['price']),'original' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($scoop['original'])]); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?></div>
-                                    </button>
-                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                                    <span class="text-muted small">This product is currently unavailable.</span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: 1, Max: 20)</span></div>
-                                <div class="d-flex align-items-center gap-3">
-                                    <button class="qty-btn" id="scoop-minus" onclick="updateQtyScoop(-1)" disabled><i class="ri-subtract-line"></i></button>
-                                    <span class="fw-bold fs-5" id="scoop-qty-display">1</span>
-                                    <button class="qty-btn" id="scoop-plus" onclick="updateQtyScoop(1)"><i class="ri-add-line"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            
-            <div class="card border-0 shadow-sm rounded-3 p-4 mb-4">
-                <h5 class="fw-bold mb-4">🎁 How Mystery Scoops Work</h5>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🛒 Step 1: Choose Your Scoop Size</div>
-                    <p class="text-muted small mb-1">Select your Mystery Scoop size:</p>
-                    <ul class="text-muted small mb-1 ps-3"><li>Classic Scoop</li><li>Standard Scoop</li><li>Premium Scoop</li></ul>
-                    <p class="text-muted small mb-0">Each size comes with a different value and surprise level.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🔢 Step 2: Select Quantity</div>
-                    <p class="text-muted small mb-0">Choose how many scoops you want (minimum 1, maximum 20 per size). You can also mix different sizes with different quantities in one order.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">✍️ Step 3: Add Special Requests (Optional)</div>
-                    <p class="text-muted small mb-1">Before adding to cart, use the comment box to tell us:</p>
-                    <ul class="text-muted small mb-1 ps-3"><li>Preferred themes</li><li>Items you'd love to receive</li><li>Items you'd like to avoid</li><li>Replacement suggestions</li></ul>
-                    <p class="text-muted small mb-0">We'll try our best to personalize your mystery.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">🎲 Step 4: We Curate the Surprise</div>
-                    <p class="text-muted small mb-1">Our team handpicks each scoop with care. No two Mystery Scoops are the same — that's the magic!</p>
-                    <p class="text-muted small mb-0">👉 <strong>Note:</strong> If more than 4 identical items are selected, they'll be upgraded automatically to keep your mystery exciting.</p>
-                </div>
-                <div class="how-step">
-                    <div class="fw-semibold mb-1">📦 Step 5: Unbox the Fun</div>
-                    <p class="text-muted small mb-0">Receive your Mystery Scoops beautifully packed and ready to surprise you. Open, explore, and enjoy the thrill of the unknown 🎉</p>
-                </div>
-            </div>
-
-            <?php echo $__env->make('pages.partials.product-reviews', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="summary-card card p-4">
-                <h5 class="fw-bold mb-4">Order Summary</h5>
-                <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Size</span>
-                    <span class="fw-semibold" id="summary-size"><?php echo e($firstScoop['name'] ?? '—'); ?></span>
-                </div>
-                <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Quantity</span>
-                    <span class="fw-semibold" id="summary-qty">1</span>
-                </div>
-                <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
-                    <span class="text-muted">Price per scoop</span>
-                    <span class="fw-semibold" id="summary-unit-price"><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['amount' => $firstScoop['price'] ?? null,'original' => $firstScoop['original'] ?? null]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('price'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['amount' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($firstScoop['price'] ?? null),'original' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($firstScoop['original'] ?? null)]); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?></span>
-                </div>
-                <div class="mb-4 d-flex justify-content-between fw-bold fs-5">
-                    <span>Total</span>
-                    <span id="summary-total" style="color:<?php echo e($theme['accent']); ?>;"><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['amount' => $firstScoop['price'] ?? null,'original' => $firstScoop['original'] ?? null]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('price'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['amount' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($firstScoop['price'] ?? null),'original' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($firstScoop['original'] ?? null)]); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $attributes = $__attributesOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__attributesOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal5c7c50258000edf57abfef324d310474)): ?>
-<?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
-<?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
-<?php endif; ?></span>
-                </div>
-                <div class="mb-4">
-                    <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
-                    <textarea class="form-control" rows="4" id="ms-special-requests" placeholder="E.g., preferred themes, items to avoid..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
-                </div>
-                <button onclick="addToCart('mystery-scoops')" <?php if(! $scoopOptions): echo 'disabled'; endif; ?> class="btn text-white w-100 py-2 fw-semibold" style="background:<?php echo e($theme['btnGrad']); ?>;border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR <?php echo e(number_format($firstScoop['price'] ?? 0)); ?></span>
-                </button>
-                <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
-            </div>
-        </div>
-    </div>
-
-
-
-<?php elseif($productType === 'bts-scoop'): ?>
+<?php if($productType === 'bts-scoop'): ?>
 
 <?php $__env->startSection('title', $bias && ($genericProduct ?? null) ? $genericProduct->name : 'BTS Mystery Scoop'); ?>
 
@@ -706,7 +321,7 @@
                                 <div class="fw-medium small mb-2">Select size</div>
                                 <div class="d-flex gap-2 flex-wrap">
                                     <?php $__empty_1 = true; $__currentLoopData = $scoopOptions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $scoop): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                                    <button class="size-btn <?php echo e($i === 0 ? 'active' : ''); ?>" onclick="selectSize(this, <?php echo e($i); ?>)">
+                                    <button class="size-btn <?php echo e($i === 0 ? 'active' : ''); ?> <?php echo e($scoop['unavailable'] ? 'unavailable' : ''); ?>" onclick="selectSize(this, <?php echo e($i); ?>)">
                                         <div class="size-name"><?php echo e($scoop['name']); ?></div><div class="size-price" data-scoop-idx="<?php echo e($i); ?>"><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal5c7c50258000edf57abfef324d310474 = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.price','data' => ['amount' => $scoop['price'],'original' => $scoop['original']]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
@@ -727,6 +342,7 @@
 <?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
 <?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
 <?php endif; ?></div>
+                                        <?php if($scoop['unavailable']): ?><div class="size-status"><?php echo e($scoop['unavailable']); ?></div><?php endif; ?>
                                     </button>
                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                     <span class="text-muted small">This product is currently unavailable.</span>
@@ -869,8 +485,8 @@
                     <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
                     <textarea class="form-control" rows="4" id="bs-special-requests" placeholder="E.g., preferred member items, era themes..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
                 </div>
-                <button onclick="addToCart('bts-scoop')" <?php if(! $scoopOptions): echo 'disabled'; endif; ?> class="btn text-white w-100 py-2 fw-semibold" style="background:<?php echo e($theme['btnGrad']); ?>;border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i>Add to Cart — <span id="btn-total">PKR <?php echo e(number_format($firstScoop['price'] ?? 0)); ?></span>
+                <button onclick="addToCart('bts-scoop')" id="scoop-add-btn" <?php if(! $scoopOptions || $firstScoop['unavailable']): echo 'disabled'; endif; ?> class="btn text-white w-100 py-2 fw-semibold" style="background:<?php echo e($theme['btnGrad']); ?>;border-radius:.5rem;font-size:.9rem;">
+                    <i class="ri-shopping-cart-line me-2"></i><span id="scoop-btn-label"><?php echo e($firstScoop['unavailable'] ?? 'Add to Cart'); ?></span><span id="scoop-btn-price" <?php if($firstScoop['unavailable'] ?? null): ?> style="display:none;" <?php endif; ?>> — <span id="btn-total">PKR <?php echo e(number_format($firstScoop['price'] ?? 0)); ?></span></span>
                 </button>
                 <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
             </div>
@@ -1214,7 +830,8 @@
     $productImg     = $product->images->first()?->image_url
                         ?? 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80';
 
-    $variants       = $product->variants->sortBy('price')->values();
+    // discontinued variants are no longer offered; an out-of-stock / restocking one stays visible, labelled
+    $variants       = $product->offeredVariants()->sortBy('price')->values();
     $hasMultiVariants = $variants->count() > 1;
 
     // Balls: the stepper walks the pack options and each pack is a single
@@ -1224,7 +841,11 @@
     $ballsMin  = $ballPacks[0]['qty'] ?? 5;
     $ballsMax  = $ballPacks ? $ballPacks[count($ballPacks) - 1]['qty'] : 50;
 
-    $firstVariant   = $isBalls ? $variants->firstWhere('id', $ballPacks[0]['id'] ?? null) : $variants->first();
+    // the page opens on a variant that can be bought, if there is one
+    $firstVariant   = $isBalls
+        ? $variants->firstWhere('id', $ballPacks[0]['id'] ?? null)
+        : ($variants->first(fn ($v) => $v->isPurchasable()) ?? $variants->first());
+    $piUnavailable  = $firstVariant ? $firstVariant->unavailableLabel() : 'Unavailable';   // why the opening selection can't be ordered
     $minPrice       = $firstVariant?->effectivePrice() ?? 0;
     $minOriginal    = $firstVariant?->hasDiscount() ? (float) $firstVariant->price : null;
     $isPreorderItem = $firstVariant?->status === \App\Models\ProductVariant::STATUS_PRE_ORDER;
@@ -1235,6 +856,8 @@
         'original' => $v->hasDiscount() ? (float) $v->price : null,
         'percent'  => $v->discountPercent(),
         'preorder' => $v->isPreOrder(),
+        'unavailable' => $v->unavailableLabel(),
+        'max_qty'  => $v->max_qty,
     ]])->all();
 
     // Breadcrumb label
@@ -1367,8 +990,8 @@
                             <div class="mb-3">
                                 <div class="fw-medium small mb-2">Select Variant</div>
                                 <div class="d-flex gap-2 flex-wrap">
-                                    <?php $__currentLoopData = $variants; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $variant): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <button class="size-btn <?php echo e($i === 0 ? 'active' : ''); ?>" data-variant-id="<?php echo e($variant->id); ?>"
+                                    <?php $__currentLoopData = $variants; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $variant): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <button class="size-btn <?php echo e($variant->id === $firstVariant?->id ? 'active' : ''); ?> <?php echo e($variant->unavailableLabel() ? 'unavailable' : ''); ?>" data-variant-id="<?php echo e($variant->id); ?>"
                                             onclick="piSelectVariant(this, <?php echo e($variant->id); ?>)">
                                         <div class="size-name"><?php echo e($variant->variant_name); ?></div>
                                         <div class="size-price"><?php if (isset($component)) { $__componentOriginal5c7c50258000edf57abfef324d310474 = $component; } ?>
@@ -1391,6 +1014,7 @@
 <?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
 <?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
 <?php endif; ?></div>
+                                        <?php if($variant->unavailableLabel()): ?><div class="size-status"><?php echo e($variant->unavailableLabel()); ?></div><?php endif; ?>
                                     </button>
                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </div>
@@ -1428,6 +1052,11 @@
                             <?php endif; ?>
 
                             
+                            <div class="info-note mb-3" id="pi-stock-note" <?php if(! $piUnavailable): ?> style="display:none;" <?php endif; ?>>
+                                <strong data-pi-stock-label><?php echo e($piUnavailable); ?></strong> — this can't be ordered right now.
+                            </div>
+
+                            
                             <div class="mb-3 mt-auto">
                                 <?php if($isBalls): ?>
                                     <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Multiples of 5, max <?php echo e($ballsMax); ?>)</span></div>
@@ -1437,7 +1066,7 @@
                                         <button class="qty-btn" id="pi-qty-plus"  onclick="updateQtyBalls(5)" <?php if(count($ballPacks) <= 1): echo 'disabled'; endif; ?>><i class="ri-add-line"></i></button>
                                     </div>
                                 <?php else: ?>
-                                    <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: 1, Max: <?php echo e($firstVariant?->max_qty ?? 10); ?>)</span></div>
+                                    <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: 1, Max: <span id="pi-max-qty"><?php echo e($firstVariant?->max_qty ?? 10); ?></span>)</span></div>
                                     <div class="d-flex align-items-center gap-3">
                                         <button class="qty-btn" id="pi-qty-minus" onclick="piUpdateQty(-1)" disabled><i class="ri-subtract-line"></i></button>
                                         <span class="fw-bold fs-5" id="pi-qty-display">1</span>
@@ -1620,12 +1249,12 @@
                               placeholder="E.g., preferred themes, items to avoid..."
                               style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
                 </div>
-                <button onclick="piAddToCart()" id="pi-add-btn" <?php if($isBalls && ! ($ballPacks[0]['available'] ?? false)): echo 'disabled'; endif; ?>
+                <button onclick="piAddToCart()" id="pi-add-btn" <?php if($piUnavailable !== null): echo 'disabled'; endif; ?>
                         class="btn text-white w-100 py-2 fw-semibold"
                         style="background:<?php echo e($piTheme['btnGrad']); ?>;border-radius:.5rem;font-size:.9rem;">
                     <i class="ri-shopping-cart-line me-2"></i>
-                    <span id="pi-btn-label"><?php echo e($isPreorderItem ? 'Pre-order Now' : 'Add to Cart'); ?></span> —
-                    <span id="pi-btn-total">PKR <?php echo e($isPreorderItem ? number_format(round($minPrice * 0.4)) : number_format($minPrice)); ?></span>
+                    <span id="pi-btn-label"><?php echo e($piUnavailable ?? ($isPreorderItem ? 'Pre-order Now' : 'Add to Cart')); ?></span><span id="pi-btn-price" <?php if($piUnavailable): ?> style="display:none;" <?php endif; ?>> —
+                    <span id="pi-btn-total">PKR <?php echo e($isPreorderItem ? number_format(round($minPrice * 0.4)) : number_format($minPrice)); ?></span></span>
                 </button>
                 <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
             </div>
@@ -1665,6 +1294,26 @@
 <?php if (isset($__componentOriginalc259565ab925afbe6d933017bcb8ab06)): ?>
 <?php $component = $__componentOriginalc259565ab925afbe6d933017bcb8ab06; ?>
 <?php unset($__componentOriginalc259565ab925afbe6d933017bcb8ab06); ?>
+<?php endif; ?>
+                            <?php if (isset($component)) { $__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.stock-badge','data' => ['label' => $related->stockLabel(),'live' => true]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('stock-badge'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($related->stockLabel()),'live' => true]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4)): ?>
+<?php $attributes = $__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4; ?>
+<?php unset($__attributesOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4)): ?>
+<?php $component = $__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4; ?>
+<?php unset($__componentOriginal8c4d3e6a7bdeb5f6eaebbbf1808b98c4); ?>
 <?php endif; ?>
                         </div>
                         <div class="p-3">
@@ -1822,9 +1471,7 @@ async function persistToCart(payload, localItem) {
 }
 
 const PRODUCT_META = {
-    'mystery-balls':  { name: 'Mystery Balls',        image: 'https://images.unsplash.com/photo-1615485925694-a031e97d8964?w=200&q=80', preorder: false },
-    'mystery-scoops': { name: 'Mystery Scoop',         image: 'https://images.unsplash.com/photo-1765516833058-c322c800fee1?w=200&q=80', preorder: false },
-    'bts-scoop':      { name: 'BTS Mystery Scoop',     image: 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=200&q=80', preorder: false },
+    'bts-scoop':     { name: 'BTS Mystery Scoop',     image: 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=200&q=80', preorder: false },
     'bts-balls':      { name: 'BTS Mystery Balls',     image: 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=200&q=80', preorder: false },
     'ceramic':        { name: 'Cute Ceramic Mug',      image: 'https://images.unsplash.com/photo-1515401857507-c897a8f64e42?w=200&q=80', preorder: false },
     'gift-box':       { name: '<?php echo e(addslashes($productName ?? "Tata's Space Gift Box")); ?>', image: '<?php echo e($productImg ?? 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80'); ?>', preorder: false },
@@ -1837,9 +1484,7 @@ const DB_PRODUCT_MAP = <?php echo json_encode($dbProductMap ?? ['product_id' => 
 
 // Maps each generic product type to its "Special Requests" textarea id
 const SPECIAL_REQUESTS_FIELD = {
-    'mystery-balls':  'mb-special-requests',
-    'mystery-scoops': 'ms-special-requests',
-    'bts-scoop':      'bs-special-requests',
+    'bts-scoop':     'bs-special-requests',
     'bts-balls':      'bb-special-requests',
 };
 
@@ -1847,7 +1492,7 @@ function addToCart(type) {
     const meta = PRODUCT_META[type] || {};
     let unitPrice, qty, subtitle, variantId = null, originalPrice = null;
 
-    if (type === 'mystery-balls' || type === 'bts-balls') {
+    if (type === 'bts-balls') {
         // The selected pack (e.g. "Pack of 10") is one cart line priced as a whole
         const pack = currentBallsPack();
         if (!pack || !pack.available) return;
@@ -1857,9 +1502,9 @@ function addToCart(type) {
         qty           = 1;
         subtitle      = 'Pack of ' + pack.qty;
 
-    } else if (type === 'mystery-scoops' || type === 'bts-scoop') {
+    } else if (type === 'bts-scoop') {
         const scoop = SCOOP_OPTIONS[scoopIdx];
-        if (!scoop) return;
+        if (!scoop || scoop.unavailable) return;
         variantId     = scoop.id;
         unitPrice     = scoop.price;
         originalPrice = scoop.original;
@@ -2003,6 +1648,14 @@ function updateScoopSummary() {
     if (su) su.innerHTML = priceHtml(scoop.price, scoop.original);
     if (st) st.innerHTML = priceHtml(scoop.price * scoopQty, scoop.original ? scoop.original * scoopQty : null);
     if (bt) bt.textContent = fmtPkr(scoop.price * scoopQty);
+
+    // an out-of-stock / restocking size can't be ordered: the button says why
+    const addBtn   = document.getElementById('scoop-add-btn');
+    const btnLabel = document.getElementById('scoop-btn-label');
+    const btnPrice = document.getElementById('scoop-btn-price');
+    if (addBtn)   addBtn.disabled = !!scoop.unavailable;
+    if (btnLabel) btnLabel.textContent = scoop.unavailable || 'Add to Cart';
+    if (btnPrice) btnPrice.style.display = scoop.unavailable ? 'none' : '';
 }
 
 // ── Ceramic / Gift Box ─────────────────────────────────────────────────────
@@ -2107,7 +1760,6 @@ let piQty         = <?php echo e(($isBalls ?? false) ? ($ballsMin ?? 5) : 1); ?>
 let piIsPreorder  = <?php echo e(($isPreorderItem ?? false) ? 'true' : 'false'); ?>;
 const PI_IS_BALLS   = <?php echo e(($isBalls ?? false) ? 'true' : 'false'); ?>;
 const PI_BALLS_AUTOMATIC = <?php echo e(($ballsMode ?? null) === \App\Models\Product::PRICING_AUTOMATIC ? 'true' : 'false'); ?>;
-const PI_MAX_QTY    = <?php echo e($firstVariant?->max_qty ?? 10); ?>;
 const PI_PRODUCT_ID = 'pi-<?php echo e($product->id ?? 'x'); ?>';
 const PI_PRODUCT_NAME = '<?php echo e(addslashes($product->name ?? '')); ?>';
 const PI_PRODUCT_IMG  = '<?php echo e($productImg ?? ''); ?>';
@@ -2135,9 +1787,7 @@ function piSelectVariant(btn, variantId) {
     piVariantName   = variant.name;
     piVariantId     = variantId;
     piQty = 1;
-    document.getElementById('pi-qty-display').textContent = piQty;
-    const minus = document.getElementById('pi-qty-minus');
-    if (minus) minus.disabled = true;
+    piRenderQty();
 
     piSetPreorder(variant.preorder);
     piRefreshSummary();
@@ -2157,7 +1807,7 @@ function piApplyLive(product) {
 
     Object.entries(product.variants).forEach(([id, fresh]) => {
         if (!PI_VARIANTS[id]) return;
-        Object.assign(PI_VARIANTS[id], { price: fresh.price, original: fresh.original, percent: fresh.percent, preorder: fresh.preorder });
+        Object.assign(PI_VARIANTS[id], { price: fresh.price, original: fresh.original, percent: fresh.percent, preorder: fresh.preorder, max_qty: fresh.max_qty });
         const price = document.querySelector(`.size-btn[data-variant-id="${id}"] .size-price`);
         if (price) price.innerHTML = livePriceHtml(fresh.price, fresh.original);
     });
@@ -2173,6 +1823,7 @@ function piApplyLive(product) {
         piOriginalPrice = picked.original;
         setDiscountBadge(picked.percent);
         piSetPreorder(picked.preorder);
+        piRenderQty();   // the admin may have changed this variant's maximum
         piRefreshSummary();
     }
 }
@@ -2194,11 +1845,25 @@ function piApplyBallsPack(pack) {
     piRefreshSummary();
 }
 
-function piUpdateQty(change) {
-    piQty = Math.min(PI_MAX_QTY, Math.max(1, piQty + change));
+// Each variant has its own maximum (Classic 5, Deluxe 10…), so the limit follows the picked one
+function piMaxQty() {
+    return Number(PI_VARIANTS[piVariantId]?.max_qty) || 10;
+}
+
+// Keep the stepper, its "Max" label and both buttons in step with the picked variant
+function piRenderQty() {
+    const max = piMaxQty();
+    piQty = Math.min(max, Math.max(1, piQty));
     document.getElementById('pi-qty-display').textContent = piQty;
     document.getElementById('pi-qty-minus').disabled = piQty <= 1;
-    document.getElementById('pi-qty-plus').disabled  = piQty >= PI_MAX_QTY;
+    document.getElementById('pi-qty-plus').disabled  = piQty >= max;
+    const label = document.getElementById('pi-max-qty');
+    if (label) label.textContent = max;
+}
+
+function piUpdateQty(change) {
+    piQty += change;
+    piRenderQty();
     piRefreshSummary();
 }
 
@@ -2242,9 +1907,33 @@ function piRefreshSummary() {
         if (elBtnLabel) elBtnLabel.textContent = 'Add to Cart';
         if (elBtn)   elBtn.textContent   = fmtPkr(total);
     }
+
+    // An out-of-stock / restocking / unavailable selection can't be ordered: say so instead of "Add to Cart"
+    const unavailable = piCurrentUnavailable();
+    const addBtn      = document.getElementById('pi-add-btn');
+    const btnPrice    = document.getElementById('pi-btn-price');
+    const stockNote   = document.getElementById('pi-stock-note');
+    if (addBtn)   addBtn.disabled = unavailable !== null;
+    if (btnPrice) btnPrice.style.display = unavailable ? 'none' : '';
+    if (elBtnLabel && unavailable) elBtnLabel.textContent = unavailable;
+    if (stockNote) {
+        stockNote.style.display = unavailable ? '' : 'none';
+        stockNote.querySelector('[data-pi-stock-label]').textContent = unavailable || '';
+    }
+}
+
+// Why the picked variant / pack can't be ordered ("Out of stock", "Restocking", …); null while it can
+function piCurrentUnavailable() {
+    if (PI_IS_BALLS) {
+        const pack = currentBallsPack();
+        return !pack ? 'Unavailable' : (pack.available ? null : (pack.unavailable || 'Unavailable'));
+    }
+    return piVariantId === null ? 'Unavailable' : (PI_VARIANTS[piVariantId]?.unavailable ?? null);
 }
 
 function piAddToCart() {
+    if (piCurrentUnavailable() !== null) return;
+
     const subtitle  = piVariantName ? 'Variant: ' + piVariantName : null;
     const specials  = document.getElementById('pi-special-requests')?.value?.trim() || null;
 
@@ -2279,6 +1968,7 @@ function piAddToCart() {
 document.addEventListener('DOMContentLoaded', () => {
     const minus = document.getElementById('pi-qty-minus');
     if (minus) minus.disabled = true;
+    if (!PI_IS_BALLS) piRenderQty();
     piRefreshSummary();
 });
 <?php endif; ?>

@@ -14,6 +14,12 @@ Route::get('/',        [App\Http\Controllers\HomeController::class, 'root'])->na
 Route::get('/shop',    [App\Http\Controllers\HomeController::class, 'shop'])->name('shop');
 Route::get('/about',   fn() => view('pages.about'))->name('about');
 Route::get('/contact', fn() => view('pages.contact'))->name('contact');
+Route::post('/contact', [App\Http\Controllers\ContactController::class, 'send'])->name('contact.send')->middleware('throttle:5,1');
+
+// ── Policies (linked from the footer) ───────────────────────────────────────
+Route::get('/terms',    fn() => view('pages.terms'))->name('terms');
+Route::get('/privacy',  fn() => view('pages.privacy'))->name('privacy');
+Route::get('/shipping', fn() => view('pages.shipping-returns'))->name('shipping');
 
 // ── Products ─────────────────────────────────────────────────────────────────
 Route::get('/mystery-balls',  [App\Http\Controllers\HomeController::class, 'genericProductPage'])->defaults('type', 'mystery-balls')->name('mystery-balls');

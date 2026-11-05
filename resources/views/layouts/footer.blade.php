@@ -36,42 +36,46 @@
                     <div class="col-6 col-md-4">
                         <h6 class="fw-bold fs-6 mb-3 text-white">Policies</h6>
                         <ul class="list-unstyled mb-0" style="color:rgba(255,255,255,.8);font-size:.875rem;">
-                            <li class="mb-2"><a href="{{ url('/privacy') }}"  class="text-white-50 text-decoration-none footer-link">Privacy Policy</a></li>
-                            <li class="mb-2"><a href="{{ url('/shipping') }}" class="text-white-50 text-decoration-none footer-link">Shipping &amp; Returns</a></li>
-                            <li class="mb-2"><a href="{{ url('/terms') }}"    class="text-white-50 text-decoration-none footer-link">Terms of Service</a></li>
+                            <li class="mb-2"><a href="{{ route('privacy') }}"  class="text-white-50 text-decoration-none footer-link">Privacy Policy</a></li>
+                            <li class="mb-2"><a href="{{ route('shipping') }}" class="text-white-50 text-decoration-none footer-link">Shipping &amp; Returns</a></li>
+                            <li class="mb-2"><a href="{{ route('terms') }}"    class="text-white-50 text-decoration-none footer-link">Terms of Service</a></li>
                         </ul>
                     </div>
 
                     {{-- Contact & Social --}}
                     <div class="col-12 col-md-4">
                         <h6 class="fw-bold fs-6 mb-3 text-white">Contact Us</h6>
+                        @php
+                            // The support email and phone saved in Admin → Settings
+                            $footerEmail = \App\Models\Setting::get('support_email');
+                            $footerPhone = \App\Models\Setting::get('support_phone');
+                        @endphp
                         <ul class="list-unstyled mb-0" style="color:rgba(255,255,255,.8);font-size:.875rem;">
-                            <li class="mb-2 d-flex align-items-center gap-2">
-                                <i class="ri-mail-line"></i>
-                                <a href="mailto:info@ravellen.com" class="text-white-50 text-decoration-none footer-link">info@ravellen.com</a>
-                            </li>
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="ri-phone-line"></i>
-                                <a href="tel:+923001234567" class="text-white-50 text-decoration-none footer-link">+92-300-1234567</a>
-                            </li>
+                            @if($footerEmail)
+                                <li class="mb-2 d-flex align-items-center gap-2">
+                                    <i class="ri-mail-line"></i>
+                                    <a href="mailto:{{ $footerEmail }}" class="text-white-50 text-decoration-none footer-link">{{ $footerEmail }}</a>
+                                </li>
+                            @endif
+                            @if($footerPhone)
+                                <li class="d-flex align-items-center gap-2">
+                                    <i class="ri-phone-line"></i>
+                                    <a href="tel:{{ preg_replace('/[^\d+]/', '', $footerPhone) }}" class="text-white-50 text-decoration-none footer-link">{{ $footerPhone }}</a>
+                                </li>
+                            @endif
                         </ul>
 
                         {{-- Social Media --}}
                         <div class="d-flex gap-2 mt-4">
-                            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"
-                               class="footer-social-btn d-flex align-items-center justify-content-center rounded-circle"
-                               style="width:2.25rem;height:2.25rem;background:rgba(255,255,255,.2);">
-                                <i class="ri-facebook-fill"></i>
-                            </a>
-                            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
+                            <a href="https://www.instagram.com/ravellen_nm" target="_blank" rel="noopener noreferrer" aria-label="Ravellen on Instagram"
                                class="footer-social-btn d-flex align-items-center justify-content-center rounded-circle"
                                style="width:2.25rem;height:2.25rem;background:rgba(255,255,255,.2);">
                                 <i class="ri-instagram-line"></i>
                             </a>
-                            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
+                            <a href="https://www.tiktok.com/@ravellen_nm" target="_blank" rel="noopener noreferrer" aria-label="Ravellen on TikTok"
                                class="footer-social-btn d-flex align-items-center justify-content-center rounded-circle"
                                style="width:2.25rem;height:2.25rem;background:rgba(255,255,255,.2);">
-                                <i class="ri-twitter-x-line"></i>
+                                <i class="ri-tiktok-line"></i>
                             </a>
                         </div>
                     </div>

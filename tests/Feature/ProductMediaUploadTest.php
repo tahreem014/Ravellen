@@ -124,7 +124,8 @@ class ProductMediaUploadTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.products.edit', $this->product()))
             ->assertOk()
             ->assertSee('name="media[]" id="mediaInput" class="d-none" multiple', false)
-            ->assertSee('Save media');
+            ->assertSee('Update Product')
+            ->assertDontSee('Save media');
     }
 
     private function product(): Product

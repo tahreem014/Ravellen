@@ -15,6 +15,14 @@ class ProductVariant extends Model
     public const STATUS_RESTOCKING   = 'restocking';
     public const STATUS_DISCONTINUED = 'discontinued';
 
+    public const STATUSES = [
+        self::STATUS_ACTIVE,
+        self::STATUS_OUT_OF_STOCK,
+        self::STATUS_PRE_ORDER,
+        self::STATUS_RESTOCKING,
+        self::STATUS_DISCONTINUED,
+    ];
+
     protected $fillable = [
         'product_id',
         'variant_name',
@@ -49,6 +57,20 @@ class ProductVariant extends Model
     public function isPurchasable(): bool
     {
         return in_array($this->status, [self::STATUS_ACTIVE, self::STATUS_PRE_ORDER], true);
+    }
+
+    /** Why shoppers can't buy this variant right now ("Out of stock", "Restocking", …), null while they can. */
+    public function unavailableLabel(): ?string
+    {
+        if ($this->isPurchasable()) {
+            return null;
+        }
+
+        return match ($this->status) {
+            self::STATUS_OUT_OF_STOCK => 'Out of stock',
+            self::STATUS_RESTOCKING   => 'Restocking',
+            default                   => 'Unavailable',
+        };
     }
 
     public function hasDiscount(): bool

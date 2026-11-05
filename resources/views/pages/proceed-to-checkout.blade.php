@@ -78,6 +78,7 @@
     .default-address-note a:hover { text-decoration: underline; }
 
     /* Order summary */
+    .free-ship-badge { background: #dcfce7; color: #166534; font-size: .75rem; font-weight: 700; padding: .2rem .65rem; border-radius: 2rem; }
     .summary-card {
         background: #fff; border: 0; border-radius: 1rem;
         box-shadow: 0 2px 16px rgba(0,0,0,.07); padding: 1.5rem;
@@ -99,6 +100,15 @@
         transition: opacity .2s; letter-spacing: .01em;
     }
     .place-order-btn:hover { opacity: .88; color: #fff; }
+    .place-order-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+    /* Order saved but the payment page could not be opened */
+    .pay-retry-banner {
+        background: #fef2f2; border: 1px solid #fecaca; border-radius: .75rem;
+        padding: 1rem 1.25rem; color: #991b1b;
+    }
+    .pay-retry-banner a, .empty-checkout-links a { text-decoration: none; display: inline-block; }
+    .empty-checkout-links { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
 
     .item-line-price { font-weight: 600; font-size: .875rem; color: #1f2937; }
     .item-comment {
@@ -181,6 +191,16 @@
             <span id="resume-banner-text">You're signed in. Your details are filled in below.</span>
         </div>
     @endif
+
+    {{-- The order is saved but Safepay's page could not be opened (throttled, offline…): retry the payment, never place the order again --}}
+    <div class="pay-retry-banner mb-4" id="pay-retry-banner" style="display:none;" role="alert">
+        <div class="fw-semibold mb-1"><i class="ri-error-warning-line"></i> Your order is saved, but the payment did not start</div>
+        <div class="small" id="pay-retry-text"></div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <button type="button" class="track-btn" id="pay-retry-btn" onclick="retryPayment()">Try payment again</button>
+            <a class="continue-shop-btn" id="pay-view-order" href="#">View my order</a>
+        </div>
+    </div>
 
     <div class="row g-4 align-items-start">
 
@@ -354,6 +374,9 @@ const SHIPPING_QUOTE_URL = '{{ route('shipping.quote') }}';          // a countr
 let SHIPPING = 0;
 let SHIPPING_AVAILABLE = false;
 let SELECTED_ADDRESS_ID = {{ optional($defaultAddress)->id ?? 'null' }};
+// Orders "Place Order" has already created that still await their first payment. The cart was
+// spent on them, so a retry has to pay these — placing again would only fail.
+let PLACED_ORDERS = null;
 // Set when a guest has just signed in from "Place Order": checkout carries on to payment by itself
 const RESUME = @json($resume ?? null);
 
@@ -414,6 +437,24 @@ async function syncPricesFromDb() {
     }
 }
 
+/* What the summary shows when there is nothing to check out, with somewhere sensible to go. */
+function emptyCheckoutHtml() {
+    if (PLACED_ORDERS) {
+        return '<p class="text-muted small mb-0">Your items are now part of the order above. Finish the payment to confirm it.</p>';
+    }
+
+    const message = readCart().length
+        ? 'No items selected. Go back to your cart to choose what to check out.'
+        : 'Your cart is empty.' + (IS_AUTH ? ' If you just placed an order, you will find it under My orders.' : '');
+
+    return `<p class="text-muted small mb-0">${message}</p>
+        <div class="empty-checkout-links">
+            <a class="track-btn" href="{{ url('/cart') }}">Go to cart</a>
+            <a class="continue-shop-btn" href="{{ url('/shop') }}">Continue shopping</a>
+            ${IS_AUTH ? '<a class="continue-shop-btn" href="{{ route('profile', ['tab' => 'orders']) }}">My orders</a>' : ''}
+        </div>`;
+}
+
 /* ── populate order summary from the selected cart items ─────────────────── */
 function loadSummary() {
     const cart = getSelectedCart();
@@ -421,11 +462,11 @@ function loadSummary() {
     const container = document.getElementById('checkout-items');
 
     if (!cart.length) {
-        container.innerHTML = readCart().length
-            ? '<p class="text-muted small">No items selected. <a href="{{ url('/cart') }}">Go back to your cart</a> to choose what to check out.</p>'
-            : '<p class="text-muted small">No items in cart.</p>';
+        container.innerHTML = emptyCheckoutHtml();
         document.getElementById('co-subtotal').textContent = fmt(0);
         document.getElementById('co-total').textContent    = fmt(0);
+        // Nothing to order, so "Place Order" could only fail
+        document.querySelector('.place-order-btn').disabled = true;
         return;
     }
 
@@ -455,8 +496,10 @@ function loadSummary() {
     document.getElementById('co-subtotal').textContent = fmt(subtotal);
 
     if (SHIPPING_AVAILABLE) {
-        document.getElementById('co-shipping').textContent = fmt(SHIPPING);
-        document.getElementById('co-total').textContent    = fmt(subtotal + SHIPPING);
+        const shipEl = document.getElementById('co-shipping');
+        if (SHIPPING > 0) shipEl.textContent = fmt(SHIPPING);
+        else              shipEl.innerHTML   = '<span class="free-ship-badge">Free shipping</span>';   // an admin-set free rate
+        document.getElementById('co-total').textContent = fmt(subtotal + SHIPPING);
     } else {
         document.getElementById('co-total').textContent = fmt(subtotal);
     }
@@ -584,24 +627,60 @@ async function startPayment(orderUuid, nextOrderUuid) {
             },
             body: JSON.stringify({ next_order_uuid: nextOrderUuid }),
         });
-        const data = await res.json();
+        const data = await readJson(res);
 
-        if (!res.ok || !data.redirect) {
-            showToast(data.message || 'Unable to start payment. Please try again.', 'error');
-            const btn = document.querySelector('.place-order-btn');
-            btn.disabled = false;
-            btn.textContent = 'Place Order';
+        if (res.ok && data.redirect) {
+            window.location.href = data.redirect;
             return;
         }
 
-        window.location.href = data.redirect;
+        paymentDidNotStart(requestErrorMessage(res, data, 'We could not open the payment page. Please try again.'));
     } catch (e) {
         console.error('Payment start failed:', e);
-        showToast('Something went wrong starting payment. Please try again.', 'error');
-        const btn = document.querySelector('.place-order-btn');
-        btn.disabled = false;
-        btn.textContent = 'Place Order';
+        paymentDidNotStart('We could not reach the payment page. Check your connection and try again.');
     }
+}
+
+/* The order exists but Safepay's page did not open (throttled, offline, gateway down…).
+   The cart is already spent on the order, so drop the stale summary and offer the payment
+   again (or the order itself) instead of a "Place Order" that could only fail. */
+function paymentDidNotStart(message) {
+    const due = (PLACED_ORDERS || []).reduce((sum, order) => sum + Number(order.charged_amount), 0);
+
+    loadSummary();
+
+    const btn = document.querySelector('.place-order-btn');
+    btn.disabled = true;
+    btn.textContent = 'Order placed';
+
+    const retryBtn = document.getElementById('pay-retry-btn');
+    retryBtn.disabled = false;
+    retryBtn.textContent = 'Try payment again';
+
+    document.getElementById('pay-retry-text').textContent = `${message} Amount due now: ${fmt(due)}.`;
+    document.getElementById('pay-view-order').href = '/orders/' + PLACED_ORDERS[0].uuid;
+
+    const banner = document.getElementById('pay-retry-banner');
+    banner.style.display = '';
+    banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    showToast(message, 'error');
+}
+
+function retryPayment() {
+    if (!PLACED_ORDERS) return;
+
+    const retryBtn = document.getElementById('pay-retry-btn');
+    retryBtn.disabled = true;
+    retryBtn.textContent = 'Opening payment…';
+
+    return startPayment(PLACED_ORDERS[0].uuid, PLACED_ORDERS[1]?.uuid ?? null);
+}
+
+function resetPlaceOrderButton() {
+    const btn = document.querySelector('.place-order-btn');
+    btn.disabled = false;
+    btn.textContent = 'Place Order';
 }
 
 /* ── guests: phone in the "+countrycode…" form the server needs ──────────── */
@@ -760,33 +839,49 @@ async function placeOrder() {
                 }),
             });
 
-            const data = await res.json();
+            const data = await readJson(res);
 
             if (!res.ok) {
-                const msg = data.message || (data.errors ? Object.values(data.errors).flat().join('\n') : 'Order failed.');
+                const msg = !data.message && data.errors
+                    ? Object.values(data.errors).flat().join('\n')
+                    : requestErrorMessage(res, data, 'Order failed. Please try again.');
                 showToast(msg, 'error');
-                btn.disabled = false;
-                btn.textContent = 'Place Order';
+                resetPlaceOrderButton();
+
+                // The server's cart is the truth: if the items are gone (an earlier attempt,
+                // another tab) show that, rather than a summary the order can no longer use.
+                await syncPricesFromDb();
+                loadSummary();
                 return;
             }
 
             // Drop the ordered items from the localStorage cart (the server
             // already removed them from the DB cart; unselected ones remain)
             removeOrderedItemsFromCart();
+            if (window.updateCartBadge) updateCartBadge();
 
             // Orders are created unpaid — hand off to Safepay for the first
             // one now. A mixed cart (normal + preorder) makes two orders;
             // the second is chained in via next_order_uuid and picked up
             // automatically once the first payment succeeds.
-            const orders = data.orders;
+            PLACED_ORDERS = data.orders;
             btn.textContent = 'Redirecting to payment…';
-            await startPayment(orders[0].uuid, orders[1]?.uuid ?? null);
+            await startPayment(PLACED_ORDERS[0].uuid, PLACED_ORDERS[1]?.uuid ?? null);
 
         } catch (e) {
             console.error('Order error:', e);
+
+            if (PLACED_ORDERS) {
+                paymentDidNotStart('Something went wrong opening the payment page.');
+                return;
+            }
+
             showToast('Something went wrong. Please try again.', 'error');
-            btn.disabled = false;
-            btn.textContent = 'Place Order';
+            resetPlaceOrderButton();
+
+            // If the request got through before the connection dropped, the cart is already spent
+            await syncPricesFromDb();
+            loadSummary();
         }
         return;
     }
@@ -837,6 +932,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fetchShippingFee();
     }
     if (RESUME) continueAfterSignIn();
+});
+
+// Back from Safepay without paying (or from the sign-in page) restores this page from the
+// browser's cache with its old summary and a stuck button; rebuild it from what is true now.
+window.addEventListener('pageshow', async (event) => {
+    if (!event.persisted) return;
+
+    if (PLACED_ORDERS) {
+        paymentDidNotStart('You left the payment page before paying.');
+        return;
+    }
+
+    resetPlaceOrderButton();
+    await syncPricesFromDb();
+    loadSummary();
 });
 
 // The admin changed prices / discounts while checkout is open (layouts/live-updates)

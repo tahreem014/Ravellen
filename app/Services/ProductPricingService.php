@@ -45,6 +45,29 @@ class ProductPricingService
     }
 
     /**
+     * Put the whole product on sale (or end the sale): every variant's sale price becomes the
+     * given percentage off its regular price, rounded to whole rupees; null clears them all.
+     * Works on the product's loaded variants, so reload them after changing any.
+     */
+    public function applyDiscount(Product $product, ?float $percent): void
+    {
+        foreach ($product->variants as $variant) {
+            $variant->update(['sale_price' => $percent ? $this->discountedPrice($product, $variant, $percent) : null]);
+        }
+    }
+
+    private function discountedPrice(Product $product, ProductVariant $variant, float $percent): float
+    {
+        // Automatic Mystery Balls packs stay exact multiples of the 5-ball
+        // sale price, the same way the pricing form builds them.
+        $steps = $product->pricing_mode === Product::PRICING_AUTOMATIC && $variant->packSize()
+            ? $variant->packSize() / Product::PACK_STEP
+            : 1;
+
+        return max(1, round((float) $variant->price / $steps * (1 - $percent / 100))) * $steps;
+    }
+
+    /**
      * Values the product form starts from. Each mode gets sensible defaults
      * from the current packs, so switching modes in the form doesn't start
      * from a blank slate.

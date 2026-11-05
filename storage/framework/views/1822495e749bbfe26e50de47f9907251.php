@@ -72,7 +72,8 @@
     .order-item-meta { font-size: .78rem; color: #6b7280; }
     .order-item-price { font-weight: 700; font-size: .9rem; color: #1f2937; white-space: nowrap; }
 
-    .money-row { display: flex; justify-content: space-between; font-size: .875rem; padding: .4rem 0; }
+    .money-row { display: flex; justify-content: space-between; align-items: center; font-size: .875rem; padding: .4rem 0; }
+    .free-ship-badge { background: #dcfce7; color: #166534; font-size: .75rem; font-weight: 700; padding: .2rem .65rem; border-radius: 2rem; }
     .money-row.total { font-weight: 700; font-size: 1.05rem; padding-top: .8rem; border-top: 1px solid #f3f4f6; margin-top: .4rem; }
 
     .preorder-note {
@@ -169,7 +170,14 @@
                 <div class="section-title"><i class="ri-bank-card-line"></i> Payment</div>
 
                 <div class="money-row"><span class="text-muted">Payment method</span><span><?php echo e($order->payment_method_label); ?></span></div>
-                <div class="money-row"><span class="text-muted">Shipping fee</span><span>PKR <?php echo e(number_format($order->shipping_fee)); ?></span></div>
+                <div class="money-row">
+                    <span class="text-muted">Shipping fee</span>
+                    <?php if($order->hasFreeShipping()): ?>
+                        <span class="free-ship-badge">Free shipping</span>
+                    <?php else: ?>
+                        <span>PKR <?php echo e(number_format($order->shipping_fee)); ?></span>
+                    <?php endif; ?>
+                </div>
 
                 <?php if($order->order_type === 'pre_order'): ?>
                     <div class="money-row"><span class="text-muted">Advance (40%)</span><span>PKR <?php echo e(number_format($order->advance_amount)); ?></span></div>
@@ -226,10 +234,10 @@ async function startSafepayPayment(url, btn, originalLabel) {
             method:  'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
         });
-        const data = await res.json();
+        const data = await readJson(res);
 
         if (!res.ok || !data.redirect) {
-            showToast(data.message || 'Payment failed. Please try again.', 'error');
+            showToast(requestErrorMessage(res, data, 'We could not open the payment page. Please try again.'), 'error');
             btn.disabled = false;
             btn.textContent = originalLabel;
             return;

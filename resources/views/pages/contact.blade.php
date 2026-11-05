@@ -67,6 +67,11 @@
 @endsection
 
 @section('content')
+@php
+    // The support email and phone saved in Admin → Settings
+    $supportEmail = \App\Models\Setting::get('support_email');
+    $supportPhone = \App\Models\Setting::get('support_phone');
+@endphp
 <div class="contact-wrapper py-5">
     <div class="container px-4" style="max-width:72rem;">
 
@@ -96,7 +101,7 @@
                             <span class="fw-semibold">Email Us</span>
                         </div>
                         <p class="text-muted small mb-1">For general inquiries and support:</p>
-                        <a href="mailto:hello@ravellen.com" class="fw-medium text-decoration-none" style="color:#ec4899;">hello@ravellen.com</a>
+                        <a href="mailto:{{ $supportEmail }}" class="fw-medium text-decoration-none" style="color:#ec4899;overflow-wrap:anywhere;">{{ $supportEmail }}</a>
                     </div>
 
                     <div class="contact-info-card p-4">
@@ -107,7 +112,7 @@
                             <span class="fw-semibold">Call Us</span>
                         </div>
                         <p class="text-muted small mb-1">Mon-Fri from 9am to 6pm:</p>
-                        <a href="tel:+923001234567" class="fw-medium text-decoration-none" style="color:#9333ea;">+92 300 1234567</a>
+                        <a href="tel:{{ preg_replace('/[^\d+]/', '', $supportPhone) }}" class="fw-medium text-decoration-none" style="color:#9333ea;">{{ $supportPhone }}</a>
                     </div>
 
                 </div>
@@ -119,21 +124,21 @@
                     <h5 class="fw-bold mb-1">Send us a message</h5>
                     <p class="text-muted small mb-4">Fill out the form below and we'll respond within 24 hours.</p>
 
-                    <form>
+                    <form method="POST" action="{{ route('contact.send') }}">
                         @csrf
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label>Your Name</label>
-                                <input type="text" class="form-control" placeholder="[name]" required>
+                                <label for="contact-name">Your Name</label>
+                                <input type="text" id="contact-name" name="name" class="form-control" placeholder="Your name" value="{{ old('name') }}" maxlength="100" required>
                             </div>
                             <div class="col-md-6">
-                                <label>Email</label>
-                                <input type="email" class="form-control" placeholder="[email]" required>
+                                <label for="contact-email">Email</label>
+                                <input type="email" id="contact-email" name="email" class="form-control" placeholder="you@example.com" value="{{ old('email') }}" maxlength="255" required>
                             </div>
                         </div>
                         <div class="mb-4">
-                            <label>Message</label>
-                            <textarea class="form-control" rows="5" placeholder="Tell us more about your inquiry..." required></textarea>
+                            <label for="contact-message">Message</label>
+                            <textarea id="contact-message" name="message" class="form-control" rows="5" placeholder="Tell us more about your inquiry..." minlength="10" maxlength="3000" required>{{ old('message') }}</textarea>
                         </div>
                         <button type="submit" class="btn text-white fw-semibold px-4 py-2"
                                 style="background:#BE185D;border-radius:.5rem;">
@@ -155,14 +160,22 @@
 
             @php
                 $faqs = [
-                    ['q'=>'How long does shipping take?',
-                     'a'=>'Standard shipping typically takes 3-5 business days within major cities in Pakistan. For remote areas, it might take 5-7 days.'],
-                    ['q'=>'Can I return my Mystery Scoop?',
-                     'a'=>'Due to the nature of mystery items, we generally do not accept returns on Mystery Scoops unless items arrive damaged. Please record an unboxing video as proof for any claims.'],
-                    ['q'=>'Do you ship internationally?',
-                     'a'=>'Currently, we only ship within Pakistan. We are working on expanding our reach to international customers soon!'],
-                    ['q'=>'How do pre-orders work?',
-                     'a'=>'For pre-order items, you need to pay a 40% advance to secure your order. The remaining amount is payable when the item arrives and is ready for shipping.'],
+                    ['q'=>'Where does Ravellen deliver?',
+                     'a'=>'We currently deliver within Pakistan only. International shipping may become available in the future. Stay tuned for updates!'],
+                    ['q'=>'What are mystery scoops and mystery balls?',
+                     'a'=>'Mystery scoops contain a surprise selection of items, while each mystery ball contains one surprise item. We recommend watching our Instagram videos to understand how our mystery products work.'],
+                    ['q'=>'How can I understand how mystery scoops and balls work?',
+                     'a'=>'We recommend watching our Instagram videos and product demonstrations before ordering. They show how our mystery products are prepared and selected.'],
+                    ['q'=>'Can I request specific items or preferences?',
+                     'a'=>'Yes! You can mention your preferred colours, characters, themes, or items in the preference textbox while ordering. We’ll try our best to accommodate your requests, but specific items cannot be guaranteed.'],
+                    ['q'=>'Can I request no duplicate items?',
+                     'a'=>'Yes! Simply mention this preference before placing your order. We’ll try our best to avoid duplicates or replace them with other available items, but this cannot always be guaranteed.'],
+                    ['q'=>'How long does delivery take?',
+                     'a'=>'Orders generally require 1–3 business days for processing, followed by an estimated 5–7 business days for delivery. Delivery times may vary depending on your location and courier service.'],
+                    ['q'=>'Can I return or exchange my order?',
+                     'a'=>'We do not accept returns for change of mind or dissatisfaction with mystery items. Damaged, incorrect, or missing items may be eligible for assistance according to our Shipping & Returns Policy. Please review it before ordering.'],
+                    ['q'=>'Do you accept pre-orders?',
+                     'a'=>'Yes! Selected products may be available for pre-order. A 40% advance payment is required to secure your slot. The remaining 60% must be paid once the stock arrives, before your order is dispatched.'],
                 ];
             @endphp
 
@@ -185,7 +198,7 @@
 <script>
     function toggleFaq(btn) {
     const body = btn.nextElementSibling;
-    const isOpen = body.style.display === 'block';
+    const isOpen = body.style.display !== 'none';
 
     // Close all FAQs first (optional: remove if you want multiple open)
     document.querySelectorAll('.faq-body').forEach(el => el.style.display = 'none');

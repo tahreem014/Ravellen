@@ -7,7 +7,7 @@
         ->flatten()->unique();
 ?>
 
-<div class="border rounded-3 p-3 mb-3" id="pricingSection" data-admin-region="pricing">
+<div class="border rounded-3 p-3 mb-3" id="pricingSection">
     <div class="fw-semibold mb-2">Pricing</div>
 
     <?php if($pricingErrors->isNotEmpty()): ?>
@@ -38,7 +38,7 @@
     </div>
 
     <div data-pricing-panel="standard" class="small text-muted">
-        Prices are set per variant in the <strong>Variants</strong> section<?php echo e(isset($product) ? ' below' : ' after you create the product'); ?>.
+        Prices are set per variant in the <strong>Variants</strong> section below.
     </div>
 
     <div data-pricing-panel="automatic">
@@ -108,8 +108,6 @@
 
 <script>
 (function () {
-    // Listeners sit on the section itself (not its contents): on the edit page the
-    // contents are re-rendered after an in-place save elsewhere (data-admin-region).
     const section  = document.getElementById('pricingSection');
     const template = document.getElementById('packRowTemplate');
     let nextIndex  = 1000;   // keeps new row names unique next to the server's 0, 1, 2 …
@@ -134,6 +132,8 @@
         const note = section.querySelector('[data-pricing-switch-note]');
         if (note) note.hidden = mode === 'standard';
         renderPreview();
+        // the form's Variants section only applies to standard pricing (partials/variant-fields)
+        document.dispatchEvent(new CustomEvent('pricing:mode', { detail: { mode } }));
     }
 
     function renderPreview() {
@@ -176,7 +176,6 @@
         if (remove && rows().children.length > 1) remove.closest('tr').remove();
     });
 
-    document.addEventListener('admin:regions-updated', showPanel);
     showPanel();
 })();
 </script>

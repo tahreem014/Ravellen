@@ -100,6 +100,7 @@
         .shop-prod-badge { top: .5rem; left: .5rem; font-size: .6rem; padding: .15rem .45rem; max-width: calc(100% - 3rem); }
         .shop-prod-img-wrap .wl-heart-btn { top: .5rem; right: .5rem; width: 1.9rem; height: 1.9rem; }
         .shop-prod-img-wrap .discount-badge { left: .5rem !important; bottom: .5rem !important; font-size: .65rem !important; padding: .3rem .5rem !important; }
+        .shop-prod-img-wrap .stock-badge { right: .5rem !important; bottom: .5rem !important; font-size: .65rem !important; padding: .3rem .5rem !important; }
         .shop-prod-body { padding: .7rem .7rem .8rem; }
         .shop-prod-cat-label { font-size: .62rem; }
         .shop-prod-name { font-size: .85rem; }
@@ -254,6 +255,7 @@
                         <div class="shop-prod-img-wrap">
                             <img src="{{ $image }}" alt="{{ $product->name }}" data-live-image>
                             <x-discount-badge :label="$product->discountLabel()" live />
+                            <x-stock-badge :label="$product->stockLabel()" live />
                             @if($sub)
                                 <span class="shop-prod-badge" style="background:{{ $theme['accent'] }};">{{ $sub->name }}</span>
                             @endif
@@ -303,7 +305,8 @@
             <p class="mb-4 mx-auto" style="max-width:32rem;color:rgba(255,255,255,.9);">
                 Try our Mystery Scoops! Each scoop is a surprise adventure with curated items perfect for you or as gifts.
             </p>
-            <a href="{{ url('/mystery-scoops') }}"
+            @php $scoopProduct = $categories->firstWhere('name', 'Mystery Scoops')?->firstProduct(); @endphp
+            <a href="{{ $scoopProduct ? route('product-item', $scoopProduct->slug) : url('/mystery-scoops') }}"
                class="btn btn-light fw-semibold px-5 py-2"
                style="color:#7c3aed;border-radius:.5rem;">
                 Get Mystery Scoop

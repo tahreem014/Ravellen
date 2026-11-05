@@ -5,21 +5,18 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\ProductPricingService;
 use App\Services\SaleNotifier;
 use Illuminate\Http\Request;
 
 class ProductVariantController extends Controller
 {
-    private const STATUSES = [
-        ProductVariant::STATUS_ACTIVE,
-        ProductVariant::STATUS_OUT_OF_STOCK,
-        ProductVariant::STATUS_PRE_ORDER,
-        ProductVariant::STATUS_RESTOCKING,
-        ProductVariant::STATUS_DISCONTINUED,
-    ];
+    private const STATUSES = ProductVariant::STATUSES;
 
-    public function __construct(private readonly SaleNotifier $saleNotifier)
-    {
+    public function __construct(
+        private readonly SaleNotifier $saleNotifier,
+        private readonly ProductPricingService $pricingService,
+    ) {
     }
 
     public function store(Request $request, Product $product)
@@ -80,9 +77,7 @@ class ProductVariantController extends Controller
         $percent = isset($data['percent']) ? (float) $data['percent'] : null;
         $discountBefore = $this->saleNotifier->bestDiscount($product);
 
-        foreach ($product->variants as $variant) {
-            $variant->update(['sale_price' => $percent ? $this->discountedPrice($product, $variant, $percent) : null]);
-        }
+        $this->pricingService->applyDiscount($product, $percent);
 
         $this->saleNotifier->notifyIfIncreased($product, $discountBefore);
 
@@ -105,17 +100,6 @@ class ProductVariantController extends Controller
         }
 
         return back()->with('status', $message);
-    }
-
-    private function discountedPrice(Product $product, ProductVariant $variant, float $percent): float
-    {
-        // Automatic Mystery Balls packs stay exact multiples of the 5-ball
-        // sale price, the same way the pricing form builds them.
-        $steps = $product->pricing_mode === Product::PRICING_AUTOMATIC && $variant->packSize()
-            ? $variant->packSize() / Product::PACK_STEP
-            : 1;
-
-        return max(1, round((float) $variant->price / $steps * (1 - $percent / 100))) * $steps;
     }
 
     private function validateVariant(Request $request): array

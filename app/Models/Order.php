@@ -117,6 +117,12 @@ class Order extends Model
         return $this->belongsTo(ShippingRate::class);
     }
 
+    /** Shipping was free for this order, so pages show a "Free shipping" badge instead of an amount. */
+    public function hasFreeShipping(): bool
+    {
+        return (float) $this->shipping_fee <= 0;
+    }
+
     /** Falls back to a headline for older orders placed with a since-retired method (visa, nayapay, ...). */
     public function getPaymentMethodLabelAttribute(): string
     {

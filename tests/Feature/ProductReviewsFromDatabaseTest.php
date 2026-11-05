@@ -12,8 +12,8 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 /**
- * The pages the home cards open (Mystery Scoops, Mystery Balls, the BTS member pages, the static gift
- * box page) show the database's own reviews — nothing made up. Rolled back.
+ * The pages the home cards open (the Mystery Scoops / Mystery Balls product pages, the BTS member pages,
+ * the static gift box page) show the database's own reviews — nothing made up. Rolled back.
  */
 class ProductReviewsFromDatabaseTest extends TestCase
 {
@@ -62,8 +62,9 @@ class ProductReviewsFromDatabaseTest extends TestCase
 
     public function test_mystery_scoops_and_balls_pages_show_real_reviews_only(): void
     {
-        foreach (['/mystery-scoops' => ['Mystery Scoops', 'Original Mystery Scoop'], '/mystery-balls' => ['Mystery Balls', 'Original Mystery Balls']] as $url => [$category, $name]) {
+        foreach ([['Mystery Scoops', 'Original Mystery Scoop'], ['Mystery Balls', 'Original Mystery Balls']] as [$category, $name]) {
             $product = $this->cleanProduct($category, $name);
+            $url     = route('product-item', $product->slug);   // the page the home cards and the shop open
 
             $empty = $this->get($url)->assertOk()->assertSee('No reviews yet.')->assertSee('(0 reviews)');
             $this->assertNoMadeUpReviewers($empty);

@@ -148,13 +148,14 @@ class HomeController extends Controller
     }
 
     /**
-     * Generic product-detail pages (mystery-balls, mystery-scoops, bts-scoop,
-     * bts-balls, ceramic, gift-box). For the mystery types it looks up the
-     * canonical DB product — or, with ?bias= from the BTS Merch page, that
-     * member's product — so prices, discounts and the variant ids sent to the
-     * cart API all come from the database.
+     * Generic product-detail pages (mystery-balls / mystery-scoops with ?bias=,
+     * bts-scoop, bts-balls, ceramic, gift-box). For the mystery types it looks
+     * up the canonical DB product — or, with ?bias= from the BTS Merch page,
+     * that member's product — so prices, discounts and the variant ids sent to
+     * the cart API all come from the database. Mystery Scoops / Balls without
+     * ?bias= redirect to the shop's product page (product-item).
      */
-    public function genericProductPage(string $type): \Illuminate\View\View
+    public function genericProductPage(string $type): \Illuminate\View\View|\Illuminate\Http\RedirectResponse
     {
         $categoryMap = [
             'mystery-balls'  => ['category' => 'Mystery Balls',  'name' => 'Original Mystery Balls'],
@@ -197,6 +198,12 @@ class HomeController extends Controller
             }
 
             $product = $query->orderBy('id')->first();
+
+            // Without ?bias= (the BTS Merch pages' member picker), /mystery-scoops and /mystery-balls
+            // are the shop's product page for that category — there is no page of their own.
+            if ($product && ! $bias && $map['name']) {
+                return redirect()->route('product-item', $product->slug);
+            }
         }
 
         return view('pages.product-detail', [

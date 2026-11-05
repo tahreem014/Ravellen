@@ -26,6 +26,7 @@
             <button type="button" class="size-btn balls-pack-btn {{ $i === 0 ? 'active' : '' }}" data-idx="{{ $i }}" onclick="selectBallsPack({{ $i }})">
                 <div class="size-name">{{ $pack['qty'] }} balls</div>
                 <div class="size-price"><x-price :amount="$pack['price']" :original="$pack['original']" /></div>
+                @if($pack['unavailable'] ?? null)<div class="size-status">{{ $pack['unavailable'] }}</div>@endif
             </button>
         @endforeach
     </div>

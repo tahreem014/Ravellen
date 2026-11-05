@@ -65,19 +65,21 @@ class LiveUpdateService
             'image'       => $product->images->first()?->image_url,
             'from'        => $cheapest ? $this->price($cheapest) : null,
             'badge'       => $product->discountLabel(),
+            'stock'       => $product->stockLabel(),
             'structure'   => $this->structure($product),
             'variants'    => $product->variants->mapWithKeys(fn (ProductVariant $variant) => [$variant->id => $this->price($variant) + [
                 'percent'   => $variant->discountPercent(),
                 'preorder'  => $variant->isPreOrder(),
                 'available' => $variant->isPurchasable(),
+                'max_qty'   => $variant->max_qty,
             ]])->all(),
         ];
     }
 
     /**
      * Fingerprint of what a product page is built from (pricing mode, which
-     * variants / packs exist). When it changes the page needs re-rendering,
-     * not just re-pricing.
+     * variants / packs exist, and whether each can be bought). When it changes
+     * the page needs re-rendering, not just re-pricing.
      */
     public function structure(Product $product): string
     {
@@ -87,6 +89,7 @@ class LiveUpdateService
                 $variant->id,
                 $variant->variant_name,
                 $variant->status === ProductVariant::STATUS_DISCONTINUED,
+                $variant->isPurchasable(),   // active ↔ pre-order is patched in place; going out of stock re-renders
             ])->values(),
         ]));
     }

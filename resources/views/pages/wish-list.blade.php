@@ -204,6 +204,7 @@
                         <div class="wl-card-img-wrap">
                             <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" @if($liveProduct) data-live-image @endif>
                             <x-discount-badge :label="$liveProduct?->discountLabel()" :live="(bool) $liveProduct" />
+                            <x-stock-badge :label="$liveProduct?->stockLabel()" :live="(bool) $liveProduct" />
                         </div>
                         <div class="wl-card-body">
                             <div class="wl-item-name" data-live-name>{{ $item['name'] }}</div>

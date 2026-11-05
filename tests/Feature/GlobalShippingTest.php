@@ -313,6 +313,77 @@ class GlobalShippingTest extends TestCase
             ->assertOk()->assertSee('Berlin')->assertDontSee('Japan</td>', false);
     }
 
+    // ── free shipping ───────────────────────────────────────────────────────
+
+    public function test_admin_sets_free_shipping_without_typing_a_charge(): void
+    {
+        // the form leaves the amount out when "Free shipping" is ticked; whatever is sent alongside it is ignored
+        $this->actingAs($this->admin)->post(route('admin.shipping-rates.store'), ['country' => 'Germany', 'city' => '', 'free_shipping' => '1', 'is_active' => '1'])
+            ->assertSessionHasNoErrors()->assertSessionHas('status', 'Shipping rate added.');
+        $this->actingAs($this->admin)->post(route('admin.shipping-rates.store'), ['country' => 'Germany', 'city' => 'Berlin', 'amount' => '400', 'free_shipping' => '1', 'is_active' => '1'])
+            ->assertSessionHasNoErrors();
+
+        $default = ShippingRate::where('country', 'Germany')->whereNull('city')->firstOrFail();
+        $berlin  = ShippingRate::where('country', 'Germany')->where('city', 'Berlin')->firstOrFail();
+        $this->assertSame('0.00', (string) $default->amount);
+        $this->assertSame('0.00', (string) $berlin->amount);
+        $this->assertTrue($default->isFree());
+
+        // a charge is still required when shipping is not free
+        $this->actingAs($this->admin)->post(route('admin.shipping-rates.store'), ['country' => 'Japan', 'city' => '', 'is_active' => '1'])
+            ->assertSessionHasErrors('amount');
+        $this->assertSame(0, ShippingRate::where('country', 'Japan')->count());
+
+        // and a free rate can be turned back into a paid one
+        $this->actingAs($this->admin)->put(route('admin.shipping-rates.update', $berlin), ['country' => 'Germany', 'city' => 'Berlin', 'amount' => '450', 'is_active' => '1'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('450.00', (string) $berlin->fresh()->amount);
+        $this->assertFalse($berlin->fresh()->isFree());
+    }
+
+    public function test_admin_list_shows_free_rates_as_a_green_badge_not_an_amount(): void
+    {
+        $this->rate('Germany', null, 0);
+        $this->rate('Japan', null, 1500);
+
+        $html = $this->actingAs($this->admin)->get(route('admin.shipping-rates.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('<span class="badge bg-success">Free shipping</span>', $html);
+        $this->assertStringContainsString('PKR 1,500.00', $html);
+        $this->assertStringNotContainsString('PKR 0.00', $html);
+    }
+
+    public function test_a_free_rate_quotes_and_orders_at_no_charge(): void
+    {
+        $this->rate('Germany', null, 0);
+        $buyer = User::factory()->create();
+
+        $this->getJson(route('shipping.quote', ['country' => 'Germany', 'city' => 'Berlin']))
+            ->assertOk()->assertExactJson(['available' => true, 'shipping_fee' => 0.0, 'scope' => 'country']);
+
+        $response = $this->placeOrder($buyer, $this->address($buyer, 'Germany', 'Berlin'))->assertCreated();
+        $order    = Order::where('uuid', $response->json('orders.0.uuid'))->firstOrFail();
+
+        $this->assertTrue($order->hasFreeShipping());
+        $this->assertEqualsWithDelta(1000, (float) $order->total_amount, 0.001, 'nothing is added to the items');
+    }
+
+    public function test_the_order_page_shows_free_shipping_as_a_green_badge_instead_of_an_amount(): void
+    {
+        $this->rate('Germany', null, 0);
+        $this->rate('Japan', null, 1500);
+        $buyer = User::factory()->create();
+
+        $free = Order::where('uuid', $this->placeOrder($buyer, $this->address($buyer, 'Germany', 'Berlin'))->json('orders.0.uuid'))->firstOrFail();
+        $paid = Order::where('uuid', $this->placeOrder($buyer, $this->address($buyer, 'Japan', 'Tokyo'))->json('orders.0.uuid'))->firstOrFail();
+
+        $this->actingAs($buyer)->get(route('orders.show', $free))
+            ->assertOk()->assertSee('<span class="free-ship-badge">Free shipping</span>', false)->assertDontSee('PKR 0');
+
+        $this->actingAs($buyer)->get(route('orders.show', $paid))
+            ->assertOk()->assertSee('PKR 1,500')->assertDontSee('<span class="free-ship-badge">', false);
+    }
+
     // ── helpers ─────────────────────────────────────────────────────────────
 
     private function rate(string $country, ?string $city, float $amount, bool $active = true): ShippingRate

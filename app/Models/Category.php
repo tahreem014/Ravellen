@@ -74,6 +74,17 @@ class Category extends Model
             : ! $this->products()->exists();
     }
 
+    /**
+     * The product a storefront card for this category opens (Mystery Scoops, Mystery Balls):
+     * the category's first product, i.e. the same page the shop lists.
+     */
+    public function firstProduct(): ?Product
+    {
+        $products = $this->relationLoaded('products') ? $this->products : $this->products()->get();
+
+        return $products->sortBy('id')->first();
+    }
+
     public function subCategories()
     {
         return $this->hasMany(SubCategory::class);

@@ -45,7 +45,14 @@
 
                                 <?php endif; ?>
                             </td>
-                            <td data-label="Amount">PKR <?php echo e(number_format($rate->amount, 2)); ?></td>
+                            <td data-label="Amount">
+                                <?php if($rate->isFree()): ?>
+                                    <span class="badge bg-success">Free shipping</span>
+                                <?php else: ?>
+                                    PKR <?php echo e(number_format($rate->amount, 2)); ?>
+
+                                <?php endif; ?>
+                            </td>
                             <td data-label="Status">
                                 <?php if($rate->is_active): ?>
                                     <span class="badge bg-success">Active</span>
@@ -145,6 +152,11 @@
                         <div class="mb-3">
                             <label class="form-label" for="shippingRateAmount">Delivery charge (PKR)</label>
                             <input type="number" step="0.01" min="0" name="amount" id="shippingRateAmount" class="form-control" value="<?php echo e(old('amount')); ?>" required>
+                            <div class="form-check mt-2">
+                                <input type="checkbox" name="free_shipping" value="1" class="form-check-input" id="shippingRateFree" <?php echo e(old('free_shipping') ? 'checked' : ''); ?>>
+                                <label class="form-check-label" for="shippingRateFree">Free shipping</label>
+                            </div>
+                            <div class="form-text">Customers see a green "Free shipping" badge instead of an amount.</div>
                         </div>
                         <div class="form-check">
                             <input type="checkbox" name="is_active" value="1" class="form-check-input" id="shippingRateIsActive" <?php echo e(old('is_active', true) ? 'checked' : ''); ?>>
@@ -207,6 +219,19 @@ function setScope(scope) {
 
 document.querySelectorAll('input[name="scope"]').forEach(radio => radio.addEventListener('change', () => setScope(radio.value)));
 
+/* Free shipping needs no charge: the amount is switched off (so it isn't sent) and saved as 0. */
+const amountInput = document.getElementById('shippingRateAmount');
+const freeInput   = document.getElementById('shippingRateFree');
+
+function setFree(free) {
+    freeInput.checked    = free;
+    amountInput.disabled = free;
+    amountInput.required = !free;
+    if (free) amountInput.value = '';
+}
+
+freeInput.addEventListener('change', () => setFree(freeInput.checked));
+
 /* Fill the form: from a saved rate (edit), a rejected attempt, or empty (add). */
 function fillShippingRateForm(values, editingId) {
     const form = document.getElementById('shippingRateForm');
@@ -218,7 +243,9 @@ function fillShippingRateForm(values, editingId) {
 
     setScope(values.city ? 'city' : 'country');
     rateLocation.setLocation(values.country, values.city);
-    document.getElementById('shippingRateAmount').value     = values.amount ?? '';
+    // a saved rate of 0 is a free-shipping rate
+    setFree(values.free_shipping ?? (values.amount != null && values.amount !== '' && Number(values.amount) === 0));
+    if (!freeInput.checked) amountInput.value = values.amount ?? '';
     document.getElementById('shippingRateIsActive').checked = values.is_active ?? true;
 }
 
@@ -236,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             country:   <?php echo json_encode(old('country'), 15, 512) ?>,
             city:      <?php echo json_encode(old('city'), 15, 512) ?>,
             amount:    <?php echo json_encode(old('amount'), 15, 512) ?>,
+            free_shipping: <?php echo json_encode((bool) old('free_shipping'), 15, 512) ?>,
             is_active: <?php echo json_encode((bool) old('is_active'), 15, 512) ?>,
         }, <?php echo json_encode(old('editing_id'), 15, 512) ?>);
         shippingRateModal.show();

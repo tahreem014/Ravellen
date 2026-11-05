@@ -126,11 +126,10 @@ class AdminInPlaceSavingTest extends TestCase
 
     public function test_admin_pages_mark_their_in_place_forms_and_sections(): void
     {
+        // the product form is the exception: it has one Save button for everything and reloads (see ProductFormSingleSaveTest)
         $edit = $this->actingAs($this->admin)->get(route('admin.products.edit', $this->product))->assertOk();
-        foreach (['discount', 'pricing', 'variants', 'media'] as $region) {
-            $edit->assertSee('data-admin-region="' . $region . '"', false);
-        }
-        $edit->assertSee('enctype="multipart/form-data" data-ajax', false);
+        $this->assertDoesNotMatchRegularExpression('/<form[^>]*data-ajax/', $edit->getContent());
+        $this->assertDoesNotMatchRegularExpression('/<(?:div|section)[^>]*data-admin-region=/', $edit->getContent());
 
         $this->actingAs($this->admin)->get(route('admin.refund-requests.index'))->assertOk()->assertSee('data-admin-region="refunds"', false);
     }

@@ -7,10 +7,13 @@
         <a href="{{ route('admin.products.index') }}" class="text-decoration-none"><i class="ri-arrow-left-line"></i> Back to Products</a>
     </div>
 
-    <div class="admin-card card">
-        <div class="card-body">
-            <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
-                @csrf
+    {{-- One form, one Save button at the very end: details, pricing, variants and media are all saved together --}}
+    <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" id="productForm">
+        @csrf
+
+        <div class="admin-card card mb-4">
+            <div class="card-body">
+                <h5 class="mb-3">Product Details</h5>
 
                 <div class="mb-3">
                     <label class="form-label">Product Name</label>
@@ -25,14 +28,18 @@
                 @include('admin.products.partials.category-fields')
 
                 @include('admin.products.partials.pricing-fields', ['currentMode' => null, 'hasVariants' => false])
-
-                <div class="border rounded-3 p-3 mb-3">
-                    <div class="fw-semibold mb-2">Photos &amp; videos <span class="text-muted fw-normal small">(optional)</span></div>
-                    @include('admin.products.partials.media-picker')
-                </div>
-
-                <button type="submit" class="btn btn-admin-primary" data-media-submit>Create Product</button>
-            </form>
+            </div>
         </div>
-    </div>
+
+        @include('admin.products.partials.variant-fields', ['product' => null])
+
+        <div class="admin-card card mb-4">
+            <div class="card-body">
+                <h5 class="mb-3">Media <span class="text-muted fw-normal small">(optional)</span></h5>
+                @include('admin.products.partials.media-picker')
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-admin-primary" data-media-submit>Save Product</button>
+    </form>
 @endsection

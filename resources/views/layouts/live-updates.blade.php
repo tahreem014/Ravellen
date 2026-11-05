@@ -7,6 +7,7 @@
         data-live-name             product name
         data-live-price            "From" price (data-live-prefix="From " for the prefix)
         data-live-badge            discount badge on the image
+        data-live-stock            "Out of stock" / "Restocking" badge on the image
         data-live-image            product photo
       data-live-category="{id}"  home page category card (its data-live-price)
       data-live-listing="{key}"  + data-live-signature: reloads when products are added / removed
@@ -57,6 +58,7 @@
                 if (product.from) el.innerHTML = livePriceHtml(product.from.price, product.from.original, el.dataset.livePrefix || '');
             });
             card.querySelectorAll('[data-live-badge]').forEach(el => setBadge(el, product.badge));
+            card.querySelectorAll('[data-live-stock]').forEach(el => setBadge(el, product.stock));
             card.querySelectorAll('img[data-live-image]').forEach(img => {
                 if (product.image && img.getAttribute('src') !== product.image) img.src = product.image;
             });

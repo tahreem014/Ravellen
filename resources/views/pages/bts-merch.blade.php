@@ -141,13 +141,7 @@
     {{-- data-live-listing: reload when BTS Merch products are added or removed --}}
     <div class="container px-4 pt-5" data-live-listing="category:BTS Merch" data-live-signature="{{ app(\App\Services\LiveUpdateService::class)->listingSignature('category:BTS Merch') }}">
 
-        @if($comingSoon ?? false)
-            <x-coming-soon title="Our BTS merch is on the way"
-                           message="We're putting the finishing touches on the mystery scoops and balls for ARMY. Check back soon!"
-                           icon="ri-star-line" accent="#7c3aed" accent2="#a855f7" />
-        @else
-
-        {{-- Choose Your Bias --}}
+        {{-- Choose Your Bias (stays visible while the category is "coming soon") --}}
         <div class="bias-section mb-4">
             <div class="text-center bias-title mb-4">Choose Your Bias 💜</div>
             @php
@@ -188,6 +182,12 @@
             </div>
             </div>
         </div>
+
+        @if($comingSoon ?? false)
+            <x-coming-soon title="Our BTS merch is on the way"
+                           message="We're putting the finishing touches on the mystery scoops and balls for ARMY. Check back soon!"
+                           icon="ri-star-line" accent="#7c3aed" accent2="#a855f7" />
+        @else
 
         {{-- Dynamic product cards --}}
         <div class="row g-4 justify-content-center mb-2" id="dynamicCards" style="display:none!important;">
@@ -275,7 +275,8 @@
     }
 
     function updateCards() {
-        if (!selectedBias) return;
+        // No product cards on the page while the category is "coming soon": picking a bias just highlights it
+        if (!selectedBias || !document.getElementById('dynamicCards')) return;
         const label = memberLabels[selectedBias];
         document.getElementById('dynScoopTitle').textContent = label + ' Mystery Scoop 💜';
         document.getElementById('dynBallsTitle').textContent = label + ' Mystery Balls 💜';

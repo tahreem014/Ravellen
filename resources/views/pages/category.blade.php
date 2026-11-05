@@ -132,6 +132,7 @@
         .gb-badge { top: .5rem; left: .5rem; font-size: .6rem; padding: .15rem .45rem; max-width: calc(100% - 3rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .gb-heart-btn { top: .5rem; right: .5rem; width: 1.9rem; height: 1.9rem; }
         .gb-card-img-wrap .discount-badge { left: .5rem !important; bottom: .5rem !important; font-size: .65rem !important; padding: .3rem .5rem !important; }
+        .gb-card-img-wrap .stock-badge { right: .5rem !important; bottom: .5rem !important; font-size: .65rem !important; padding: .3rem .5rem !important; }
         .gb-card-body { padding: .7rem .7rem .8rem; }
         .gb-name { font-size: .85rem; }
         .gb-desc { font-size: .72rem; }
@@ -246,6 +247,7 @@
                 <div class="gb-card-img-wrap">
                     <img src="{{ $image }}" alt="{{ $product->name }}" class="gb-card-img" data-live-image>
                     <x-discount-badge :label="$product->discountLabel()" live />
+                    <x-stock-badge :label="$product->stockLabel()" live />
                     @if($subName)
                         <span class="gb-badge" style="background:#ec4899;">{{ $subName }}</span>
                     @endif
@@ -351,6 +353,7 @@
                     <div class="gb-card-img-wrap">
                         <img src="{{ $image }}" alt="{{ $product->name }}" class="gb-card-img" data-live-image>
                         <x-discount-badge :label="$product->discountLabel()" live />
+                    <x-stock-badge :label="$product->stockLabel()" live />
                         @if($subName)
                             <span class="gb-badge" style="background:#7c3aed;">{{ $subName }}</span>
                         @endif
@@ -449,6 +452,7 @@
                 <div class="gb-card-img-wrap">
                     <img src="{{ $image }}" alt="{{ $product->name }}" class="gb-card-img" data-live-image>
                     <x-discount-badge :label="$product->discountLabel()" live />
+                    <x-stock-badge :label="$product->stockLabel()" live />
                     @if($subName)
                         <span class="gb-badge" style="background:#C8A98A;">{{ $subName }}</span>
                     @endif

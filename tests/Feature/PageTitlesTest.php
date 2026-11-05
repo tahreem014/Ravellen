@@ -34,8 +34,6 @@ class PageTitlesTest extends TestCase
             '/shop'                 => 'Shop',
             '/about'                => 'About Us',
             '/contact'              => 'Contact Us',
-            '/mystery-balls'        => 'Mystery Balls',
-            '/mystery-scoops'       => 'Mystery Scoops',
             '/bts-merch'            => 'BTS Merch',
             '/gift-boxes'           => 'Mystery Gift Boxes',
             '/bts-gift-boxes'       => 'BTS Gift Boxes',

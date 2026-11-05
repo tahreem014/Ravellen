@@ -236,9 +236,6 @@ class ProductPricingTest extends TestCase
         $mug->variants->first()->update(['sale_price' => 1500]);
         $this->get(route('shop'))->assertOk()->assertSee('From PKR 1,500 <s class="price-was"', false);
         $this->get(route('product-item', $mug))->assertOk()->assertSee('PKR 2,000</s>', false);
-
-        $this->get(route('mystery-balls'))->assertOk()->assertSee('const BALL_PACKS = [{"qty":', false);
-        $this->get(route('mystery-scoops'))->assertOk()->assertSee('const SCOOP_OPTIONS = [{"id":', false);
     }
 
     public function test_discounted_products_show_a_percentage_badge_on_their_images(): void
@@ -299,8 +296,8 @@ class ProductPricingTest extends TestCase
         // The edit page leads with the Discount box, filled in with the running discount
         $this->actingAs($this->admin)->get(route('admin.products.edit', $mug))
             ->assertOk()
-            ->assertSeeInOrder(['Discount', '-20%', 'Update discount', 'End discount', 'Product Details'])
-            ->assertSee('name="percent" value="20"', false);
+            ->assertSeeInOrder(['Discount', '-20%', 'name="discount_percent"', 'Product Details'], false)
+            ->assertSee('name="discount_percent" value="20"', false);
 
         $this->actingAs($this->admin)->from(route('admin.products.edit', $mug))->post(route('admin.products.sale', $mug), [])
             ->assertRedirect(route('admin.products.edit', $mug));
@@ -322,8 +319,9 @@ class ProductPricingTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.products.edit', $this->customBallsProduct([5 => 1000])))
             ->assertOk()->assertSee('Packs')->assertSee('name="packs[0][price]"', false);
 
-        $this->actingAs($this->admin)->get(route('admin.products.edit', $this->standardProduct(['Mug' => 2000])))
-            ->assertOk()->assertSee('name="sale_price"', false)->assertSee('Apply discount');
+        $mug = $this->standardProduct(['Mug' => 2000]);
+        $this->actingAs($this->admin)->get(route('admin.products.edit', $mug))
+            ->assertOk()->assertSee('name="variants[' . $mug->variants->first()->id . '][sale_price]"', false)->assertSee('name="discount_percent"', false);
 
         $this->actingAs($this->admin)->get(route('admin.products.index'))->assertOk();
     }

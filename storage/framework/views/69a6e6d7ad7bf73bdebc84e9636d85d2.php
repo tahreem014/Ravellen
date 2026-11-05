@@ -38,6 +38,7 @@
                 if (product.from) el.innerHTML = livePriceHtml(product.from.price, product.from.original, el.dataset.livePrefix || '');
             });
             card.querySelectorAll('[data-live-badge]').forEach(el => setBadge(el, product.badge));
+            card.querySelectorAll('[data-live-stock]').forEach(el => setBadge(el, product.stock));
             card.querySelectorAll('img[data-live-image]').forEach(img => {
                 if (product.image && img.getAttribute('src') !== product.image) img.src = product.image;
             });

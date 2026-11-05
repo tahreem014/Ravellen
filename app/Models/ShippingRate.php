@@ -27,6 +27,12 @@ class ShippingRate extends Model
         return trim((string) $this->city) === '';
     }
 
+    /** A charge of nothing is how free shipping is recorded: customers see a "Free shipping" badge instead of an amount. */
+    public function isFree(): bool
+    {
+        return (float) $this->amount <= 0;
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class);

@@ -95,6 +95,35 @@ class ProductMediaService
         return count($files);
     }
 
+    /**
+     * Delete the product's media rows with these ids (ids of other products' media are ignored).
+     * The files stay on disk until deleteFiles(), so a save that later fails can roll back.
+     *
+     * @param int[] $ids
+     * @return string[] file names to hand to deleteFiles()
+     */
+    public function remove(Product $product, array $ids): array
+    {
+        $files = [];
+
+        foreach ($product->images()->whereIn('id', $ids)->get() as $media) {
+            array_push($files, ...array_filter([$media->image, $media->video]));
+            $media->delete();
+        }
+
+        return $files;
+    }
+
+    /** @param string[] $files */
+    public function deleteFiles(array $files): void
+    {
+        foreach ($files as $file) {
+            if (file_exists(public_path('images/products/' . $file))) {
+                unlink(public_path('images/products/' . $file));
+            }
+        }
+    }
+
     private function isVideo(UploadedFile $file): bool
     {
         return str_starts_with((string) $file->getMimeType(), 'video/');

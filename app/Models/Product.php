@@ -92,6 +92,36 @@ class Product extends Model
         return ProductVariant::cheapestOf($this->variants);
     }
 
+    /** The variants shoppers are still offered: everything the admin hasn't marked discontinued. */
+    public function offeredVariants()
+    {
+        return $this->variants
+            ->reject(fn (ProductVariant $variant) => $variant->status === ProductVariant::STATUS_DISCONTINUED)
+            ->values();
+    }
+
+    /**
+     * Why the whole product can't be bought right now ("Out of stock", "Restocking", "Unavailable"),
+     * null while any offered variant can be — the badge on listing cards. A product with no
+     * variants at all has no status yet.
+     */
+    public function stockLabel(): ?string
+    {
+        if ($this->variants->isEmpty()) {
+            return null;
+        }
+
+        $offered = $this->offeredVariants();
+
+        if ($offered->contains(fn (ProductVariant $variant) => $variant->isPurchasable())) {
+            return null;
+        }
+
+        $labels = $offered->map(fn (ProductVariant $variant) => $variant->unavailableLabel());
+
+        return $labels->contains('Out of stock') ? 'Out of stock' : ($labels->first() ?? 'Unavailable');
+    }
+
     /**
      * Discount badge text for product images: "-15%" when every variant on
      * offer is discounted by the same amount, "Up to -20%" when the discount
@@ -137,6 +167,7 @@ class Product extends Model
             'percent'   => $variant->discountPercent(),
             'preorder'  => $variant->isPreOrder(),
             'available' => $variant->isPurchasable(),
+            'unavailable' => $variant->unavailableLabel(),
         ])->all();
     }
 }
