@@ -104,12 +104,48 @@
 <p>We are not responsible for the privacy practices or content of external websites.</p>
 <p>We recommend reviewing their privacy policies before sharing personal information.</p>
 
-<h2>13. Changes to This Privacy Policy</h2>
+<h2>13. Google Sign-In and Google User Data</h2>
+<p>Ravellen allows users to create an account or sign in using Google Sign-In. When you choose to sign in with Google, our website uses Google's OAuth authentication service to verify your identity.</p>
+
+<h3>Information We Collect from Google</h3>
+<p>Depending on the permissions granted during Google Sign-In, we may receive the following information:</p>
+<ul>
+    <li><strong>Name:</strong> To identify you and create your Ravellen account.</li>
+    <li><strong>Email Address:</strong> To register your account, identify your login, and communicate with you about your account and orders.</li>
+    <li><strong>Profile Picture:</strong> If provided by Google and requested by our application, it may be used to personalize your account.</li>
+</ul>
+<p>We only access the Google account information necessary to provide the sign-in and account services.</p>
+
+<h3>How We Use Google User Data</h3>
+<p>We use information received through Google Sign-In to:</p>
+<ul>
+    <li>Authenticate your identity and allow secure login.</li>
+    <li>Create and maintain your Ravellen customer account.</li>
+    <li>Associate your Google account with your Ravellen account.</li>
+    <li>Manage your orders and provide customer support.</li>
+    <li>Communicate important account-related information.</li>
+</ul>
+
+<h3>Sharing of Google User Data</h3>
+<p>We do not sell, rent, or trade Google user data. We do not use Google user data for advertising purposes. We only share it when necessary to provide our services, comply with legal obligations, or protect our rights.</p>
+
+<h3>Storage and Security of Google User Data</h3>
+<p>Information received through Google Sign-In may be stored in our website database and protected using reasonable security measures. We take steps to prevent unauthorized access, disclosure, alteration, or misuse.</p>
+
+<h3>Data Retention and Deletion</h3>
+<p>We retain Google user information for as long as necessary to maintain your account and provide our services, or as required by law.</p>
+@php $googleContactEmail = \App\Models\Setting::get('support_email') ?: 'ravellenraynae@gmail.com'; @endphp
+<p>You may request access to, correction of, or deletion of your account information by contacting us at <a href="mailto:{{ $googleContactEmail }}">{{ $googleContactEmail }}</a>. We will review and process requests in accordance with applicable legal requirements.</p>
+
+<h3>Google Permissions</h3>
+<p>Ravellen uses Google Sign-In only for authentication and access to the account information required for this purpose. We do not request access to Gmail, Google Drive, Google Contacts, or other Google services unless explicitly disclosed and requested through a separate permission.</p>
+
+<h2>14. Changes to This Privacy Policy</h2>
 <p>We may update this Privacy Policy from time to time to reflect changes in our business, website features, or applicable legal requirements.</p>
 <p>Any changes will be published on this page with an updated effective date.</p>
 <p>We encourage you to check this page occasionally to stay informed.</p>
 
-<h2>14. Contact Us</h2>
+<h2>15. Contact Us</h2>
 <p>Have questions about your privacy or how your information is handled? We'd love to hear from you!</p>
 @include('pages.partials.policy-contact', ['fields' => ['name', 'email', 'website', 'instagram']])
 

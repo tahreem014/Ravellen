@@ -168,7 +168,7 @@ class ProductPricingTest extends TestCase
         $mug->variants->first()->update(['sale_price' => 1500]);
         $balls = $this->customBallsProduct([5 => 1000, 10 => 1900]);
         $pack10 = $balls->packVariants()->first(fn ($v) => $v->packSize() === 10);
-        $pack10->update(['sale_price' => 1700]);
+        $pack10->update(['sale_price' => 1700, 'stock' => 5, 'status' => 'active']);   // new packs start with no stock, so out of stock, until some is added
 
         $this->actingAs($buyer)->postJson(route('cart.store'), [
             'product_id' => $mug->id, 'product_variant_id' => $mug->variants->first()->id, 'qty' => 2,

@@ -20,7 +20,18 @@
         document.querySelectorAll('[data-live-product]').forEach(el => products.add(el.dataset.liveProduct));
         const categories = [...new Set([...document.querySelectorAll('[data-live-category]')].map(el => el.dataset.liveCategory))];
         const listings = [...new Set([...document.querySelectorAll('[data-live-listing]')].map(el => el.dataset.liveListing))];
-        return { products: [...products], categories, listings };
+        return { products: [...products], categories, listings, stats: !!document.querySelector('[data-live-stat]') };
+    }
+
+    function patchStats(stats) {
+        document.querySelectorAll('[data-live-stat]').forEach(el => {
+            const value = stats[el.dataset.liveStat];
+            if (value === undefined || el.textContent === value) return;
+            el.textContent = value;
+            el.classList.remove('stat-updated');
+            void el.offsetWidth;   // restart the highlight animation
+            el.classList.add('stat-updated');
+        });
     }
 
     function setBadge(el, label) {
@@ -85,10 +96,13 @@
             wants.products.forEach(id => params.append('products[]', id));
             wants.categories.forEach(id => params.append('categories[]', id));
             wants.listings.forEach(key => params.append('listings[]', key));
+            if (wants.stats) params.set('stats', '1');
 
             const res = await fetch(LIVE_URL + '?' + params, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
             if (!res.ok) return;
             const data = await res.json();
+
+            if (data.stats) patchStats(data.stats);
 
             if (data.unread !== undefined) {
                 if (unread !== null && data.unread !== unread) {

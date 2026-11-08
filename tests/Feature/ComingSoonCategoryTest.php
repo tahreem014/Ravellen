@@ -92,14 +92,14 @@ class ComingSoonCategoryTest extends TestCase
         $this->get(route('bts-merch'))->assertOk()
             ->assertSeeInOrder(['Choose Your Bias', 'data-bias="jungkook"', 'Our BTS merch is on the way'], false)
             ->assertSee('data-live-listing="category:BTS Merch"', false)
-            ->assertDontSee('id="dynamicCards"', false);
+            ->assertDontSee('id="biasProducts"', false);
         $this->assertTrue($this->shopPillIsFlagged('BTS Merch'));
 
         $this->productIn($bts);
 
         $this->get(route('bts-merch'))->assertOk()
             ->assertSee('Choose Your Bias')
-            ->assertSee('id="dynamicCards"', false)
+            ->assertSee('id="biasProducts"', false)
             ->assertDontSee('Our BTS merch is on the way');
         $this->assertFalse($this->shopPillIsFlagged('BTS Merch'));
     }
@@ -188,6 +188,28 @@ class ComingSoonCategoryTest extends TestCase
         // once the category has a product its own page is back
         $this->productIn($ceramic);
         $this->get(route('ceramic-mug'))->assertOk()->assertDontSee("We're getting Ceramic Items ready");
+    }
+
+    public function test_the_shop_shows_each_empty_categorys_coming_soon_panel_in_its_own_theme(): void
+    {
+        $bts     = $this->emptyCategory('BTS Merch');
+        $ceramic = $this->emptyCategory('Ceramic Items');
+
+        $html  = $this->get(route('shop'))->assertOk()->getContent();
+        $panel = function (Category $category) use ($html): string {
+            preg_match('/<div[^>]*data-coming-soon-for="' . $category->id . '".*?<\/h3>/s', $html, $match);
+
+            return $match[0] ?? '';
+        };
+
+        // BTS Merch: BTS purple and its star, not ceramic brown
+        $this->assertStringContainsString('BTS Merch are on their way', $panel($bts));
+        $this->assertStringContainsString('#7c3aed', $panel($bts));
+        $this->assertStringContainsString('ri-star-line', $panel($bts));
+        $this->assertStringNotContainsString('#8B5E3C', $panel($bts));
+
+        $this->assertStringContainsString('#8B5E3C', $panel($ceramic));
+        $this->assertStringContainsString('ri-cup-line', $panel($ceramic));
     }
 
     public function test_other_categories_are_unaffected(): void

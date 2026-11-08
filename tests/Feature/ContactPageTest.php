@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\ContactMessageMail;
 use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -54,6 +55,37 @@ class ContactPageTest extends TestCase
             ->assertSee('ri-tiktok-line', false)
             ->assertDontSee('ri-facebook-fill', false)
             ->assertDontSee('ri-twitter-x-line', false);
+    }
+
+    public function test_footer_faqs_link_lands_on_the_contact_pages_faq_section(): void
+    {
+        $this->get('/about')->assertOk()->assertSee('href="' . route('contact') . '#faq"', false);
+
+        $this->get('/contact')->assertOk()->assertSee('id="faq"', false);
+    }
+
+    public function test_footer_track_order_link_opens_the_order_history_tab_of_the_profile(): void
+    {
+        $url = route('profile', ['tab' => 'orders']);
+        $this->assertStringEndsWith('/profile?tab=orders', $url);
+
+        $this->get('/about')->assertOk()
+            ->assertSee('href="' . $url . '"', false)
+            ->assertDontSee('/order-tracking', false)
+            ->assertDontSee('/faqs', false);
+
+        // the profile page opens whichever tab ?tab= names, and Order History is the "orders" one
+        $this->actingAs(User::factory()->create())->get($url)->assertOk()
+            ->assertSee('id="tab-orders"', false)
+            ->assertSee("switchTab('orders',this)", false);
+    }
+
+    public function test_footer_social_icons_are_not_underlined(): void
+    {
+        $html = $this->get('/about')->assertOk()->getContent();
+
+        $this->assertSame(2, preg_match_all('/<a [^>]*class="footer-social-btn [^"]*\btext-decoration-none\b/', $html));
+        $this->assertStringContainsString('.footer-social-btn:hover, .footer-social-btn:focus { text-decoration: none;', $html);
     }
 
     public function test_contact_page_lists_the_faqs(): void

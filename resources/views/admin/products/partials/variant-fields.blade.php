@@ -72,9 +72,10 @@
                                     <td data-label="Min"><input type="number" name="variants[{{ $id }}][min_qty]" value="{{ $value('min_qty') }}" class="form-control form-control-sm {{ $invalid("variants.$id.min_qty") }}" style="width:70px;" required></td>
                                     <td data-label="Max"><input type="number" name="variants[{{ $id }}][max_qty]" value="{{ $value('max_qty') }}" class="form-control form-control-sm {{ $invalid("variants.$id.max_qty") }}" style="width:70px;" required></td>
                                 @endif
-                                <td data-label="Stock"><input type="number" name="variants[{{ $id }}][stock]" value="{{ $value('stock') }}" class="form-control form-control-sm {{ $invalid("variants.$id.stock") }}" style="width:80px;" required></td>
+                                {{-- data-synced: what the database holds, so the live stock poll (products/edit) can tell what the admin has changed here --}}
+                                <td data-label="Stock"><input type="number" name="variants[{{ $id }}][stock]" value="{{ $value('stock') }}" data-synced="{{ $variant->stock }}" class="form-control form-control-sm {{ $invalid("variants.$id.stock") }}" style="width:80px;" required></td>
                                 <td data-label="Status">
-                                    <select name="variants[{{ $id }}][status]" class="form-select form-select-sm {{ $invalid("variants.$id.status") }}">
+                                    <select name="variants[{{ $id }}][status]" data-synced="{{ $variant->status }}" class="form-select form-select-sm {{ $invalid("variants.$id.status") }}">
                                         @foreach (\App\Models\ProductVariant::STATUSES as $status)
                                             <option value="{{ $status }}" @selected($value('status') === $status)>{{ $statusLabel($status) }}</option>
                                         @endforeach
@@ -185,6 +186,21 @@
         }
         const removeNew = e.target.closest('[data-remove-new-variant]');
         if (removeNew) removeNew.closest('tr').remove();
+    });
+
+    // Stock and status go together: typing new stock for a variant that has none flips its Status to Active,
+    // and typing 0 for an active one flips it to Out of stock — shown here before saving, so the admin can
+    // still pick something else. A variant that was Out of stock while it had stock keeps its status.
+    card.addEventListener('input', (e) => {
+        const stock = e.target.closest('input[name$="[stock]"][data-synced]');
+        if (!stock) return;
+
+        const status = stock.closest('tr').querySelector('select[name$="[status]"]');
+        const amount = Number(stock.value);
+        if (!status || stock.value === '' || Number.isNaN(amount)) return;
+
+        if (amount > 0 && status.value === 'out_of_stock' && Number(stock.defaultValue) <= 0) status.value = 'active';
+        if (amount <= 0 && status.value === 'active') status.value = 'out_of_stock';
     });
 
     // Variants only apply to standard pricing: Mystery Balls pricing builds the packs itself

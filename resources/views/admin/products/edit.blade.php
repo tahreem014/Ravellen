@@ -128,4 +128,74 @@
             toggle.querySelector('i').className = removed ? 'ri-arrow-go-back-line' : 'ri-close-line';
         });
     </script>
+
+    <script>
+        /**
+         * Live stock in the Variants table: orders placed while this page is open lower each variant's
+         * stock (and a sold-out one turns Out of stock). Every few seconds the Stock and Status fields are
+         * brought up to date — except one the admin has changed: that keeps their edit, with the live
+         * figure shown under it, so saving never silently undoes a sale they hadn't seen yet.
+         */
+        (function () {
+            const STOCK_URL = @json(route('admin.products.stock', ['ids' => [$product->id]], false));
+            const PRODUCT_ID = @json((string) $product->id);
+            const POLL_MS = 5000;
+            let polling = false;
+
+            function note(field, text) {
+                let el = field.parentElement.querySelector('[data-live-hint]');
+                if (!el) {
+                    if (!text) return;
+                    el = document.createElement('div');
+                    el.setAttribute('data-live-hint', '');
+                    el.className = 'small text-danger mt-1';
+                    field.insertAdjacentElement('afterend', el);
+                }
+                el.textContent = text;
+                el.hidden = !text;
+            }
+
+            function sync(field, value) {
+                value = String(value);
+                const label = field.tagName === 'SELECT' ? (field.querySelector(`option[value="${value}"]`)?.textContent || value) : value;
+
+                if (field.value === field.dataset.synced) {   // untouched: follows the database
+                    if (field.value !== value) {
+                        field.value = value;
+                        field.classList.add('border-warning');
+                        setTimeout(() => field.classList.remove('border-warning'), 1500);
+                    }
+                    field.dataset.synced = value;
+                    note(field, '');
+                } else {                                      // edited by the admin: keep it, show the live figure
+                    note(field, field.value === value ? '' : 'Live: ' + label);
+                }
+            }
+
+            async function pollStock() {
+                if (polling || document.visibilityState !== 'visible') return;
+                polling = true;
+
+                try {
+                    const res = await fetch(STOCK_URL, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                    if (!res.ok) return;
+                    const variants = (await res.json()).products[PRODUCT_ID]?.variants || {};
+
+                    Object.entries(variants).forEach(([id, fresh]) => {
+                        const stock  = document.querySelector(`input[name="variants[${id}][stock]"]`);
+                        const status = document.querySelector(`select[name="variants[${id}][status]"]`);
+                        if (stock)  sync(stock, fresh.stock);
+                        if (status) sync(status, fresh.status);
+                    });
+                } catch (e) {
+                    // offline, signed out or server busy — try again on the next tick
+                } finally {
+                    polling = false;
+                }
+            }
+
+            setInterval(pollStock, POLL_MS);
+            document.addEventListener('visibilitychange', pollStock);
+        })();
+    </script>
 @endsection

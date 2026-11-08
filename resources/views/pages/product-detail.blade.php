@@ -113,14 +113,26 @@
             'original' => $v->hasDiscount() ? (float) $v->price : null,
             'percent'  => $v->discountPercent(),
             'unavailable' => $v->unavailableLabel(),   // "Out of stock" / "Restocking" …, null while it can be ordered
+            'min'      => $v->orderMin(),               // each size has its own order limits (Classic 1–5, Premium 1–7 …)
+            'max'      => $v->orderMax(),
         ])->all()
         : [];
     $firstScoop = $scoopOptions[0] ?? null;
+
+    // The BTS member pages show the product's own name, description and photo (the admin's), not fixed text
+    $genericName  = $genericProduct?->name;
+    $genericDesc  = $genericProduct?->description;
+    $genericImage = $genericProduct?->images->map(fn ($image) => $image->image_url)->filter()->first();
 
     // Live updates (layouts/live-updates): the DB product this page shows, and a
     // fingerprint of its sizes / packs so a structural admin change re-renders the page
     $livePageProduct   = ($type ?? null) === 'product-item' ? ($product ?? null) : $genericProduct;
     $livePageStructure = $livePageProduct ? app(\App\Services\LiveUpdateService::class)->structure($livePageProduct) : null;
+
+    // Units left per variant id (null: not limited by stock) — the "Only N left" note and the quantity cap
+    $stockMap = $livePageProduct
+        ? $livePageProduct->variants->mapWithKeys(fn ($variant) => [$variant->id => $variant->remainingStock()])->all()
+        : [];
 @endphp
 
 @section('css')
@@ -158,6 +170,18 @@
     /* a size / pack that can't be ordered right now: still selectable, so its status can be read */
     .size-btn.unavailable { opacity: .65; }
     .size-btn .size-status { font-size: .7rem; font-weight: 600; color: #b45309; }
+
+    /* "Only N left" — shown once the picked size / pack is down to its last few; the number counts down live */
+    .stock-left { background: #fff7ed; border: 1px solid #fed7aa; border-radius: .75rem; padding: .6rem .85rem; color: #9a3412; }
+    .stock-left.stock-left-critical { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .stock-left-text { display: flex; align-items: center; gap: .4rem; font-size: .875rem; font-weight: 600; }
+    .stock-left-count { display: inline-block; min-width: 1.2ch; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+    .stock-left-bar { height: .4rem; margin-top: .45rem; background: rgba(0,0,0,.08); border-radius: 1rem; overflow: hidden; }
+    .stock-left-bar span { display: block; height: 100%; width: 100%; border-radius: 1rem; background: linear-gradient(90deg,#f97316,#ef4444); transition: width .6s ease; }
+    .stock-left.stock-left-drop { animation: stock-left-pulse .9s ease; }
+    .stock-left.stock-left-drop .stock-left-count { animation: stock-left-tick .6s ease; }
+    @keyframes stock-left-tick { 0% { transform: translateY(-.7em); opacity: 0; color: #dc2626; } 60% { transform: translateY(.1em); opacity: 1; color: #dc2626; } 100% { transform: none; color: inherit; } }
+    @keyframes stock-left-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } 30% { box-shadow: 0 0 0 .3rem rgba(239,68,68,.25); } }
 
     /* Quantity */
     .qty-btn {
@@ -258,26 +282,32 @@
             <div class="bts-info-badge" style="background:color-mix(in srgb, {{ $theme['accent'] }} 12%, white);border-color:color-mix(in srgb, {{ $theme['accent'] }} 40%, white);color:{{ $theme['accent'] }};"><i class="ri-heart-fill"></i> {{ $btsLabel }}</div>
         @endif
         <h1 class="fw-bold mb-3" style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,{{ $theme['accent'] }},{{ $theme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-            BTS Mystery Scoop 💜
+            <span data-pi-name>{{ $genericName ?? 'BTS Mystery Scoop' }}</span> 💜
         </h1>
         <p class="text-muted mx-auto" style="max-width:36rem;font-size:1.05rem;">
             Exclusive ARMY-themed mystery scoop{{ $biasLabel ? ' for '.$biasLabel : '' }}. Choose your size and let the magic begin!
         </p>
     </div>
 
+    @php
+        // Each size has its own order limits (the admin's Min / Max per size); the page opens on the first size
+        $scoopStartQty = $firstScoop['min'] ?? 1;
+        $scoopFallbackDesc = 'Exclusive themed mystery items for ARMY! Each scoop is curated with BTS-themed goodies' . ($biasLabel ? ' for '.$biasLabel : '') . '.';
+    @endphp
+
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="product-card card mb-4">
                 <div class="row g-0">
                     <div class="col-md-5 position-relative">
-                        <img src="https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=600&q=80" alt="BTS Mystery Scoop" class="product-img h-100">
+                        <img src="{{ $genericImage ?? 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=600&q=80' }}" alt="{{ $genericName ?? 'BTS Mystery Scoop' }}" class="product-img h-100">
                         <x-discount-badge id="discount-badge" :label="isset($firstScoop['percent']) ? '-' . $firstScoop['percent'] . '%' : null" />
                         <span class="position-absolute top-0 start-0 m-3 badge" style="background:{{ $theme['badgeBg'] }};font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">ARMY Special</span>
                     </div>
                     <div class="col-md-7">
                         <div class="card-body p-4 d-flex flex-column justify-content-start h-100">
-                            <h3 class="fw-bold mb-2">{{ $biasLabel ? $btsLabel.' Mystery Scoop' : 'BTS Mystery Scoop' }}</h3>
-                            <p class="text-muted small mb-3">Exclusive themed mystery items for ARMY! Each scoop is curated with BTS-themed goodies{{ $biasLabel ? ' for '.$biasLabel : '' }}.</p>
+                            <h3 class="fw-bold mb-2" data-pi-name>{{ $genericName ?? ($biasLabel ? $btsLabel.' Mystery Scoop' : 'BTS Mystery Scoop') }}</h3>
+                            <p class="text-muted small mb-3" data-pi-description data-pi-fallback="{{ $scoopFallbackDesc }}">{{ filled($genericDesc) ? $genericDesc : $scoopFallbackDesc }}</p>
                             <div class="info-note mb-3">⚠️ Note: More than 4 same items will be upgraded to prevent duplicates. Specify in comments if you prefer otherwise.</div>
                             <div class="mb-3">
                                 <span class="fw-bold" id="display-price" style="font-size:1.5rem;color:{{ $theme['accent'] }};"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
@@ -296,12 +326,14 @@
                                     @endforelse
                                 </div>
                             </div>
+                            <x-stock-left />
                             <div class="mb-3">
-                                <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: 1, Max: 20)</span></div>
+                                {{-- the limits follow the picked size (script: renderScoopQty) --}}
+                                <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: <span id="scoop-min-qty">{{ $firstScoop['min'] ?? 1 }}</span>, Max: <span id="scoop-max-qty">{{ $firstScoop['max'] ?? 1 }}</span>)</span></div>
                                 <div class="d-flex align-items-center gap-3">
                                     <button class="qty-btn" id="scoop-minus" onclick="updateQtyScoop(-1)" disabled><i class="ri-subtract-line"></i></button>
-                                    <span class="fw-bold fs-5" id="scoop-qty-display">1</span>
-                                    <button class="qty-btn" id="scoop-plus" onclick="updateQtyScoop(1)"><i class="ri-add-line"></i></button>
+                                    <span class="fw-bold fs-5" id="scoop-qty-display">{{ $scoopStartQty }}</span>
+                                    <button class="qty-btn" id="scoop-plus" onclick="updateQtyScoop(1)" @disabled($scoopStartQty >= ($firstScoop['max'] ?? 1))><i class="ri-add-line"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -319,12 +351,12 @@
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🛒 Step 2: Choose Your Scoop Size</div>
                     <p class="text-muted small mb-1">Select your Mystery Scoop size:</p>
-                    <ul class="text-muted small mb-1 ps-3">@foreach($scoopOptions as $scoop)<li>{{ $scoop['name'] }} Scoop — <span data-scoop-idx="{{ $loop->index }}"><x-price :amount="$scoop['price']" :original="$scoop['original']" /></span></li>@endforeach</ul>
+                    <ul class="text-muted small mb-1 ps-3">@foreach($scoopOptions as $scoop)<li>{{ $scoop['name'] }} Scoop — <span data-scoop-idx="{{ $loop->index }}"><x-price :amount="$scoop['price']" :original="$scoop['original']" /></span> <span data-scoop-limits="{{ $loop->index }}">(min {{ $scoop['min'] }}, max {{ $scoop['max'] }})</span></li>@endforeach</ul>
                     <p class="text-muted small mb-0">Each size comes with a different value and surprise level.</p>
                 </div>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🔢 Step 3: Select Quantity</div>
-                    <p class="text-muted small mb-0">Choose how many scoops you want (minimum 1, maximum 20 per size). You can also mix different sizes with different quantities in one order.</p>
+                    <p class="text-muted small mb-0">Choose how many scoops you want, within the minimum and maximum shown for each size. You can also mix different sizes with different quantities in one order.</p>
                 </div>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">✍️ Step 4: Add Special Requests (Optional)</div>
@@ -361,7 +393,7 @@
                 </div>
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Quantity</span>
-                    <span class="fw-semibold" id="summary-qty">1</span>
+                    <span class="fw-semibold" id="summary-qty">{{ $scoopStartQty }}</span>
                 </div>
                 <div class="mb-3 pb-3 border-bottom d-flex justify-content-between">
                     <span class="text-muted">Price per scoop</span>
@@ -369,14 +401,14 @@
                 </div>
                 <div class="mb-4 d-flex justify-content-between fw-bold fs-5">
                     <span>Total</span>
-                    <span id="summary-total" style="color:{{ $theme['accent'] }};"><x-price :amount="$firstScoop['price'] ?? null" :original="$firstScoop['original'] ?? null" /></span>
+                    <span id="summary-total" style="color:{{ $theme['accent'] }};"><x-price :amount="isset($firstScoop['price']) ? $firstScoop['price'] * $scoopStartQty : null" :original="isset($firstScoop['original']) ? $firstScoop['original'] * $scoopStartQty : null" /></span>
                 </div>
                 <div class="mb-4">
                     <label class="fw-medium small mb-2 d-block">Special Requests (Optional)</label>
                     <textarea class="form-control" rows="4" id="bs-special-requests" placeholder="E.g., preferred member items, era themes..." style="border-radius:.5rem;font-size:.875rem;resize:none;border:1px solid #e5e7eb;"></textarea>
                 </div>
                 <button onclick="addToCart('bts-scoop')" id="scoop-add-btn" @disabled(! $scoopOptions || $firstScoop['unavailable']) class="btn text-white w-100 py-2 fw-semibold" style="background:{{ $theme['btnGrad'] }};border-radius:.5rem;font-size:.9rem;">
-                    <i class="ri-shopping-cart-line me-2"></i><span id="scoop-btn-label">{{ $firstScoop['unavailable'] ?? 'Add to Cart' }}</span><span id="scoop-btn-price" @if($firstScoop['unavailable'] ?? null) style="display:none;" @endif> — <span id="btn-total">PKR {{ number_format($firstScoop['price'] ?? 0) }}</span></span>
+                    <i class="ri-shopping-cart-line me-2"></i><span id="scoop-btn-label">{{ $firstScoop['unavailable'] ?? 'Add to Cart' }}</span><span id="scoop-btn-price" @if($firstScoop['unavailable'] ?? null) style="display:none;" @endif> — <span id="btn-total">PKR {{ number_format(($firstScoop['price'] ?? 0) * $scoopStartQty) }}</span></span>
                 </button>
                 <p class="text-center text-muted mt-3" style="font-size:.75rem;">Secure checkout powered by Ravellen</p>
             </div>
@@ -395,7 +427,7 @@
             <div class="bts-info-badge" style="background:color-mix(in srgb, {{ $theme['accent'] }} 12%, white);border-color:color-mix(in srgb, {{ $theme['accent'] }} 40%, white);color:{{ $theme['accent'] }};"><i class="ri-heart-fill"></i> {{ $btsLabel }}</div>
         @endif
         <h1 class="fw-bold mb-3" style="font-size:clamp(2rem,5vw,3.5rem);background:linear-gradient(to right,{{ $theme['accent'] }},{{ $theme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
-            BTS Mystery Balls 💜
+            <span data-pi-name>{{ $genericName ?? 'BTS Mystery Balls' }}</span> 💜
         </h1>
         <p class="text-muted mx-auto" style="max-width:36rem;font-size:1.05rem;">
             Surprise mystery balls with ARMY-themed goodies{{ $biasLabel ? ' for '.$biasLabel : '' }}!
@@ -412,17 +444,19 @@
             <div class="product-card card mb-4">
                 <div class="row g-0">
                     <div class="col-md-5 position-relative">
-                        <img src="https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=600&q=80" alt="BTS Mystery Balls" class="product-img h-100">
+                        <img src="{{ $genericImage ?? 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=600&q=80' }}" alt="{{ $genericName ?? 'BTS Mystery Balls' }}" class="product-img h-100">
                         <x-discount-badge id="discount-badge" :label="isset($ballPacks[0]['percent']) ? '-' . $ballPacks[0]['percent'] . '%' : null" />
                         <span class="position-absolute top-0 start-0 m-3 badge" style="background:{{ $theme['badgeBg'] }};font-size:.75rem;padding:.4rem .75rem;border-radius:2rem;">ARMY Special</span>
                     </div>
                     <div class="col-md-7">
                         <div class="card-body p-4 d-flex flex-column justify-content-center h-100">
-                            <h3 class="fw-bold mb-3">{{ $biasLabel ? $btsLabel.' Mystery Balls' : 'BTS Mystery Balls' }}</h3>
-                            <p class="text-muted mb-4">Surprise mystery balls packed with BTS-themed goodies{{ $biasLabel ? ' for '.$biasLabel : '' }}! Same high-quality items as our scoops.</p>
+                            @php $ballsFallbackDesc = 'Surprise mystery balls packed with BTS-themed goodies' . ($biasLabel ? ' for '.$biasLabel : '') . '! Same high-quality items as our scoops.'; @endphp
+                            <h3 class="fw-bold mb-3" data-pi-name>{{ $genericName ?? ($biasLabel ? $btsLabel.' Mystery Balls' : 'BTS Mystery Balls') }}</h3>
+                            <p class="text-muted mb-4" data-pi-description data-pi-fallback="{{ $ballsFallbackDesc }}">{{ filled($genericDesc) ? $genericDesc : $ballsFallbackDesc }}</p>
                             <div class="mb-4">
                                 @include('pages.partials.balls-pricing', ['packs' => $ballPacks, 'mode' => $ballsMode, 'accent' => $theme['accent']])
                             </div>
+                            <x-stock-left />
                             <div class="bg-light rounded-3 p-4 text-center">
                                 <div class="fw-medium text-muted small mb-3">Select Quantity (Multiples of 5)</div>
                                 <div class="d-flex align-items-center justify-content-center gap-4">
@@ -449,7 +483,7 @@
                 </div>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🛒 Step 2: Choose Your Pack Size</div>
-                    <p class="text-muted small mb-0">Select how many Mystery Balls you'd like. You can choose any quantity from 5 to 50 balls in increments of 5.</p>
+                    <p class="text-muted small mb-0">Select how many Mystery Balls you'd like. You can choose any quantity from {{ $ballsMin }} to {{ $ballsMax }} balls in increments of {{ \App\Models\Product::PACK_STEP }}.</p>
                 </div>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🔢 Step 3: Select Quantity</div>
@@ -694,7 +728,8 @@
         'percent'  => $v->discountPercent(),
         'preorder' => $v->isPreOrder(),
         'unavailable' => $v->unavailableLabel(),
-        'max_qty'  => $v->max_qty,
+        'min_qty'  => $v->orderMin(),
+        'max_qty'  => $v->orderMax(),
     ]])->all();
 
     // Breadcrumb label
@@ -764,6 +799,11 @@
                             </div>
                             <p class="text-muted small mb-3" data-pi-description>{{ $product->description }}</p>
 
+                            {{-- Same duplicate-items note as the BTS scoop card, in the same spot (under the description, above the price) --}}
+                            @if($resolvedThemeKey === 'mystery-scoops')
+                            <div class="info-note mb-3">⚠️ Note: More than 4 same items will be upgraded to prevent duplicates. Specify in comments if you prefer otherwise.</div>
+                            @endif
+
                             @if($isCeramicItem && $firstVariant)
                             {{-- Ceramic size comes from the variant name --}}
                             <div class="row g-2 mb-3">
@@ -814,6 +854,8 @@
                                 <strong data-pi-stock-label>{{ $piUnavailable }}</strong> — this can't be ordered right now.
                             </div>
 
+                            <x-stock-left />
+
                             {{-- Quantity selector --}}
                             <div class="mb-3 mt-auto">
                                 @if($isBalls)
@@ -824,10 +866,10 @@
                                         <button class="qty-btn" id="pi-qty-plus"  onclick="updateQtyBalls(5)" @disabled(count($ballPacks) <= 1)><i class="ri-add-line"></i></button>
                                     </div>
                                 @else
-                                    <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: 1, Max: <span id="pi-max-qty">{{ $firstVariant?->max_qty ?? 10 }}</span>)</span></div>
+                                    <div class="fw-medium small mb-2">Quantity <span class="text-muted">(Min: <span id="pi-min-qty">{{ $firstVariant?->orderMin() ?? 1 }}</span>, Max: <span id="pi-max-qty">{{ $firstVariant?->orderMax() ?? 10 }}</span>)</span></div>
                                     <div class="d-flex align-items-center gap-3">
                                         <button class="qty-btn" id="pi-qty-minus" onclick="piUpdateQty(-1)" disabled><i class="ri-subtract-line"></i></button>
-                                        <span class="fw-bold fs-5" id="pi-qty-display">1</span>
+                                        <span class="fw-bold fs-5" id="pi-qty-display">{{ $firstVariant?->orderMin() ?? 1 }}</span>
                                         <button class="qty-btn" id="pi-qty-plus"  onclick="piUpdateQty(1)"><i class="ri-add-line"></i></button>
                                     </div>
                                 @endif
@@ -844,12 +886,12 @@
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🛒 Step 1: Choose Your Scoop Size</div>
                     <p class="text-muted small mb-1">Select your Mystery Scoop size:</p>
-                    <ul class="text-muted small mb-1 ps-3"><li>Classic Scoop</li><li>Standard Scoop</li><li>Premium Scoop</li></ul>
+                    <ul class="text-muted small mb-1 ps-3">@foreach($variants as $variant)<li>{{ $variant->variant_name }} (min {{ $variant->orderMin() }}, max {{ $variant->orderMax() }})</li>@endforeach</ul>
                     <p class="text-muted small mb-0">Each size comes with a different value and surprise level.</p>
                 </div>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🔢 Step 2: Select Quantity</div>
-                    <p class="text-muted small mb-0">Choose how many scoops you want (minimum 1, maximum 20 per size). You can also mix different sizes with different quantities in one order.</p>
+                    <p class="text-muted small mb-0">Choose how many scoops you want, within the minimum and maximum shown for each size. You can also mix different sizes with different quantities in one order.</p>
                 </div>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">✍️ Step 3: Add Special Requests (Optional)</div>
@@ -872,7 +914,7 @@
                 <h5 class="fw-bold mb-4">🎁 How Mystery Balls Work</h5>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🛒 Step 1: Choose Your Pack Size</div>
-                    <p class="text-muted small mb-0">Select how many Mystery Balls you'd like. You can choose any quantity from 5 to 50 balls in increments of 5.</p>
+                    <p class="text-muted small mb-0">Select how many Mystery Balls you'd like. You can choose any quantity from {{ $ballsMin }} to {{ $ballsMax }} balls in increments of {{ \App\Models\Product::PACK_STEP }}.</p>
                 </div>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🔢 Step 2: Select Quantity</div>
@@ -904,7 +946,7 @@
                 <h5 class="fw-bold mb-4">💜 How BTS Mystery Balls Work</h5>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🛒 Step 1: Choose Your Pack Size</div>
-                    <p class="text-muted small mb-0">Select how many Mystery Balls you'd like. You can choose any quantity from 5 to 50 balls in increments of 5.</p>
+                    <p class="text-muted small mb-0">Select how many Mystery Balls you'd like. You can choose any quantity from {{ $ballsMin }} to {{ $ballsMax }} balls in increments of {{ \App\Models\Product::PACK_STEP }}.</p>
                 </div>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🔢 Step 2: Select Quantity</div>
@@ -932,12 +974,12 @@
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🛒 Step 1: Choose Your Scoop Size</div>
                     <p class="text-muted small mb-1">Select your Mystery Scoop size:</p>
-                    <ul class="text-muted small mb-1 ps-3"><li>Classic Scoop</li><li>Standard Scoop</li><li>Premium Scoop</li></ul>
+                    <ul class="text-muted small mb-1 ps-3">@foreach($variants as $variant)<li>{{ $variant->variant_name }} (min {{ $variant->orderMin() }}, max {{ $variant->orderMax() }})</li>@endforeach</ul>
                     <p class="text-muted small mb-0">Each size comes with a different value and surprise level.</p>
                 </div>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">🔢 Step 2: Select Quantity</div>
-                    <p class="text-muted small mb-0">Choose how many scoops you want (minimum 1, maximum 20 per size). You can also mix different sizes with different quantities in one order.</p>
+                    <p class="text-muted small mb-0">Choose how many scoops you want, within the minimum and maximum shown for each size. You can also mix different sizes with different quantities in one order.</p>
                 </div>
                 <div class="how-step">
                     <div class="fw-semibold mb-1">✍️ Step 3: Add Special Requests (Optional)</div>
@@ -1171,8 +1213,9 @@ async function persistToCart(payload, localItem) {
 }
 
 const PRODUCT_META = {
-    'bts-scoop':     { name: 'BTS Mystery Scoop',     image: 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=200&q=80', preorder: false },
-    'bts-balls':      { name: 'BTS Mystery Balls',     image: 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=200&q=80', preorder: false },
+    // the BTS member pages put the member's own product (name and photo) in the cart
+    'bts-scoop':     { name: @json($genericName ?? 'BTS Mystery Scoop'), image: @json($genericImage ?? 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=200&q=80'), preorder: false },
+    'bts-balls':      { name: @json($genericName ?? 'BTS Mystery Balls'), image: @json($genericImage ?? 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=200&q=80'), preorder: false },
     'ceramic':        { name: 'Cute Ceramic Mug',      image: 'https://images.unsplash.com/photo-1515401857507-c897a8f64e42?w=200&q=80', preorder: false },
     'gift-box':       { name: '{{ addslashes($productName ?? "Tata's Space Gift Box") }}', image: '{{ $productImg ?? 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=600&q=80' }}', preorder: false },
 };
@@ -1303,13 +1346,38 @@ function selectBallsPack(idx) {
 
     // Product-item page
     if (typeof piApplyBallsPack === 'function') piApplyBallsPack(pack);
+
+    renderStockLeft();
 }
 
 // ── Mystery Scoops / BTS Scoop ─────────────────────────────────────────────
 // Sizes are the product's variants, cheapest first, with any sale applied.
 const SCOOP_OPTIONS = @json($scoopOptions ?? []);
-let scoopQty = 1;
 let scoopIdx = 0;
+let scoopQty = SCOOP_OPTIONS[0]?.min || 1;   // the page opens on the first size, at its own minimum
+
+// Each size has its own order limits (the admin's Min / Max per size), so they follow the picked size
+function scoopLimits() {
+    const scoop = SCOOP_OPTIONS[scoopIdx];
+    const min = Number(scoop?.min) || 1;
+    return [min, Math.max(min, Math.min(Number(scoop?.max) || 1, stockCap(scoop?.id)))];
+}
+
+// Keep the stepper, its "Min" / "Max" labels and both buttons in step with the picked size
+function renderScoopQty() {
+    const [min, max] = scoopLimits();
+    scoopQty = Math.min(max, Math.max(min, scoopQty));
+    const minus = document.getElementById('scoop-minus');
+    const plus  = document.getElementById('scoop-plus');
+    const disp  = document.getElementById('scoop-qty-display');
+    if (minus) minus.disabled = scoopQty <= min;
+    if (plus)  plus.disabled  = scoopQty >= max;
+    if (disp)  disp.textContent = scoopQty;
+    const minLabel = document.getElementById('scoop-min-qty');
+    const maxLabel = document.getElementById('scoop-max-qty');
+    if (minLabel) minLabel.textContent = min;
+    if (maxLabel) maxLabel.textContent = max;
+}
 
 function selectSize(btn, idx) {
     document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
@@ -1321,19 +1389,71 @@ function selectSize(btn, idx) {
     if (dp) dp.innerHTML = priceHtml(scoop.price, scoop.original);
     if (dl) dl.textContent = 'per ' + scoop.name.toLowerCase();
     setDiscountBadge(scoop.percent);
+    scoopQty = scoopLimits()[0];   // a new size starts at its own minimum
+    renderScoopQty();
     updateScoopSummary();
+    renderStockLeft();
 }
 
 function updateQtyScoop(change) {
-    scoopQty = Math.min(20, Math.max(1, scoopQty + change));
-    const minus = document.getElementById('scoop-minus');
-    const plus  = document.getElementById('scoop-plus');
-    const disp  = document.getElementById('scoop-qty-display');
-    if (minus) minus.disabled = scoopQty <= 1;
-    if (plus)  plus.disabled  = scoopQty >= 20;
-    if (disp)  disp.textContent = scoopQty;
+    scoopQty += change;
+    renderScoopQty();
     updateScoopSummary();
 }
+
+// ── Stock left ("Only N left") ─────────────────────────────────────────────
+// VARIANT_STOCK maps each variant id to the units still orderable (null: not limited by stock).
+// The note shows while the picked size / pack / variant has STOCK_LOW or fewer; live updates keep
+// the map current, so the number ticks down while the shopper is looking at it, and a shopper can't
+// pick more than what is left.
+const STOCK_LOW     = {{ \App\Models\ProductVariant::LOW_STOCK_THRESHOLD }};
+const VARIANT_STOCK = @json((object) $stockMap);
+let stockLeftVariant = null;   // what the note last showed, so a drop of the same variant can be animated
+let stockLeftCount   = null;
+
+function pickedVariantId() {
+    if (BALL_PACKS.length)    return currentBallsPack()?.id ?? null;
+    if (SCOOP_OPTIONS.length) return SCOOP_OPTIONS[scoopIdx]?.id ?? null;
+    return typeof piVariantId !== 'undefined' ? piVariantId : null;
+}
+
+// The most one order can hold of this variant: the admin's Max, but never more than what is left
+function stockCap(variantId) {
+    const left = VARIANT_STOCK[variantId];
+    return left === null || left === undefined ? Infinity : left;
+}
+
+function renderStockLeft() {
+    const note = document.querySelector('[data-stock-left]');
+    if (!note) return;
+
+    const id   = pickedVariantId();
+    const left = id === null || id === undefined ? null : VARIANT_STOCK[id];
+    const low  = left !== null && left !== undefined && left > 0 && left <= STOCK_LOW;
+    note.hidden = !low;
+
+    if (!low) {
+        stockLeftVariant = id;
+        stockLeftCount   = null;
+        return;
+    }
+
+    const dropped = stockLeftVariant === id && stockLeftCount !== null && left < stockLeftCount;
+    note.querySelector('[data-stock-left-count]').textContent = left;
+    note.querySelector('[data-stock-left-fill]').style.width = Math.max(4, left / STOCK_LOW * 100) + '%';
+    note.classList.toggle('stock-left-critical', left <= 5);
+
+    if (dropped) {
+        note.classList.remove('stock-left-drop');
+        void note.offsetWidth;   // restart the animation
+        note.classList.add('stock-left-drop');
+    }
+
+    stockLeftVariant = id;
+    stockLeftCount   = left;
+}
+
+document.addEventListener('DOMContentLoaded', renderStockLeft);
 
 function updateScoopSummary() {
     const scoop = SCOOP_OPTIONS[scoopIdx];
@@ -1393,6 +1513,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const qm = document.getElementById('qty-minus');
     if (qm) qm.disabled = true;
     if (BALL_PACKS.length) selectBallsPack(0);
+    if (SCOOP_OPTIONS.length) { renderScoopQty(); updateScoopSummary(); }
     // Set correct initial total for ceramic/gift-box
     const st = document.getElementById('ceramic-summary-total');
     if (st) st.textContent = 'PKR ' + CERAMIC_UNIT_PRICE.toLocaleString();
@@ -1405,6 +1526,27 @@ window.LIVE_PRODUCT_IDS = @json($livePageProduct ? [$livePageProduct->id] : []);
 const LIVE_PAGE_PRODUCT_ID = @json($livePageProduct?->id);
 const LIVE_PAGE_STRUCTURE  = @json($livePageStructure);
 
+// The product's own name, description and photo, on the shop's product page and on the BTS member pages.
+// A blank description goes back to the text the page was rendered with (data-pi-fallback), if it has one.
+function applyLiveProductInfo(product) {
+    document.querySelectorAll('[data-pi-name]').forEach(el => el.textContent = product.name);
+    document.title = product.name + ' | Ravellen';
+    document.querySelectorAll('[data-pi-description]').forEach(el => el.textContent = product.description || el.dataset.piFallback || '');
+
+    // what a guest's cart line says follows too (BTS member pages)
+    ['bts-scoop', 'bts-balls'].forEach(type => {
+        if (!PRODUCT_META[type]) return;
+        PRODUCT_META[type].name = product.name;
+        if (product.image) PRODUCT_META[type].image = product.image;
+    });
+
+    const img = document.querySelector('.product-img');
+    if (img && product.image && img.getAttribute('src') !== product.image) {
+        img.src = product.image;
+        img.parentElement.style.setProperty('--product-img', `url("${product.image}")`);
+    }
+}
+
 document.addEventListener('live:catalog', (e) => {
     if (!LIVE_PAGE_PRODUCT_ID) return;
     const product = e.detail.products[LIVE_PAGE_PRODUCT_ID];
@@ -1412,9 +1554,14 @@ document.addEventListener('live:catalog', (e) => {
         location.reload();
         return;
     }
+    applyLiveProductInfo(product);
+
+    // units left per variant — orders placed since the page opened lower them (the note below counts down)
+    Object.entries(product.variants).forEach(([id, v]) => { VARIANT_STOCK[id] = v.stock; });
+
     const fresh = (id) => {
         const v = product.variants[id] || {};
-        return { price: v.price, original: v.original, percent: v.percent, preorder: v.preorder, available: v.available };
+        return { price: v.price, original: v.original, percent: v.percent, preorder: v.preorder, available: v.available, min: v.min_qty, max: v.max_qty };
     };
 
     // Mystery Balls packs
@@ -1432,21 +1579,28 @@ document.addEventListener('live:catalog', (e) => {
     // Mystery Scoop sizes
     if (SCOOP_OPTIONS.length) {
         SCOOP_OPTIONS.forEach(option => {
-            const { price, original, percent } = fresh(option.id);
-            Object.assign(option, { price, original, percent });
+            const { price, original, percent, min, max } = fresh(option.id);
+            Object.assign(option, { price, original, percent, min: min ?? option.min, max: max ?? option.max });
         });
         document.querySelectorAll('[data-scoop-idx]').forEach(el => {
             const option = SCOOP_OPTIONS[el.dataset.scoopIdx];
             el.innerHTML = livePriceHtml(option.price, option.original);
         });
+        document.querySelectorAll('[data-scoop-limits]').forEach(el => {
+            const option = SCOOP_OPTIONS[el.dataset.scoopLimits];
+            el.textContent = `(min ${option.min}, max ${option.max})`;
+        });
         const picked = SCOOP_OPTIONS[scoopIdx];
         const dp = document.getElementById('display-price');
         if (dp) dp.innerHTML = livePriceHtml(picked.price, picked.original);
         setDiscountBadge(picked.percent);
+        renderScoopQty();   // the admin may have changed this size's limits
         updateScoopSummary();
     }
 
     if (typeof piApplyLive === 'function') piApplyLive(product);
+
+    renderStockLeft();
 });
 
 // ── Product-Item (DB product) ───────────────────────────────────────────────
@@ -1456,7 +1610,7 @@ let piUnitPrice     = {{ $piInitialUnitPrice ?? $minPrice ?? 0 }};
 let piOriginalPrice = {{ $minOriginal ?? 'null' }};   // regular price while on sale
 let piVariantName = '{{ addslashes($firstVariant?->variant_name ?? '') }}';
 let piVariantId   = {{ $firstVariant?->id ?? 'null' }};
-let piQty         = {{ ($isBalls ?? false) ? ($ballsMin ?? 5) : 1 }};
+let piQty         = {{ ($isBalls ?? false) ? ($ballsMin ?? 5) : ($firstVariant?->orderMin() ?? 1) }};
 let piIsPreorder  = {{ ($isPreorderItem ?? false) ? 'true' : 'false' }};
 const PI_IS_BALLS   = {{ ($isBalls ?? false) ? 'true' : 'false' }};
 const PI_BALLS_AUTOMATIC = {{ ($ballsMode ?? null) === \App\Models\Product::PRICING_AUTOMATIC ? 'true' : 'false' }};
@@ -1486,28 +1640,20 @@ function piSelectVariant(btn, variantId) {
     piOriginalPrice = variant.original;
     piVariantName   = variant.name;
     piVariantId     = variantId;
-    piQty = 1;
+    piQty = piMinQty();   // a new size starts at its own minimum
     piRenderQty();
 
     piSetPreorder(variant.preorder);
     piRefreshSummary();
+    renderStockLeft();
 }
 
 // Fresh prices / name / photo from the admin (called by the live:catalog handler below)
 function piApplyLive(product) {
-    document.querySelectorAll('[data-pi-name]').forEach(el => el.textContent = product.name);
-    document.title = product.name + ' | Ravellen';
-    document.querySelectorAll('[data-pi-description]').forEach(el => el.textContent = product.description || '');
-
-    const img = document.querySelector('.product-img');
-    if (img && product.image && img.getAttribute('src') !== product.image) {
-        img.src = product.image;
-        img.parentElement.style.setProperty('--product-img', `url("${product.image}")`);
-    }
-
+    // name, description and photo are patched by applyLiveProductInfo() (shared with the BTS member pages)
     Object.entries(product.variants).forEach(([id, fresh]) => {
         if (!PI_VARIANTS[id]) return;
-        Object.assign(PI_VARIANTS[id], { price: fresh.price, original: fresh.original, percent: fresh.percent, preorder: fresh.preorder, max_qty: fresh.max_qty });
+        Object.assign(PI_VARIANTS[id], { price: fresh.price, original: fresh.original, percent: fresh.percent, preorder: fresh.preorder, min_qty: fresh.min_qty, max_qty: fresh.max_qty });
         const price = document.querySelector(`.size-btn[data-variant-id="${id}"] .size-price`);
         if (price) price.innerHTML = livePriceHtml(fresh.price, fresh.original);
     });
@@ -1545,20 +1691,25 @@ function piApplyBallsPack(pack) {
     piRefreshSummary();
 }
 
-// Each variant has its own maximum (Classic 5, Deluxe 10…), so the limit follows the picked one
+// Each variant has its own limits (Classic 1–5, Deluxe 2–10…), so they follow the picked one
+function piMinQty() {
+    return Number(PI_VARIANTS[piVariantId]?.min_qty) || 1;
+}
 function piMaxQty() {
-    return Number(PI_VARIANTS[piVariantId]?.max_qty) || 10;
+    return Math.max(piMinQty(), Math.min(Number(PI_VARIANTS[piVariantId]?.max_qty) || 10, stockCap(piVariantId)));
 }
 
-// Keep the stepper, its "Max" label and both buttons in step with the picked variant
+// Keep the stepper, its "Min" / "Max" labels and both buttons in step with the picked variant
 function piRenderQty() {
-    const max = piMaxQty();
-    piQty = Math.min(max, Math.max(1, piQty));
+    const min = piMinQty(), max = piMaxQty();
+    piQty = Math.min(max, Math.max(min, piQty));
     document.getElementById('pi-qty-display').textContent = piQty;
-    document.getElementById('pi-qty-minus').disabled = piQty <= 1;
+    document.getElementById('pi-qty-minus').disabled = piQty <= min;
     document.getElementById('pi-qty-plus').disabled  = piQty >= max;
-    const label = document.getElementById('pi-max-qty');
-    if (label) label.textContent = max;
+    const minLabel = document.getElementById('pi-min-qty');
+    if (minLabel) minLabel.textContent = min;
+    const maxLabel = document.getElementById('pi-max-qty');
+    if (maxLabel) maxLabel.textContent = max;
 }
 
 function piUpdateQty(change) {

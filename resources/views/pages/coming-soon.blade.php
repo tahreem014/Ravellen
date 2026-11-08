@@ -14,7 +14,7 @@
      data-live-listing="category:{{ $name }}"
      data-live-signature="{{ app(\App\Services\LiveUpdateService::class)->listingSignature('category:' . $name) }}">
     <div class="container px-3 px-sm-4 pt-5">
-        <x-coming-soon :title="'We\'re getting ' . $name . ' ready'"
+        <x-coming-soon :title="$heading ?? ('We\'re getting ' . $name . ' ready')"
                        message="Check back soon!"
                        :accent="$accent" :accent2="$accent2" />
     </div>

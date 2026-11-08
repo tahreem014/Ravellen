@@ -151,7 +151,8 @@
         </div>
 
         {{-- ── FAQ ── --}}
-        <div class="fade-up" style="max-width:44rem;margin:0 auto;">
+        {{-- id="faq": the footer's FAQs link lands here (scroll-margin keeps the heading below the sticky navbar) --}}
+        <div id="faq" class="fade-up" style="max-width:44rem;margin:0 auto;scroll-margin-top:5.5rem;">
             <div class="text-center mb-4">
                 <h2 class="fw-bold d-flex align-items-center justify-content-center gap-2">
                     <i class="ri-question-line" style="color:#9333ea;"></i> Frequently Asked Questions

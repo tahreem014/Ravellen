@@ -159,6 +159,19 @@
 <div class="home-wrapper">
 
     
+    <?php
+        // Mystery Scoops / Mystery Balls open the product page the shop lists for that category; Gift Boxes
+        // opens the shop on that category (BTS Merch keeps its own member page). The category cards further
+        // down reuse these. With no such category in the database: the legacy URL / the shop.
+        $categoryProductUrl = fn (string $category, string $fallback) => ($landing = $categories->firstWhere('name', $category)?->firstProduct())
+            ? route('product-item', $landing->slug)
+            : url($fallback);
+
+        $categoryShopUrl = fn (string $category) => ($found = $categories->firstWhere('name', $category))
+            ? route('shop', ['category' => $found->id])
+            : route('shop');
+    ?>
+
     <section class="hero-section py-5 py-md-6 ">
         <div class="hero-blob-1"></div>
         <div class="hero-blob-2"></div>
@@ -198,17 +211,11 @@
                     <div class="hero-grid-wrap">
                         <div class="row g-3">
                             <?php
-                                // Mystery Scoops / Mystery Balls open the product page the shop lists for that
-                                // category (the category cards below reuse this); no product yet → the legacy URL's "Coming soon"
-                                $categoryProductUrl = fn (string $category, string $fallback) => ($landing = $categories->firstWhere('name', $category)?->firstProduct())
-                                    ? route('product-item', $landing->slug)
-                                    : url($fallback);
-
                                 $heroCategories = [
                                     ['name'=>'Mystery Scoops','url'=>$categoryProductUrl('Mystery Scoops', 'mystery-scoops'),'icon'=>'ri-gift-line',      'bg'=>'linear-gradient(135deg,#f472b6,#fb7185)'],
                                     ['name'=>'Mystery Balls', 'url'=>$categoryProductUrl('Mystery Balls', 'mystery-balls'),  'icon'=>'ri-sparkling-line', 'bg'=>'linear-gradient(135deg,#f472b6,#fb7185)'],
                                     ['name'=>'BTS Merch',     'url'=>url('bts-merch'),                                       'icon'=>'ri-star-line',      'bg'=>'linear-gradient(135deg,#C084FC,#9333EA)'],
-                                    ['name'=>'Gift Box',      'url'=>url('gift-boxes'),                                      'icon'=>'ri-shopping-bag-line','bg'=>'linear-gradient(135deg,#fb7185,#f472b6)'],
+                                    ['name'=>'Gift Box',      'url'=>$categoryShopUrl('Gift Boxes'),                         'icon'=>'ri-shopping-bag-line','bg'=>'linear-gradient(135deg,#fb7185,#f472b6)'],
                                 ];
                             ?>
 
@@ -313,6 +320,7 @@
                     ],
                     'Gift Boxes' => [
                         'link'    => 'gift-boxes',
+                        'shop'    => true,   // opens the shop on this category, like the hero card
                         'icon'    => 'ri-shopping-bag-line',
                         'overlay' => 'linear-gradient(to top,rgba(244,63,94,.7),rgba(251,113,133,.4))',
                         'iconBg'  => 'linear-gradient(135deg,#fb7185,#f472b6)',
@@ -356,7 +364,8 @@
                     $pDesc     = $cat->subCategories->count() . ' sub-categories, ' . $allProds->count() . ' products';
                     $catLabel  = isset($cfg) ? ($cfg['label'] ?? $cat->name) : $cat->name;
                     $soon      = $cat->isComingSoon();   // no products yet: no price or count
-                    $catUrl    = isset($cfg) ? (($cfg['product'] ?? false) ? $categoryProductUrl($cat->name, $cfg['link']) : url($cfg['link'])) : null;
+                    $catUrl    = ! isset($cfg) ? null : (($cfg['product'] ?? false) ? $categoryProductUrl($cat->name, $cfg['link'])
+                        : (($cfg['shop'] ?? false) ? route('shop', ['category' => $cat->id]) : url($cfg['link'])));
                 ?>
                 <?php if($cfg): ?>
                 <div class="col-md-6 col-lg-4 fade-up" <?php if (! ($soon)): ?> data-live-category="<?php echo e($cat->id); ?>" <?php endif; ?>>

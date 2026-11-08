@@ -197,6 +197,12 @@
             ];
             $shopDefaultTheme = ['accent' => '#9333ea', 'accent2' => '#ec4899', 'grad' => 'linear-gradient(135deg,#9333ea,#ec4899)'];
 
+            // The icons the home page cards use for each category (shown on its "coming soon" panel)
+            $shopThemeIcons = [
+                'Mystery Scoops' => 'ri-gift-line', 'Mystery Balls' => 'ri-sparkling-line', 'BTS Merch' => 'ri-star-line',
+                'BTS Gift Boxes' => 'ri-gift-2-line', 'Gift Boxes' => 'ri-shopping-bag-line', 'Ceramic Items' => 'ri-cup-line',
+            ];
+
             // Flatten every product across every category/sub-category, tagging
             // each with its parent category & sub-category for filtering.
             $allProducts = collect();
@@ -230,7 +236,7 @@
             <?php $__currentLoopData = $categories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                 <?php if($category->isComingSoon()) continue; ?>
                 <?php $__currentLoopData = $category->subCategories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <button type="button" class="shop-pill sub" data-sub="<?php echo e($sub->id); ?>" data-parent="<?php echo e($category->id); ?>" style="display:none;" onclick="selectShopSub('<?php echo e($sub->id); ?>', this)"><?php echo e($sub->name); ?></button>
+                    <button type="button" class="shop-pill sub" data-sub="<?php echo e($sub->id); ?>" data-parent="<?php echo e($category->id); ?>" <?php if($sub->products->isEmpty()): ?> data-coming-soon="1" <?php endif; ?> style="display:none;" onclick="selectShopSub('<?php echo e($sub->id); ?>', this)"><?php echo e($sub->name); ?></button>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
@@ -330,7 +336,8 @@
 <?php $component = $__componentOriginal5c7c50258000edf57abfef324d310474; ?>
 <?php unset($__componentOriginal5c7c50258000edf57abfef324d310474); ?>
 <?php endif; ?></p>
-                            <a href="<?php echo e(route('product-item', $product->slug)); ?>" class="shop-explore-btn" style="background:<?php echo e($theme['grad']); ?>;">
+                            
+                            <a href="<?php echo e($btsMemberUrls[$product->id] ?? route('product-item', $product->slug)); ?>" class="shop-explore-btn" style="background:<?php echo e($theme['grad']); ?>;">
                                 View Product <i class="ri-arrow-right-line ms-1"></i>
                             </a>
                         </div>
@@ -350,16 +357,19 @@
 
         
         <div id="shop-coming-soon" style="display:none;">
-            <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
+            
+            <?php $__currentLoopData = $categories->filter(fn ($category) => $category->isComingSoon()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <?php $comingTheme = $shopThemeMap[$category->name] ?? $shopDefaultTheme; ?>
+                <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => 'Coming soon','message' => 'We\'re getting everything ready. Check back soon!','actions' => false]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['dataComingSoonFor' => ''.e($category->id).'','hidden' => true,'title' => $category->name . ' are on their way','message' => 'We\'re getting everything ready. Check back soon!','icon' => $shopThemeIcons[$category->name] ?? 'ri-time-line','accent' => $comingTheme['accent'],'accent2' => $comingTheme['accent2'],'actions' => false]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('coming-soon'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['title' => 'Coming soon','message' => 'We\'re getting everything ready. Check back soon!','actions' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(false)]); ?>
+<?php $component->withAttributes(['data-coming-soon-for' => ''.e($category->id).'','hidden' => true,'title' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($category->name . ' are on their way'),'message' => 'We\'re getting everything ready. Check back soon!','icon' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($shopThemeIcons[$category->name] ?? 'ri-time-line'),'accent' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($comingTheme['accent']),'accent2' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($comingTheme['accent2']),'actions' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(false)]); ?>
 <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
 <?php if (isset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
@@ -370,6 +380,34 @@
 <?php $component = $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
 <?php unset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
 <?php endif; ?>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+
+            
+            <?php $__currentLoopData = $categories->reject(fn ($category) => $category->isComingSoon()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $category): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <?php $comingTheme = $shopThemeMap[$category->name] ?? $shopDefaultTheme; ?>
+                <?php $__currentLoopData = $category->subCategories->filter(fn ($sub) => $sub->products->isEmpty()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['dataComingSoonForSub' => ''.e($sub->id).'','hidden' => true,'title' => $sub->name . ' products are on their way','message' => 'We\'re getting everything ready. Check back soon!','icon' => $shopThemeIcons[$category->name] ?? 'ri-time-line','accent' => $comingTheme['accent'],'accent2' => $comingTheme['accent2'],'actions' => false]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('coming-soon'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['data-coming-soon-for-sub' => ''.e($sub->id).'','hidden' => true,'title' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($sub->name . ' products are on their way'),'message' => 'We\'re getting everything ready. Check back soon!','icon' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($shopThemeIcons[$category->name] ?? 'ri-time-line'),'accent' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($comingTheme['accent']),'accent2' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($comingTheme['accent2']),'actions' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(false)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $attributes = $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $component = $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
 
         
@@ -402,7 +440,17 @@ let shopActiveCat = 'all';
 let shopActiveSub = 'all';
 let shopSearchQuery = '';
 let shopCurrentPage = 1;
-let shopComingSoon = false;   // the selected category has nothing on sale yet
+let shopComingSoon = false;      // the selected category has nothing on sale yet
+let shopSubComingSoon = false;   // ...or the selected sub-category (e.g. a BTS member) has no products yet
+
+// The "coming soon" panel that belongs to the selected category / sub-category (none while products are listed)
+function showShopComingSoonPanel() {
+    document.querySelectorAll('#shop-coming-soon > *').forEach(panel => {
+        panel.hidden = shopSubComingSoon
+            ? panel.dataset.comingSoonForSub !== String(shopActiveSub)
+            : !(shopComingSoon && panel.dataset.comingSoonFor === String(shopActiveCat));
+    });
+}
 
 // ── Category selection ──────────────────────────────────────────────────────
 function selectShopCategory(catId, btn) {
@@ -410,9 +458,8 @@ function selectShopCategory(catId, btn) {
     shopActiveSub = 'all';
 
     shopComingSoon = btn.dataset.comingSoon === '1';
-    if (shopComingSoon) {
-        document.querySelector('#shop-coming-soon .coming-soon-title').textContent = btn.dataset.name + ' are on their way';
-    }
+    shopSubComingSoon = false;
+    showShopComingSoonPanel();
 
     document.querySelectorAll('#shop-cat-pills .shop-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -439,6 +486,8 @@ function selectShopCategory(catId, btn) {
 // ── Sub-category selection ──────────────────────────────────────────────────
 function selectShopSub(subId, btn) {
     shopActiveSub = subId;
+    shopSubComingSoon = btn.dataset.comingSoon === '1';
+    showShopComingSoonPanel();
     document.querySelectorAll('#shop-sub-pills .shop-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     applyShopFilters();
@@ -480,8 +529,9 @@ function renderShopPage() {
         if (idx >= start && idx < end) item.style.display = '';
     });
 
-    document.getElementById('shop-coming-soon').style.display = shopComingSoon ? 'block' : 'none';
-    document.getElementById('no-results').style.display = (!shopComingSoon && matched.length === 0) ? 'block' : 'none';
+    const comingSoon = shopComingSoon || shopSubComingSoon;
+    document.getElementById('shop-coming-soon').style.display = comingSoon ? 'block' : 'none';
+    document.getElementById('no-results').style.display = (!comingSoon && matched.length === 0) ? 'block' : 'none';
     renderShopPagination(matched.length, totalPages);
     rememberShopView();
 }

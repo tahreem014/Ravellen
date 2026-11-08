@@ -71,7 +71,9 @@ class LiveUpdateService
                 'percent'   => $variant->discountPercent(),
                 'preorder'  => $variant->isPreOrder(),
                 'available' => $variant->isPurchasable(),
-                'max_qty'   => $variant->max_qty,
+                'min_qty'   => $variant->orderMin(),
+                'max_qty'   => $variant->orderMax(),
+                'stock'     => $variant->remainingStock(),   // units left (null: not limited by stock) — the "Only N left" note
             ]])->all(),
         ];
     }

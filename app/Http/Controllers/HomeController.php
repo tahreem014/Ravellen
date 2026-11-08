@@ -19,6 +19,13 @@ class HomeController extends Controller
         'suga'     => 'SUGA',         'ot7'      => 'OT7',          'bt21'  => 'BT21',
     ];
 
+    // How each member is named in "coming soon" messages
+    public const BTS_BIAS_NAMES = [
+        'jungkook' => 'Jungkook', 'taehyung' => 'Taehyung', 'jimin' => 'Jimin',
+        'namjoon'  => 'Namjoon',  'jin'      => 'Jin',      'jhope' => 'J-Hope',
+        'suga'     => 'Suga',     'ot7'      => 'OT7',      'bt21'  => 'BT21',
+    ];
+
     /**
      * Create a new controller instance.
      *
@@ -50,36 +57,98 @@ class HomeController extends Controller
             'products.images',
         ])->orderBy('name')->get();
 
-        return view('pages.shop', compact('categories'));
+        return view('pages.shop', [
+            'categories'    => $categories,
+            'btsMemberUrls' => $this->btsMemberUrls($categories),
+        ]);
     }
 
     /**
-     * BTS Merch landing page. Picking a bias shows that member's starting
-     * prices, read from the same products the bias product pages sell.
+     * Where the shop sends the BTS Merch products, keyed by product id: the member pages the BTS Merch
+     * page's picker opens (/mystery-scoops?bias=… and /mystery-balls?bias=…), not the plain product page.
+     * Those pages show a member's first Scoop / Balls product, so only that product gets the link.
+     *
+     * @return array<int, string>
+     */
+    private function btsMemberUrls($categories): array
+    {
+        $members = array_flip(self::BTS_BIAS_SUB_CATEGORIES);   // sub-category name => bias key
+        $urls    = [];
+
+        foreach ($categories->firstWhere('name', 'BTS Merch')?->subCategories ?? [] as $subCategory) {
+            $bias = $members[$subCategory->name] ?? null;
+
+            foreach (['Scoop' => 'mystery-scoops', 'Balls' => 'mystery-balls'] as $word => $route) {
+                $first = $bias ? $subCategory->products->sortBy('id')->first(fn ($product) => \Illuminate\Support\Str::contains($product->name, $word, ignoreCase: true)) : null;
+
+                if ($first) {
+                    $urls[$first->id] = route($route, ['bias' => $bias]);
+                }
+            }
+        }
+
+        return $urls;
+    }
+
+    /**
+     * BTS Merch landing page. Picking a bias shows the products that member really has in the database:
+     * their first Scoop and first Balls (the same two the member pages /mystery-scoops?bias=… and
+     * /mystery-balls?bias=… open). A member with neither shows "Coming soon", nothing is made up.
      */
     public function btsMerch()
     {
-        $products = \App\Models\Product::with(['variants', 'subCategory'])
+        $products = \App\Models\Product::with(['variants', 'images', 'subCategory'])
             ->whereHas('category', fn ($q) => $q->where('name', 'BTS Merch'))
+            ->orderBy('id')
             ->get();
 
-        $biasPrices = [];
+        $biasProducts = [];
 
         foreach (self::BTS_BIAS_SUB_CATEGORIES as $bias => $subCategory) {
             $memberProducts = $products->filter(fn ($p) => $p->subCategory?->name === $subCategory);
-            $scoop = $memberProducts->first(fn ($p) => str_contains($p->name, 'Scoop'))?->cheapestVariant();
-            $balls = $memberProducts->first(fn ($p) => str_contains($p->name, 'Balls'));
 
-            $biasPrices[$bias] = [
-                'scoop' => $scoop ? ['price' => $scoop->effectivePrice(), 'original' => $scoop->hasDiscount() ? (float) $scoop->price : null] : null,
-                'balls' => $balls ? ($balls->packOptions()[0] ?? null) : null,   // smallest pack
+            $biasProducts[$bias] = [
+                'scoop' => $this->btsCard($memberProducts->first(fn ($p) => \Illuminate\Support\Str::contains($p->name, 'Scoop', ignoreCase: true)), 'scoop', $bias),
+                'balls' => $this->btsCard($memberProducts->first(fn ($p) => \Illuminate\Support\Str::contains($p->name, 'Balls', ignoreCase: true)), 'balls', $bias),
             ];
         }
 
         // No BTS Merch products yet: the page says "Coming soon" instead of offering a bias to pick
         $comingSoon = $products->isEmpty();
 
-        return view('pages.bts-merch', compact('biasPrices', 'comingSoon'));
+        return view('pages.bts-merch', compact('biasProducts', 'comingSoon'));
+    }
+
+    /**
+     * What a BTS Merch card shows for one of a member's products: its name, photo, description, starting
+     * price (sale price applied) and the member page it opens. Null when the member has no such product.
+     */
+    private function btsCard(?\App\Models\Product $product, string $kind, string $bias): ?array
+    {
+        if (! $product) {
+            return null;
+        }
+
+        $pack     = $kind === 'balls' ? ($product->packOptions()[0] ?? null) : null;   // smallest pack
+        $cheapest = $product->cheapestVariant();
+
+        if ($pack) {
+            $price = ['label' => $pack['qty'] . ' balls for', 'amount' => $pack['price'], 'original' => $pack['original']];
+        } elseif ($cheapest) {
+            $price = ['label' => 'Starting from', 'amount' => $cheapest->effectivePrice(), 'original' => $cheapest->hasDiscount() ? (float) $cheapest->price : null];
+        } else {
+            $price = null;
+        }
+
+        return [
+            'id'          => $product->id,
+            'name'        => $product->name,
+            'description' => $product->description,
+            'image'       => $product->images->map(fn ($image) => $image->image_url)->filter()->first(),   // photos only, not video rows
+            'min'         => $pack['qty'] ?? null,
+            'price'       => $price,
+            'url'         => route($kind === 'balls' ? 'mystery-balls' : 'mystery-scoops', ['bias' => $bias]),
+        ];
     }
 
     public function categoryPage(string $section = 'gift-box')
@@ -198,6 +267,14 @@ class HomeController extends Controller
             }
 
             $product = $query->orderBy('id')->first();
+
+            // A member who has no such product yet: "Coming soon", not a product page with nothing behind it
+            if (! $product && isset($biasSubCategories[$bias])) {
+                return view('pages.coming-soon', [
+                    'name'    => 'BTS Merch',
+                    'heading' => self::BTS_BIAS_NAMES[$bias] . "'s " . ($isBalls ? 'Mystery Balls are on their way' : 'Mystery Scoop is on its way'),
+                ]);
+            }
 
             // Without ?bias= (the BTS Merch pages' member picker), /mystery-scoops and /mystery-balls
             // are the shop's product page for that category — there is no page of their own.

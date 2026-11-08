@@ -74,6 +74,10 @@
     .bias-btn[data-bias="ot7"]      { background: linear-gradient(145deg,#c4b5fd,#a78bfa); }
     .bias-btn[data-bias="bt21"]     { background: linear-gradient(145deg,#ddd6fe,#c4b5fd); }
 
+    /* each member's products (or "coming soon"); only the picked member's panel is shown */
+    .bias-products { display: none; }
+    .bias-products.show { display: block; }
+
     .bias-emoji { font-size: 2rem; line-height: 1; }
     .bias-name  { font-size: .8rem; font-weight: 700; color: #5b21b6; }
     
@@ -189,49 +193,58 @@
                            icon="ri-star-line" accent="#7c3aed" accent2="#a855f7" />
         @else
 
-        {{-- Dynamic product cards --}}
-        <div class="row g-4 justify-content-center mb-2" id="dynamicCards" style="display:none!important;">
-
-            {{-- Mystery Scoop --}}
-            <div class="col-sm-10 col-md-6 col-lg-5">
-                <div class="bts-card card h-100">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1765516833058-c322c800fee1?w=600&q=80"
-                             alt="Mystery Scoop" class="bts-card-img">
-                        <span class="prod-badge badge-army">ARMY Special</span>
-                    </div>
-                    <div class="card-body p-4 d-flex flex-column">
-                        <h5 class="fw-bold mb-1" id="dynScoopTitle">Mystery Scoop 💜</h5>
-                        <p class="text-muted small mb-3">Exclusive themed mystery items for ARMY! Available in Classic, Standard, and Premium sizes.</p>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted small">Starting from</span>
-                            <span class="fw-bold" id="dynScoopPrice" style="color:#7c3aed;">PKR 2,500</span>
+        {{-- One panel per member, shown when that bias is picked: the member's real products (read from the
+             database by HomeController::btsMerch), or "Coming soon" while they have none. --}}
+        @php
+            $cardFallbacks = [
+                'scoop' => 'https://images.unsplash.com/photo-1765516833058-c322c800fee1?w=600&q=80',
+                'balls' => 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=600&q=80',
+            ];
+            $money = fn ($amount) => 'PKR ' . number_format($amount);
+        @endphp
+        <div id="biasProducts">
+            @foreach(array_merge($row1, $row2) as $m)
+                @php $cards = array_filter($biasProducts[$m['id']] ?? []); @endphp
+                <div class="bias-products" data-bias-products="{{ $m['id'] }}">
+                    @if($cards)
+                        <div class="row g-4 justify-content-center mb-2">
+                            @foreach($cards as $kind => $card)
+                                <div class="col-sm-10 col-md-6 col-lg-5">
+                                    <div class="bts-card card h-100" data-product="{{ $card['id'] }}">
+                                        <div class="position-relative">
+                                            <img src="{{ $card['image'] ?? $cardFallbacks[$kind] }}" alt="{{ $card['name'] }}" class="bts-card-img">
+                                            @if($kind === 'balls')
+                                                <span class="prod-badge badge-min">Min {{ $card['min'] ?? 5 }} pcs</span>
+                                            @else
+                                                <span class="prod-badge badge-army">ARMY Special</span>
+                                            @endif
+                                        </div>
+                                        <div class="card-body p-4 d-flex flex-column">
+                                            <h5 class="fw-bold mb-1">{{ $card['name'] }} 💜</h5>
+                                            @if($card['description'])
+                                                <p class="text-muted small mb-3">{{ $card['description'] }}</p>
+                                            @endif
+                                            @if($card['price'])
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <span class="text-muted small">{{ $card['price']['label'] }}</span>
+                                                    <span class="fw-bold" style="color:#7c3aed;">{{ $money($card['price']['amount']) }}@if($card['price']['original'] && $card['price']['original'] > $card['price']['amount']) <s style="color:#9ca3af;font-weight:500;font-size:.8em;margin-left:.3em;">{{ $money($card['price']['original']) }}</s>@endif</span>
+                                                </div>
+                                            @endif
+                                            <a href="{{ $card['url'] }}" class="bts-explore-btn w-100 justify-content-center mt-auto text-decoration-none">
+                                                Order {{ $kind === 'balls' ? 'Mystery Balls' : 'Mystery Scoop' }}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
-                        <button class="bts-explore-btn w-100 justify-content-center mt-auto" onclick="goToProduct('scoop')">Order Mystery Scoop</button>
-                    </div>
+                    @else
+                        <x-coming-soon :title="$m['name'] . '\'s merch is on the way'"
+                                       :message="'We\'re getting ' . $m['name'] . '\'s mystery scoops and balls ready. Check back soon!'"
+                                       :icon="'ri-star-line'" accent="#7c3aed" accent2="#a855f7" :actions="false" />
+                    @endif
                 </div>
-            </div>
-
-            {{-- Mystery Balls --}}
-            <div class="col-sm-10 col-md-6 col-lg-5">
-                <div class="bts-card card h-100">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=600&q=80"
-                             alt="Mystery Balls" class="bts-card-img">
-                        <span class="prod-badge badge-min">Min 5 pcs</span>
-                    </div>
-                    <div class="card-body p-4 d-flex flex-column">
-                        <h5 class="fw-bold mb-1" id="dynBallsTitle">Mystery Balls 💜</h5>
-                        <p class="text-muted small mb-3">Surprise mystery balls with ARMY-themed goodies! Minimum 5 balls, add by multiples of 5.</p>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted small" id="dynBallsQty">5 balls for</span>
-                            <span class="fw-bold" id="dynBallsPrice" style="color:#7c3aed;">PKR 1,000</span>
-                        </div>
-                        <button class="bts-explore-btn w-100 justify-content-center mt-auto" onclick="goToProduct('balls')">Order Mystery Balls</button>
-                    </div>
-                </div>
-            </div>
-
+            @endforeach
         </div>
 
         @endif
@@ -249,11 +262,6 @@
 
 <script>
     let selectedBias = null;
-    const memberLabels = {
-        jungkook:'Jungkook 🐰', taehyung:'Taehyung 🐯', jimin:'Jimin 🐥',
-        namjoon:'Namjoon 🐨', jin:'Jin 🐹', jhope:'J-Hope 🐿️',
-        suga:'Suga 🐱', ot7:'OT7 💜', bt21:'BT21 ✨'
-    };
 
     function selectBias(id) {
         selectedBias = id;
@@ -264,36 +272,12 @@
         history.replaceState(null, '', location.pathname + '?bias=' + encodeURIComponent(id));
     }
 
-    // Each member's cheapest scoop and smallest balls pack, sale prices applied
-    const biasPrices = @json($biasPrices ?? []);
-
-    function fmtPkr(n) { return 'PKR ' + Math.round(n).toLocaleString(); }
-    function priceHtml(amount, original) {
-        return fmtPkr(amount) + (original && original > amount
-            ? ' <s style="color:#9ca3af;font-weight:500;font-size:.8em;margin-left:.3em;">' + fmtPkr(original) + '</s>'
-            : '');
-    }
-
+    // Shows the picked member's panel (their real products, or "coming soon"). The panels are rendered by the
+    // server from the database; there are none while the whole category is "coming soon".
     function updateCards() {
-        // No product cards on the page while the category is "coming soon": picking a bias just highlights it
-        if (!selectedBias || !document.getElementById('dynamicCards')) return;
-        const label = memberLabels[selectedBias];
-        document.getElementById('dynScoopTitle').textContent = label + ' Mystery Scoop 💜';
-        document.getElementById('dynBallsTitle').textContent = label + ' Mystery Balls 💜';
-        const prices = biasPrices[selectedBias] || {};
-        if (prices.scoop) document.getElementById('dynScoopPrice').innerHTML = priceHtml(prices.scoop.price, prices.scoop.original);
-        if (prices.balls) {
-            document.getElementById('dynBallsQty').textContent   = prices.balls.qty + ' balls for';
-            document.getElementById('dynBallsPrice').innerHTML = priceHtml(prices.balls.price, prices.balls.original);
-        }
-        document.getElementById('dynamicCards').style.setProperty('display', 'flex', 'important');
-    }
-
-    function goToProduct(type) {
-        if (!selectedBias) return;
-        const params = new URLSearchParams({ bias: selectedBias });
-        const base = type === 'scoop' ? '/mystery-scoops' : '/mystery-balls';
-        window.location.href = base + '?' + params.toString();
+        document.querySelectorAll('.bias-products').forEach(panel => {
+            panel.classList.toggle('show', panel.dataset.biasProducts === selectedBias);
+        });
     }
 
     // Coming back (or opening a shared link) with ?bias=… shows that member's cards straight away

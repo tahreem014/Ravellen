@@ -14,6 +14,7 @@ class OrderItem extends Model
         'product_id',
         'product_variant_id',
         'qty',
+        'stock_reserved',
         'price',
         'comment',
         'preference',

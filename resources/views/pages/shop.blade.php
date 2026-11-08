@@ -197,6 +197,12 @@
             ];
             $shopDefaultTheme = ['accent' => '#9333ea', 'accent2' => '#ec4899', 'grad' => 'linear-gradient(135deg,#9333ea,#ec4899)'];
 
+            // The icons the home page cards use for each category (shown on its "coming soon" panel)
+            $shopThemeIcons = [
+                'Mystery Scoops' => 'ri-gift-line', 'Mystery Balls' => 'ri-sparkling-line', 'BTS Merch' => 'ri-star-line',
+                'BTS Gift Boxes' => 'ri-gift-2-line', 'Gift Boxes' => 'ri-shopping-bag-line', 'Ceramic Items' => 'ri-cup-line',
+            ];
+
             // Flatten every product across every category/sub-category, tagging
             // each with its parent category & sub-category for filtering.
             $allProducts = collect();
@@ -230,7 +236,7 @@
             @foreach($categories as $category)
                 @continue($category->isComingSoon())
                 @foreach($category->subCategories as $sub)
-                    <button type="button" class="shop-pill sub" data-sub="{{ $sub->id }}" data-parent="{{ $category->id }}" style="display:none;" onclick="selectShopSub('{{ $sub->id }}', this)">{{ $sub->name }}</button>
+                    <button type="button" class="shop-pill sub" data-sub="{{ $sub->id }}" data-parent="{{ $category->id }}" @if($sub->products->isEmpty()) data-coming-soon="1" @endif style="display:none;" onclick="selectShopSub('{{ $sub->id }}', this)">{{ $sub->name }}</button>
                 @endforeach
             @endforeach
         </div>
@@ -273,7 +279,8 @@
                             <p class="shop-prod-cat-label" style="color:{{ $theme['accent'] }};">{{ $cat->name }}</p>
                             <h6 class="shop-prod-name" data-live-name>{{ $product->name }}</h6>
                             <p class="shop-prod-price" data-live-price data-live-prefix="From " style="background:linear-gradient(to right,{{ $theme['accent'] }},{{ $theme['accent2'] }});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><x-price :variant="$cheapest" prefix="From " /></p>
-                            <a href="{{ route('product-item', $product->slug) }}" class="shop-explore-btn" style="background:{{ $theme['grad'] }};">
+                            {{-- a BTS member's scoop / balls open the member page the BTS Merch picker leads to --}}
+                            <a href="{{ $btsMemberUrls[$product->id] ?? route('product-item', $product->slug) }}" class="shop-explore-btn" style="background:{{ $theme['grad'] }};">
                                 View Product <i class="ri-arrow-right-line ms-1"></i>
                             </a>
                         </div>
@@ -293,7 +300,27 @@
 
         {{-- Shown in place of the grid while a "coming soon" category's pill is selected --}}
         <div id="shop-coming-soon" style="display:none;">
-            <x-coming-soon title="Coming soon" message="We're getting everything ready. Check back soon!" :actions="false" />
+            {{-- one panel per empty category, in that category's own theme (BTS purple, ceramic brown …); the selected pill shows its own --}}
+            @foreach($categories->filter(fn ($category) => $category->isComingSoon()) as $category)
+                @php $comingTheme = $shopThemeMap[$category->name] ?? $shopDefaultTheme; @endphp
+                <x-coming-soon data-coming-soon-for="{{ $category->id }}" hidden
+                               :title="$category->name . ' are on their way'"
+                               message="We're getting everything ready. Check back soon!"
+                               :icon="$shopThemeIcons[$category->name] ?? 'ri-time-line'"
+                               :accent="$comingTheme['accent']" :accent2="$comingTheme['accent2']" :actions="false" />
+            @endforeach
+
+            {{-- ...and one per empty sub-category of a category that does have products (a BTS member with no products yet) --}}
+            @foreach($categories->reject(fn ($category) => $category->isComingSoon()) as $category)
+                @php $comingTheme = $shopThemeMap[$category->name] ?? $shopDefaultTheme; @endphp
+                @foreach($category->subCategories->filter(fn ($sub) => $sub->products->isEmpty()) as $sub)
+                    <x-coming-soon data-coming-soon-for-sub="{{ $sub->id }}" hidden
+                                   :title="$sub->name . ' products are on their way'"
+                                   message="We're getting everything ready. Check back soon!"
+                                   :icon="$shopThemeIcons[$category->name] ?? 'ri-time-line'"
+                                   :accent="$comingTheme['accent']" :accent2="$comingTheme['accent2']" :actions="false" />
+                @endforeach
+            @endforeach
         </div>
 
         {{-- ── Pagination ── --}}
@@ -326,7 +353,17 @@ let shopActiveCat = 'all';
 let shopActiveSub = 'all';
 let shopSearchQuery = '';
 let shopCurrentPage = 1;
-let shopComingSoon = false;   // the selected category has nothing on sale yet
+let shopComingSoon = false;      // the selected category has nothing on sale yet
+let shopSubComingSoon = false;   // ...or the selected sub-category (e.g. a BTS member) has no products yet
+
+// The "coming soon" panel that belongs to the selected category / sub-category (none while products are listed)
+function showShopComingSoonPanel() {
+    document.querySelectorAll('#shop-coming-soon > *').forEach(panel => {
+        panel.hidden = shopSubComingSoon
+            ? panel.dataset.comingSoonForSub !== String(shopActiveSub)
+            : !(shopComingSoon && panel.dataset.comingSoonFor === String(shopActiveCat));
+    });
+}
 
 // ── Category selection ──────────────────────────────────────────────────────
 function selectShopCategory(catId, btn) {
@@ -334,9 +371,8 @@ function selectShopCategory(catId, btn) {
     shopActiveSub = 'all';
 
     shopComingSoon = btn.dataset.comingSoon === '1';
-    if (shopComingSoon) {
-        document.querySelector('#shop-coming-soon .coming-soon-title').textContent = btn.dataset.name + ' are on their way';
-    }
+    shopSubComingSoon = false;
+    showShopComingSoonPanel();
 
     document.querySelectorAll('#shop-cat-pills .shop-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -363,6 +399,8 @@ function selectShopCategory(catId, btn) {
 // ── Sub-category selection ──────────────────────────────────────────────────
 function selectShopSub(subId, btn) {
     shopActiveSub = subId;
+    shopSubComingSoon = btn.dataset.comingSoon === '1';
+    showShopComingSoonPanel();
     document.querySelectorAll('#shop-sub-pills .shop-pill').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     applyShopFilters();
@@ -404,8 +442,9 @@ function renderShopPage() {
         if (idx >= start && idx < end) item.style.display = '';
     });
 
-    document.getElementById('shop-coming-soon').style.display = shopComingSoon ? 'block' : 'none';
-    document.getElementById('no-results').style.display = (!shopComingSoon && matched.length === 0) ? 'block' : 'none';
+    const comingSoon = shopComingSoon || shopSubComingSoon;
+    document.getElementById('shop-coming-soon').style.display = comingSoon ? 'block' : 'none';
+    document.getElementById('no-results').style.display = (!comingSoon && matched.length === 0) ? 'block' : 'none';
     renderShopPagination(matched.length, totalPages);
     rememberShopView();
 }

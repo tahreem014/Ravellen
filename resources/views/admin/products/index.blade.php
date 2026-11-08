@@ -2,6 +2,21 @@
 
 @section('title', 'Products')
 
+@section('css')
+<style>
+    /* Stock column (partials/stock-cell): it re-draws live, and flashes when the number moves */
+    .stock-total { display: inline-block; padding: .3rem .7rem; border-radius: 2rem; font-size: .8rem; font-weight: 700; color: #fff; white-space: nowrap; }
+    .stock-total.stock-ok   { background: #16a34a; }
+    .stock-total.stock-low  { background: #d97706; }
+    .stock-total.stock-out  { background: #e11d48; }
+    .stock-total.stock-none { background: #6b7280; }
+    [data-stock-cell] { transition: background-color 1.4s ease; }
+    [data-stock-cell].stock-flash-down { background-color: #fee2e2; transition: none; }
+    [data-stock-cell].stock-flash-up   { background-color: #dcfce7; transition: none; }
+    [data-stock-cell].stock-flash-same { background-color: #e0f2fe; transition: none; }
+</style>
+@endsection
+
 @section('content')
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <form method="GET" class="admin-toolbar-form">
@@ -22,6 +37,7 @@
                         <th>Name</th>
                         <th>Category</th>
                         <th>Variants</th>
+                        <th>Stock</th>
                         <th>Price Range</th>
                         <th>Discount</th>
                         <th class="text-end">Actions</th>
@@ -57,6 +73,10 @@
                                 </span>
                             </td>
                             <td data-label="Variants">{{ $product->variants->count() }}</td>
+                            {{-- live: the script below re-draws it whenever an order (or the admin) moves the stock --}}
+                            <td data-label="Stock" data-stock-cell="{{ $product->id }}" data-stock-total="{{ $product->stockTotal() }}" data-stock-signature="{{ $product->stockSignature() }}">
+                                <div data-stock-body>@include('admin.products.partials.stock-cell', ['product' => $product])</div>
+                            </td>
                             <td data-label="Price">
                                 <div>
                                 @if ($prices->isNotEmpty())
@@ -95,7 +115,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center text-muted py-4">No products yet.</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted py-4">No products yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -210,5 +230,59 @@
 
     document.getElementById('discountForm').addEventListener('submit', saveDiscount);
     document.getElementById('endDiscountForm').addEventListener('submit', saveDiscount);
+</script>
+
+<script>
+    /**
+     * Live stock: every few seconds (while the tab is visible) asks the server for the stock of the
+     * products listed here and re-draws the cells that moved — orders take stock, cancelled orders give
+     * it back, and a product that sells out turns red by itself. The cell flashes red when the number
+     * went down, green when it went up.
+     */
+    (function () {
+        const STOCK_URL = @json(route('admin.products.stock', [], false));
+        const POLL_MS = 5000;
+        let polling = false;
+
+        function flash(cell, kind) {
+            cell.classList.remove('stock-flash-down', 'stock-flash-up', 'stock-flash-same');
+            void cell.offsetWidth;   // restart the highlight
+            cell.classList.add('stock-flash-' + kind);
+            setTimeout(() => cell.classList.remove('stock-flash-' + kind), 1500);
+        }
+
+        async function pollStock() {
+            const cells = [...document.querySelectorAll('[data-stock-cell]')];
+            if (polling || document.visibilityState !== 'visible' || !cells.length) return;
+            polling = true;
+
+            try {
+                const params = new URLSearchParams();
+                cells.forEach(cell => params.append('ids[]', cell.dataset.stockCell));
+
+                const res = await fetch(STOCK_URL + '?' + params, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                cells.forEach(cell => {
+                    const fresh = data.products[cell.dataset.stockCell];
+                    if (!fresh || fresh.signature === cell.dataset.stockSignature) return;
+
+                    const before = Number(cell.dataset.stockTotal);
+                    cell.querySelector('[data-stock-body]').innerHTML = fresh.html;
+                    cell.dataset.stockSignature = fresh.signature;
+                    cell.dataset.stockTotal = fresh.total;
+                    flash(cell, fresh.total < before ? 'down' : (fresh.total > before ? 'up' : 'same'));
+                });
+            } catch (e) {
+                // offline, signed out or server busy — try again on the next tick
+            } finally {
+                polling = false;
+            }
+        }
+
+        setInterval(pollStock, POLL_MS);
+        document.addEventListener('visibilitychange', pollStock);
+    })();
 </script>
 @endsection

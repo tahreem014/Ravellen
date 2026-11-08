@@ -3,26 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Services\LiveUpdateService;
+use App\Services\StoreStatsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LiveController extends Controller
 {
-    public function __construct(private readonly LiveUpdateService $live)
-    {
+    public function __construct(
+        private readonly LiveUpdateService $live,
+        private readonly StoreStatsService $stats,
+    ) {
     }
 
     /**
-     * GET /live?v=…&products[]=…&categories[]=…&listings[]=…
+     * GET /live?v=…&products[]=…&categories[]=…&listings[]=…&stats=1
      * Polled by storefront pages every few seconds. Answers with just the
      * version (and the unread notification count) when nothing changed since
      * v, otherwise with fresh data for the products / categories / listings
-     * the page shows.
+     * the page shows. A page that shows the About-page figures adds stats=1
+     * and gets them with every answer, since orders and reviews don't move
+     * the catalog version.
      */
     public function __invoke(Request $request): JsonResponse
     {
         $version = $this->live->version();
         $payload = ['version' => $version, 'changed' => $request->query('v') !== $version];
+
+        if ($request->boolean('stats')) {
+            $payload['stats'] = $this->stats->summary();
+        }
 
         if ($user = $request->user()) {
             $payload['unread'] = $user->unreadNotifications()->count();

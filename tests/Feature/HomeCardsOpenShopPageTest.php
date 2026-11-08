@@ -8,11 +8,11 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 /**
- * Mystery Scoops and Mystery Balls have one page each: the shop's product page. The home cards open it, and
- * the bare /mystery-scoops and /mystery-balls URLs only send visitors there (?bias= still serves the BTS Merch
- * member pages). Rolled back.
+ * The home cards open the shop, not pages of their own. Mystery Scoops and Mystery Balls open the shop's product
+ * page (and the bare /mystery-scoops and /mystery-balls URLs only send visitors there; ?bias= still serves the
+ * BTS Merch member pages). BTS Merch and Gift Boxes open the shop on that category. Rolled back.
  */
-class MysteryCardsOpenShopPageTest extends TestCase
+class HomeCardsOpenShopPageTest extends TestCase
 {
     use DatabaseTransactions;
 
@@ -40,6 +40,24 @@ class MysteryCardsOpenShopPageTest extends TestCase
 
         $home->assertDontSee('href="' . url('mystery-scoops') . '"', false)
             ->assertDontSee('href="' . url('mystery-balls') . '"', false);
+    }
+
+    public function test_gift_box_cards_open_the_shop_on_that_category(): void
+    {
+        $category = Category::firstOrCreate(['name' => 'Gift Boxes']);
+        $home = $this->get('/')->assertOk();
+
+        // the hero card and the "Shop by Category" card
+        $this->assertSame(2, substr_count($home->getContent(), 'href="' . route('shop', ['category' => $category->id]) . '"'));
+        $home->assertDontSee('href="' . url('gift-boxes') . '"', false);
+
+        $this->get(route('shop', ['category' => $category->id]))->assertOk()->assertSee('data-cat="' . $category->id . '"', false);
+    }
+
+    public function test_bts_merch_cards_keep_their_own_member_page(): void
+    {
+        // the hero card, the "BTS Collection" button and the "Shop by Category" card
+        $this->assertSame(3, substr_count($this->get('/')->assertOk()->getContent(), 'href="' . url('bts-merch') . '"'));
     }
 
     public function test_the_old_urls_send_visitors_to_the_shops_page(): void

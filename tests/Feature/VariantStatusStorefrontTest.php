@@ -103,14 +103,16 @@ class VariantStatusStorefrontTest extends TestCase
     {
         $product = $this->product(['Only' => 'active']);
 
-        $badge = '>Out of stock</span>';
-        $this->get(route('shop'))->assertOk()->assertDontSee($badge, false);
+        // The shop lists the real catalogue too, where some product may genuinely be sold out, so count the badges
+        $badge  = '>Out of stock</span>';
+        $badges = fn () => substr_count($this->get(route('shop'))->assertOk()->getContent(), $badge);
+        $before = $badges();
 
         $product->variants->first()->update(['status' => 'out_of_stock']);
-        $this->get(route('shop'))->assertOk()->assertSee($badge, false);
+        $this->assertSame($before + 1, $badges());
 
         $product->variants->first()->update(['status' => 'pre_order']);
-        $this->get(route('shop'))->assertOk()->assertDontSee($badge, false);
+        $this->assertSame($before, $badges());
     }
 
     public function test_live_updates_carry_the_status(): void

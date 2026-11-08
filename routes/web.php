@@ -12,7 +12,7 @@ Route::get('index/{locale}', [App\Http\Controllers\HomeController::class, 'lang'
 // ── Core pages ──────────────────────────────────────────────────────────────
 Route::get('/',        [App\Http\Controllers\HomeController::class, 'root'])->name('root');
 Route::get('/shop',    [App\Http\Controllers\HomeController::class, 'shop'])->name('shop');
-Route::get('/about',   fn() => view('pages.about'))->name('about');
+Route::get('/about',   fn(App\Services\StoreStatsService $stats) => view('pages.about', ['stats' => $stats->summary()]))->name('about');
 Route::get('/contact', fn() => view('pages.contact'))->name('contact');
 Route::post('/contact', [App\Http\Controllers\ContactController::class, 'send'])->name('contact.send')->middleware('throttle:5,1');
 
@@ -142,6 +142,9 @@ Route::post('/update-password/{id}', [App\Http\Controllers\HomeController::class
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', App\Http\Middleware\RespondToBackgroundForms::class])->group(function () {
     Route::get('/', [Admin\DashboardController::class, 'index'])->name('dashboard');
     Route::get('overview/stats', [Admin\DashboardController::class, 'stats'])->name('overview.stats')->middleware('throttle:120,1');
+
+    // Live stock of the listed / edited products, polled by the product pages (admin/products/partials/stock-cell)
+    Route::get('products/stock', Admin\ProductStockController::class)->name('products.stock')->middleware('throttle:120,1');
 
     Route::resource('products', Admin\ProductController::class)->except(['show']);
     Route::post('products/{product}/variants', [Admin\ProductVariantController::class, 'store'])->name('products.variants.store');

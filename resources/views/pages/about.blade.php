@@ -48,6 +48,9 @@
     /* ── Stats ── */
     .stats-section { background: #fdf2f8; }
     .stat-number { font-size: 2.5rem; font-weight: 800; }
+    /* a figure that just changed (patched by layouts/live-updates) pops briefly */
+    .stat-number.stat-updated { animation: stat-pop .6s ease; }
+    @keyframes stat-pop { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 
     /* ── Values ── */
     .value-card {
@@ -96,7 +99,7 @@
                 </div>
 
                 <div class="col-md-7 fade-up">
-                    <span class="since-badge">Since 2023</span>
+                    <span class="since-badge">Since 2026</span>
                     <h2 class="fw-bold mb-3" style="font-size:1.9rem;">More Than Just a Store</h2>
                     <p class="text-muted mb-3">Ravellen began with a simple idea: the thrill of the unknown. What started as a small passion project for mystery scoops has grown into a comprehensive community for collectors and fans.</p>
                     <p class="text-muted mb-4">We understand the excitement of waiting for a package, the joy of unboxing, and the love for K-Pop culture. That's why every single scoop, box, and ball is packed with love, care, and a touch of magic.</p>
@@ -138,19 +141,19 @@
         <div class="container px-4">
             <div class="row g-4 text-center">
                 <div class="col-6 col-md-3">
-                    <div class="stat-number" style="color:#ec4899;">5k+</div>
+                    <div class="stat-number" data-live-stat="customers" style="color:#ec4899;">{{ $stats['customers'] }}</div>
                     <div class="text-muted">Happy Customers</div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="stat-number" style="color:#9333ea;">10k+</div>
+                    <div class="stat-number" data-live-stat="scoops" style="color:#9333ea;">{{ $stats['scoops'] }}</div>
                     <div class="text-muted">Scoops Sold</div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="stat-number" style="color:#ec4899;">50+</div>
+                    <div class="stat-number" data-live-stat="categories" style="color:#ec4899;">{{ $stats['categories'] }}</div>
                     <div class="text-muted">Merch Categories</div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="stat-number" style="color:#9333ea;">4.9</div>
+                    <div class="stat-number" data-live-stat="rating" style="color:#9333ea;">{{ $stats['rating'] }}</div>
                     <div class="text-muted">Average Rating</div>
                 </div>
             </div>

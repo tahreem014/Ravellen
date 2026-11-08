@@ -122,6 +122,18 @@ class Product extends Model
         return $labels->contains('Out of stock') ? 'Out of stock' : ($labels->first() ?? 'Unavailable');
     }
 
+    /** Units shoppers can still order across all variants (pre-orders and unavailable variants add none). */
+    public function stockTotal(): int
+    {
+        return (int) $this->variants->sum(fn (ProductVariant $variant) => $variant->remainingStock() ?? 0);
+    }
+
+    /** Fingerprint of every variant's stock and status — the admin's live stock cells re-draw when it changes. */
+    public function stockSignature(): string
+    {
+        return md5(json_encode($this->variants->sortBy('id')->map(fn (ProductVariant $variant) => [$variant->id, (int) $variant->stock, $variant->status])->values()));
+    }
+
     /**
      * Discount badge text for product images: "-15%" when every variant on
      * offer is discounted by the same amount, "Up to -20%" when the discount

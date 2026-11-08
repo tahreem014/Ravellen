@@ -16,8 +16,10 @@ class OrderService
 {
     private const ADVANCE_RATE = 0.4;
 
-    public function __construct(private readonly ShippingRateService $shippingRateService)
-    {
+    public function __construct(
+        private readonly ShippingRateService $shippingRateService,
+        private readonly StockService $stock,
+    ) {
     }
 
     /**
@@ -74,6 +76,10 @@ class OrderService
             $orders = [];
 
             if ($normalItems->isNotEmpty()) {
+                // The order holds its quantities out of the stock from now on (given back if it is
+                // cancelled); not enough left rejects the whole placement before anything is saved.
+                $this->stock->take($normalItems);
+
                 $orders[] = $this->createOrder($user, $data, $normalItems, $shippingFee, $rate->id, isPreorder: false);
             }
 
@@ -125,6 +131,7 @@ class OrderService
                 'product_id'         => $item->product_id,
                 'product_variant_id' => $item->product_variant_id,
                 'qty'                => $item->qty,
+                'stock_reserved'     => $isPreorder ? null : $item->qty,   // what StockService::take() just took
                 'price'              => $item->productVariant->effectivePrice(),
                 'comment'            => $item->comment,
                 'preference'         => $item->preference,

@@ -60,9 +60,10 @@
                                     <td data-label="Min"><input type="number" name="variants[<?php echo e($id); ?>][min_qty]" value="<?php echo e($value('min_qty')); ?>" class="form-control form-control-sm <?php echo e($invalid("variants.$id.min_qty")); ?>" style="width:70px;" required></td>
                                     <td data-label="Max"><input type="number" name="variants[<?php echo e($id); ?>][max_qty]" value="<?php echo e($value('max_qty')); ?>" class="form-control form-control-sm <?php echo e($invalid("variants.$id.max_qty")); ?>" style="width:70px;" required></td>
                                 <?php endif; ?>
-                                <td data-label="Stock"><input type="number" name="variants[<?php echo e($id); ?>][stock]" value="<?php echo e($value('stock')); ?>" class="form-control form-control-sm <?php echo e($invalid("variants.$id.stock")); ?>" style="width:80px;" required></td>
+                                
+                                <td data-label="Stock"><input type="number" name="variants[<?php echo e($id); ?>][stock]" value="<?php echo e($value('stock')); ?>" data-synced="<?php echo e($variant->stock); ?>" class="form-control form-control-sm <?php echo e($invalid("variants.$id.stock")); ?>" style="width:80px;" required></td>
                                 <td data-label="Status">
-                                    <select name="variants[<?php echo e($id); ?>][status]" class="form-select form-select-sm <?php echo e($invalid("variants.$id.status")); ?>">
+                                    <select name="variants[<?php echo e($id); ?>][status]" data-synced="<?php echo e($variant->status); ?>" class="form-select form-select-sm <?php echo e($invalid("variants.$id.status")); ?>">
                                         <?php $__currentLoopData = \App\Models\ProductVariant::STATUSES; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $status): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                             <option value="<?php echo e($status); ?>" <?php if($value('status') === $status): echo 'selected'; endif; ?>><?php echo e($statusLabel($status)); ?></option>
                                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -173,6 +174,21 @@
         }
         const removeNew = e.target.closest('[data-remove-new-variant]');
         if (removeNew) removeNew.closest('tr').remove();
+    });
+
+    // Stock and status go together: typing new stock for a variant that has none flips its Status to Active,
+    // and typing 0 for an active one flips it to Out of stock — shown here before saving, so the admin can
+    // still pick something else. A variant that was Out of stock while it had stock keeps its status.
+    card.addEventListener('input', (e) => {
+        const stock = e.target.closest('input[name$="[stock]"][data-synced]');
+        if (!stock) return;
+
+        const status = stock.closest('tr').querySelector('select[name$="[status]"]');
+        const amount = Number(stock.value);
+        if (!status || stock.value === '' || Number.isNaN(amount)) return;
+
+        if (amount > 0 && status.value === 'out_of_stock' && Number(stock.defaultValue) <= 0) status.value = 'active';
+        if (amount <= 0 && status.value === 'active') status.value = 'out_of_stock';
     });
 
     // Variants only apply to standard pricing: Mystery Balls pricing builds the packs itself

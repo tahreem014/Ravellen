@@ -74,6 +74,10 @@
     .bias-btn[data-bias="ot7"]      { background: linear-gradient(145deg,#c4b5fd,#a78bfa); }
     .bias-btn[data-bias="bt21"]     { background: linear-gradient(145deg,#ddd6fe,#c4b5fd); }
 
+    /* each member's products (or "coming soon"); only the picked member's panel is shown */
+    .bias-products { display: none; }
+    .bias-products.show { display: block; }
+
     .bias-emoji { font-size: 2rem; line-height: 1; }
     .bias-name  { font-size: .8rem; font-weight: 700; color: #5b21b6; }
     
@@ -207,48 +211,74 @@
         <?php else: ?>
 
         
-        <div class="row g-4 justify-content-center mb-2" id="dynamicCards" style="display:none!important;">
+        <?php
+            $cardFallbacks = [
+                'scoop' => 'https://images.unsplash.com/photo-1765516833058-c322c800fee1?w=600&q=80',
+                'balls' => 'https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=600&q=80',
+            ];
+            $money = fn ($amount) => 'PKR ' . number_format($amount);
+        ?>
+        <div id="biasProducts">
+            <?php $__currentLoopData = array_merge($row1, $row2); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $m): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <?php $cards = array_filter($biasProducts[$m['id']] ?? []); ?>
+                <div class="bias-products" data-bias-products="<?php echo e($m['id']); ?>">
+                    <?php if($cards): ?>
+                        <div class="row g-4 justify-content-center mb-2">
+                            <?php $__currentLoopData = $cards; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $kind => $card): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <div class="col-sm-10 col-md-6 col-lg-5">
+                                    <div class="bts-card card h-100" data-product="<?php echo e($card['id']); ?>">
+                                        <div class="position-relative">
+                                            <img src="<?php echo e($card['image'] ?? $cardFallbacks[$kind]); ?>" alt="<?php echo e($card['name']); ?>" class="bts-card-img">
+                                            <?php if($kind === 'balls'): ?>
+                                                <span class="prod-badge badge-min">Min <?php echo e($card['min'] ?? 5); ?> pcs</span>
+                                            <?php else: ?>
+                                                <span class="prod-badge badge-army">ARMY Special</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="card-body p-4 d-flex flex-column">
+                                            <h5 class="fw-bold mb-1"><?php echo e($card['name']); ?> 💜</h5>
+                                            <?php if($card['description']): ?>
+                                                <p class="text-muted small mb-3"><?php echo e($card['description']); ?></p>
+                                            <?php endif; ?>
+                                            <?php if($card['price']): ?>
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <span class="text-muted small"><?php echo e($card['price']['label']); ?></span>
+                                                    <span class="fw-bold" style="color:#7c3aed;"><?php echo e($money($card['price']['amount'])); ?><?php if($card['price']['original'] && $card['price']['original'] > $card['price']['amount']): ?> <s style="color:#9ca3af;font-weight:500;font-size:.8em;margin-left:.3em;"><?php echo e($money($card['price']['original'])); ?></s><?php endif; ?></span>
+                                                </div>
+                                            <?php endif; ?>
+                                            <a href="<?php echo e($card['url']); ?>" class="bts-explore-btn w-100 justify-content-center mt-auto text-decoration-none">
+                                                Order <?php echo e($kind === 'balls' ? 'Mystery Balls' : 'Mystery Scoop'); ?>
 
-            
-            <div class="col-sm-10 col-md-6 col-lg-5">
-                <div class="bts-card card h-100">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1765516833058-c322c800fee1?w=600&q=80"
-                             alt="Mystery Scoop" class="bts-card-img">
-                        <span class="prod-badge badge-army">ARMY Special</span>
-                    </div>
-                    <div class="card-body p-4 d-flex flex-column">
-                        <h5 class="fw-bold mb-1" id="dynScoopTitle">Mystery Scoop 💜</h5>
-                        <p class="text-muted small mb-3">Exclusive themed mystery items for ARMY! Available in Classic, Standard, and Premium sizes.</p>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted small">Starting from</span>
-                            <span class="fw-bold" id="dynScoopPrice" style="color:#7c3aed;">PKR 2,500</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </div>
-                        <button class="bts-explore-btn w-100 justify-content-center mt-auto" onclick="goToProduct('scoop')">Order Mystery Scoop</button>
-                    </div>
+                    <?php else: ?>
+                        <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => $m['name'] . '\'s merch is on the way','message' => 'We\'re getting ' . $m['name'] . '\'s mystery scoops and balls ready. Check back soon!','icon' => 'ri-star-line','accent' => '#7c3aed','accent2' => '#a855f7','actions' => false]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('coming-soon'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($m['name'] . '\'s merch is on the way'),'message' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute('We\'re getting ' . $m['name'] . '\'s mystery scoops and balls ready. Check back soon!'),'icon' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute('ri-star-line'),'accent' => '#7c3aed','accent2' => '#a855f7','actions' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(false)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $attributes = $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>
+<?php $component = $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37; ?>
+<?php unset($__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37); ?>
+<?php endif; ?>
+                    <?php endif; ?>
                 </div>
-            </div>
-
-            
-            <div class="col-sm-10 col-md-6 col-lg-5">
-                <div class="bts-card card h-100">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1642761450221-cad688ceafe4?w=600&q=80"
-                             alt="Mystery Balls" class="bts-card-img">
-                        <span class="prod-badge badge-min">Min 5 pcs</span>
-                    </div>
-                    <div class="card-body p-4 d-flex flex-column">
-                        <h5 class="fw-bold mb-1" id="dynBallsTitle">Mystery Balls 💜</h5>
-                        <p class="text-muted small mb-3">Surprise mystery balls with ARMY-themed goodies! Minimum 5 balls, add by multiples of 5.</p>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted small" id="dynBallsQty">5 balls for</span>
-                            <span class="fw-bold" id="dynBallsPrice" style="color:#7c3aed;">PKR 1,000</span>
-                        </div>
-                        <button class="bts-explore-btn w-100 justify-content-center mt-auto" onclick="goToProduct('balls')">Order Mystery Balls</button>
-                    </div>
-                </div>
-            </div>
-
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
 
         <?php endif; ?>
@@ -266,11 +296,6 @@
 
 <script>
     let selectedBias = null;
-    const memberLabels = {
-        jungkook:'Jungkook 🐰', taehyung:'Taehyung 🐯', jimin:'Jimin 🐥',
-        namjoon:'Namjoon 🐨', jin:'Jin 🐹', jhope:'J-Hope 🐿️',
-        suga:'Suga 🐱', ot7:'OT7 💜', bt21:'BT21 ✨'
-    };
 
     function selectBias(id) {
         selectedBias = id;
@@ -281,36 +306,12 @@
         history.replaceState(null, '', location.pathname + '?bias=' + encodeURIComponent(id));
     }
 
-    // Each member's cheapest scoop and smallest balls pack, sale prices applied
-    const biasPrices = <?php echo json_encode($biasPrices ?? [], 15, 512) ?>;
-
-    function fmtPkr(n) { return 'PKR ' + Math.round(n).toLocaleString(); }
-    function priceHtml(amount, original) {
-        return fmtPkr(amount) + (original && original > amount
-            ? ' <s style="color:#9ca3af;font-weight:500;font-size:.8em;margin-left:.3em;">' + fmtPkr(original) + '</s>'
-            : '');
-    }
-
+    // Shows the picked member's panel (their real products, or "coming soon"). The panels are rendered by the
+    // server from the database; there are none while the whole category is "coming soon".
     function updateCards() {
-        // No product cards on the page while the category is "coming soon": picking a bias just highlights it
-        if (!selectedBias || !document.getElementById('dynamicCards')) return;
-        const label = memberLabels[selectedBias];
-        document.getElementById('dynScoopTitle').textContent = label + ' Mystery Scoop 💜';
-        document.getElementById('dynBallsTitle').textContent = label + ' Mystery Balls 💜';
-        const prices = biasPrices[selectedBias] || {};
-        if (prices.scoop) document.getElementById('dynScoopPrice').innerHTML = priceHtml(prices.scoop.price, prices.scoop.original);
-        if (prices.balls) {
-            document.getElementById('dynBallsQty').textContent   = prices.balls.qty + ' balls for';
-            document.getElementById('dynBallsPrice').innerHTML = priceHtml(prices.balls.price, prices.balls.original);
-        }
-        document.getElementById('dynamicCards').style.setProperty('display', 'flex', 'important');
-    }
-
-    function goToProduct(type) {
-        if (!selectedBias) return;
-        const params = new URLSearchParams({ bias: selectedBias });
-        const base = type === 'scoop' ? '/mystery-scoops' : '/mystery-balls';
-        window.location.href = base + '?' + params.toString();
+        document.querySelectorAll('.bias-products').forEach(panel => {
+            panel.classList.toggle('show', panel.dataset.biasProducts === selectedBias);
+        });
     }
 
     // Coming back (or opening a shared link) with ?bias=… shows that member's cards straight away

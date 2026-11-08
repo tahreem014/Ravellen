@@ -15,14 +15,14 @@
     <div class="container px-3 px-sm-4 pt-5">
         <?php if (isset($component)) { $__componentOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => 'We\'re getting ' . $name . ' ready','message' => 'Check back soon!','accent' => $accent,'accent2' => $accent2]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.coming-soon','data' => ['title' => $heading ?? ('We\'re getting ' . $name . ' ready'),'message' => 'Check back soon!','accent' => $accent,'accent2' => $accent2]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('coming-soon'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['title' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute('We\'re getting ' . $name . ' ready'),'message' => 'Check back soon!','accent' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($accent),'accent2' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($accent2)]); ?>
+<?php $component->withAttributes(['title' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($heading ?? ('We\'re getting ' . $name . ' ready')),'message' => 'Check back soon!','accent' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($accent),'accent2' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($accent2)]); ?>
 <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
 <?php if (isset($__attributesOriginala96be7eb5a7f8a23476ff5e6addf7d37)): ?>

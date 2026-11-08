@@ -27,8 +27,8 @@
                             <li class="mb-2"><a href="<?php echo e(url('/about')); ?>"          class="text-white-50 text-decoration-none footer-link">About Us</a></li>
                             <li class="mb-2"><a href="<?php echo e(url('/contact')); ?>"        class="text-white-50 text-decoration-none footer-link">Contact Us</a></li>
                             <li class="mb-2"><a href="<?php echo e(url('/shop')); ?>"           class="text-white-50 text-decoration-none footer-link">Shop</a></li>
-                            <li class="mb-2"><a href="<?php echo e(url('/order-tracking')); ?>" class="text-white-50 text-decoration-none footer-link">Track Order</a></li>
-                            <li class="mb-2"><a href="<?php echo e(url('/faqs')); ?>"           class="text-white-50 text-decoration-none footer-link">FAQs</a></li>
+                            <li class="mb-2"><a href="<?php echo e(route('profile', ['tab' => 'orders'])); ?>" class="text-white-50 text-decoration-none footer-link">Track Order</a></li>
+                            <li class="mb-2"><a href="<?php echo e(route('contact')); ?>#faq"   class="text-white-50 text-decoration-none footer-link">FAQs</a></li>
                         </ul>
                     </div>
 
@@ -68,12 +68,12 @@
                         
                         <div class="d-flex gap-2 mt-4">
                             <a href="https://www.instagram.com/ravellen_nm" target="_blank" rel="noopener noreferrer" aria-label="Ravellen on Instagram"
-                               class="footer-social-btn d-flex align-items-center justify-content-center rounded-circle"
+                               class="footer-social-btn d-flex align-items-center justify-content-center rounded-circle text-decoration-none"
                                style="width:2.25rem;height:2.25rem;background:rgba(255,255,255,.2);">
                                 <i class="ri-instagram-line"></i>
                             </a>
                             <a href="https://www.tiktok.com/@ravellen_nm" target="_blank" rel="noopener noreferrer" aria-label="Ravellen on TikTok"
-                               class="footer-social-btn d-flex align-items-center justify-content-center rounded-circle"
+                               class="footer-social-btn d-flex align-items-center justify-content-center rounded-circle text-decoration-none"
                                style="width:2.25rem;height:2.25rem;background:rgba(255,255,255,.2);">
                                 <i class="ri-tiktok-line"></i>
                             </a>
@@ -97,5 +97,6 @@
     .footer-link:hover { color: #fff !important; }
     .footer-social-btn:hover { background: rgba(255,255,255,.35) !important; }
     .footer-social-btn { color: #fff; transition: background .2s; }
+    .footer-social-btn, .footer-social-btn:hover, .footer-social-btn:focus { text-decoration: none; color: #fff; }   /* no underline on the icons, even on hover */
 </style>
 <?php /**PATH C:\Users\zubai\Herd\Ravellen\resources\views/layouts/footer.blade.php ENDPATH**/ ?>

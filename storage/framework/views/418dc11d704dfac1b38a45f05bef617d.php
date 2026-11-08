@@ -30,12 +30,12 @@ unset($__defined_vars); ?>
 
 <div <?php echo e($attributes->merge(['class' => 'coming-soon text-center mx-auto'])); ?> style="max-width:34rem;padding:2.5rem 1.25rem;">
     <div class="mx-auto mb-3 d-flex align-items-center justify-content-center"
-         style="width:4.5rem;height:4.5rem;border-radius:50%;color:#fff;font-size:2rem;background:linear-gradient(135deg,<?php echo e($accent2); ?>,<?php echo e($accent); ?>);box-shadow:0 8px 24px rgba(139,94,60,.25);">
+         style="width:4.5rem;height:4.5rem;border-radius:50%;color:#fff;font-size:2rem;background:linear-gradient(135deg,<?php echo e($accent2); ?>,<?php echo e($accent); ?>);box-shadow:0 8px 24px color-mix(in srgb, <?php echo e($accent); ?> 28%, transparent);">
         <i class="<?php echo e($icon); ?>"></i>
     </div>
     <span class="d-inline-block mb-3"
           style="background:#fff;color:<?php echo e($accent); ?>;border:1.5px solid <?php echo e($accent2); ?>;border-radius:2rem;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;">Coming Soon</span>
-    <h3 class="coming-soon-title fw-bold mb-2" style="color:#5c3d1e;font-size:clamp(1.4rem,4vw,1.9rem);"><?php echo e($title); ?></h3>
+    <h3 class="coming-soon-title fw-bold mb-2" style="color:color-mix(in srgb, <?php echo e($accent); ?> 65%, #1c1917);font-size:clamp(1.4rem,4vw,1.9rem);"><?php echo e($title); ?></h3>
     <?php if($message): ?>
         <p class="text-muted mb-4" style="font-size:.95rem;"><?php echo e($message); ?></p>
     <?php endif; ?>
