@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
@@ -51,6 +52,21 @@ class Handler extends ExceptionHandler
             return redirect()->back()
                 ->withInput($request->except(['_token', ...$this->dontFlash]))
                 ->with('error', "Your session had expired, so that change wasn't saved. Please try again.");
+        });
+
+        // The contact form allows 5 sends a minute (throttle on its route). Going over that comes
+        // back to the form with a red toast and what the visitor typed, instead of the bare
+        // "429 Too Many Requests" page.
+        $this->renderable(function (ThrottleRequestsException $e, $request) {
+            if (! $request->routeIs('contact.send') || $request->expectsJson()) {
+                return null;
+            }
+
+            $wait = (int) ($e->getHeaders()['Retry-After'] ?? 0);
+
+            return redirect()->route('contact')
+                ->withInput($request->except(['_token', ...$this->dontFlash]))
+                ->with('error', 'Too many attempts. Please wait ' . ($wait > 0 ? $wait . ' seconds' : 'a minute') . ' and try again.');
         });
     }
 }

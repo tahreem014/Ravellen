@@ -128,6 +128,24 @@ class ContactPageTest extends TestCase
         Mail::assertNothingSent();
     }
 
+    public function test_sending_too_often_goes_back_to_the_form_with_a_message_instead_of_a_429_page(): void
+    {
+        Mail::fake();
+
+        // the route allows 5 sends a minute
+        for ($i = 0; $i < 5; $i++) {
+            $this->from('/contact')->post(route('contact.send'), $this->message)->assertRedirect('/contact');
+        }
+
+        $this->from('/contact')->post(route('contact.send'), $this->message)
+            ->assertRedirect(route('contact'))
+            ->assertSessionHas('error')
+            ->assertSessionHasInput('message', $this->message['message']);
+
+        $this->assertStringContainsString('Too many attempts', session('error'));
+        Mail::assertSent(ContactMessageMail::class, 5);   // the sixth was held back, not sent
+    }
+
     public function test_a_mail_failure_tells_the_visitor_and_keeps_what_they_typed(): void
     {
         Mail::shouldReceive('to')->once()->andThrow(new \RuntimeException('SMTP is down'));
